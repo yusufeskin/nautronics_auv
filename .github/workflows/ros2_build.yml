@@ -28,4 +28,7 @@ jobs:
           rosdep update
           rosdep install --from-paths src --ignore-src -r -y
       - name: Build Workspace
-        run: colcon build --symlink-install
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --symlink-install

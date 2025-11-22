@@ -26,10 +26,17 @@ def generate_launch_description():
         executable='pwm_router_node',
         name='pwm_router_node',
         output='screen',
-        emulate_tty=True
+    )
+
+    pixhawk_baro_reader = Node(
+        package='auv_hardware',
+        executable='pixhawk_baro_reader',
+        name='pixhawk_baro_reader',
+        output='screen',
     )
 
     return LaunchDescription([
         realsense_service,
-        pwm_router_node
+        pwm_router_node,
+        pixhawk_baro_reader
     ])

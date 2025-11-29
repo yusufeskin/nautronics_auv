@@ -2,7 +2,7 @@ name: ROS 2 Build Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'fix/**' ]
   pull_request:
     branches: [ main ]
 
@@ -27,7 +27,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3-vcstool
           cd src
-          vcs import < nautronics_auv/src/nautronics.repos
+          
+          # AKILLI ÇÖZÜM: Dosyayı nerede olursa olsun buluyoruz
+          # (İster root'ta olsun ister src içinde)
+          REPO_FILE=$(find nautronics_auv -name "nautronics.repos" | head -n 1)
+          
+          if [ -z "$REPO_FILE" ]; then
+            echo "::error::nautronics.repos dosyası bulunamadı! Dosya yapısı listeleniyor:"
+            ls -R nautronics_auv
+            exit 1
+          else
+            echo "Dosya bulundu: $REPO_FILE"
+            vcs import < "$REPO_FILE"
+          fi
 
       - name: Install dependencies
         run: |

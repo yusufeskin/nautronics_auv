@@ -29,6 +29,7 @@ setup(
         'console_scripts': [
             'pwm_router_node = auv_hardware.pwm_router:main',
             'pixhawk_baro_reader = auv_hardware.baro_publisher:main',
+            'ping_sonar_node = auv_hardware.ping_sonar:main',
         ],
     },
 )

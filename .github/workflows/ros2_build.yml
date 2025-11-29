@@ -22,11 +22,19 @@ jobs:
         with:
           path: src/nautronics_auv
 
+      - name: Import External Repositories
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-vcstool
+          cd src
+          vcs import < nautronics_auv/src/nautronics.repos
+
       - name: Install dependencies
         run: |
           sudo apt-get update
           rosdep update
           rosdep install --from-paths src --ignore-src -r -y
+
       - name: Build Workspace
         shell: bash
         run: |

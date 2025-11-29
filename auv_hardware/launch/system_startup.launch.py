@@ -8,7 +8,13 @@ from launch_ros.actions import Node
 def generate_launch_description():
     
     realsense_dir = get_package_share_directory('realsense2_camera')
-    
+    auv_hardware_dir = get_package_share_directory('auv_hardware')
+    bno055_config = os.path.join(
+        auv_hardware_dir,
+        'config',
+        'bno055_params_i2c.yaml'
+    )
+
     realsense_service = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(realsense_dir, 'launch', 'rs_launch.py')
@@ -35,8 +41,19 @@ def generate_launch_description():
         output='screen',
     )
 
+    bno055_node = Node(
+        package='bno055',
+        executable='bno055',
+        parameters=[bno055_config], #its from our package not default one (the names are the same do not get confuse)
+        remappings=[
+            ('/bno055/imu', '/imu/data'),
+            ('/bno055/calib_status', '/imu/calib_status')
+        ]
+    )
+
     return LaunchDescription([
         realsense_service,
         pwm_router_node,
-        pixhawk_baro_reader
+        pixhawk_baro_reader,
+        bno055_node
     ])

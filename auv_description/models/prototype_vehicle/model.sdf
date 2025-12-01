@@ -1,0 +1,105 @@
+  <?xml version="1.0" ?>
+  <sdf version="1.6">
+    <model name="test_model">
+      <static>true</static> <!-- Yerçekimi etkilemesin, havada asılı kalsın -->
+      
+      <!-- 1. GÖVDE (BASE) -->
+      <link name="base_link">
+        <visual name="base_visual">
+          <geometry>
+            <mesh>
+              <uri>model://prototype_vehicle/meshes/sim.obj</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <!--<material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>  Kırmızı Gövde 
+          </material>-->
+        </visual>
+      </link>
+
+      <!-- 2. PERVANE (PROPELLER) -->
+      <link name="propeller_link">
+        <pose>-0.088444 -0.212676 0.005653 0 0 0</pose>
+        <visual name="prop_visual">
+          <geometry>
+            <mesh>
+              <uri>model://bluerov2_heavy/meshes/t200_cw_prop.dae</uri>
+            </mesh>
+          </geometry>
+            <inertial>
+        <mass>0.002</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.001</izz>
+        </inertia>
+      </inertial>
+          <material>
+            <ambient>0 0 1 1</ambient>
+            <diffuse>0 0 1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <joint name="propeller_joint" type="revolute">
+        <parent>base_link</parent>
+        <child>propeller_link</child>
+        <axis>
+          <xyz>0 0 -1</xyz>
+        </axis>
+      </joint>
+
+
+
+    <plugin
+        filename="gz-sim-hydrodynamics-system"
+        name="gz::sim::systems::Hydrodynamics">
+      <link_name>base_link</link_name>
+      <water_density>1000.0</water_density>
+      <!-- Added mass: -->
+      <xDotU>0</xDotU>
+      <yDotV>0</yDotV>
+      <zDotW>0</zDotW>
+      <kDotP>0</kDotP>
+      <mDotQ>0</mDotQ>
+      <nDotR>0</nDotR>
+      <!-- First order stability derivative: -->
+      <xU>0</xU>
+      <yV>0</yV>
+      <zW>0</zW>
+      <kP>0</kP>
+      <mQ>0</mQ>
+      <nR>0</nR>
+      <!-- Second order stability derivative: -->
+      <xUabsU>-58.42</xUabsU>
+      <yVabsV>-55.137</yVabsV>
+      <zWabsW>-124.818</zWabsW>
+      <kPabsP>-4.0</kPabsP>
+      <mQabsQ>-4.0</mQabsQ>
+      <nRabsR>-4.0</nRabsR>
+    </plugin>
+
+
+
+
+
+      <plugin
+          filename="gz-sim-thruster-system"
+          name="gz::sim::systems::Thruster">
+        <namespace>test_model</namespace>
+        <joint_name>propeller_joint</joint_name>
+        <thrust_coefficient>0.02</thrust_coefficient>
+        <fluid_density>1000.0</fluid_density>
+        <propeller_diameter>0.1</propeller_diameter>
+        <velocity_control>true</velocity_control>
+        <use_angvel_cmd>False</use_angvel_cmd>
+      </plugin>
+
+
+
+    </model>
+  </sdf>

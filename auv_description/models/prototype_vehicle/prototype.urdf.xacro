@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="prototype">
+  
+  <xacro:include filename="macros/pipe_macro.xacro" />
+  <xacro:include filename="macros/thruster_macro.xacro" />
+  <xacro:include filename="macros/plugins.xacro" />
+  <xacro:include filename="macros/imu_macro.xacro"/>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 -0.05" rpy="0 0 0"/>
+      <mass value="11.0"/>
+      <inertia ixx="0.201" ixy="0" ixz="0" iyy="0.223" iyz="0" izz="0.269"/>
+    </inertial>
+    <visual>
+      <geometry><mesh filename="model://prototype_vehicle/meshes/sim.obj"/></geometry>
+    </visual>
+
+
+    <xacro:add_pipe name="left_top_pipe"   length="0.365"  x="0.001"  y="0.156"   z="0.1417" r="0" p="${pi/2}" yaw="0" />
+    <xacro:add_pipe name="right_top_pipe"  length="0.365"  x="0.001"  y="-0.156"  z="0.1417" r="0" p="${pi/2}" yaw="0" />
+    <xacro:add_pipe name="back_top_pipe"   length="0.3354" x="-0.182" y="-0.0017" z="0.1413" r="${pi/2}" p="0" yaw="0" />
+    <xacro:add_pipe name="front_top_pipe"  length="0.3354" x="0.182"  y="-0.0017" z="0.1413" r="${pi/2}" p="0" yaw="0" />
+    <xacro:add_pipe name="left_bottom_pipe"  length="0.365"  x="0.001"  y="0.156"   z="-0.123" r="0" p="${pi/2}" yaw="0" />
+    <xacro:add_pipe name="right_bottom_pipe" length="0.365"  x="0.001"  y="-0.156"  z="-0.123" r="0" p="${pi/2}" yaw="0" />
+    <xacro:add_pipe name="back_bottom_pipe"  length="0.3354" x="-0.182" y="-0.0017" z="-0.123" r="${pi/2}" p="0" yaw="0" />
+    <xacro:add_pipe name="front_bottom_pipe" length="0.3354" x="0.182"  y="-0.0017" z="-0.123" r="${pi/2}" p="0" yaw="0" />
+    <xacro:add_pipe name="front_left_pipe"  length="0.25" x="0.1857"  y="-0.0760" z="0.01" r="0" p="0" yaw="0" />
+    <xacro:add_pipe name="front_right_pipe" length="0.25" x="0.1857"  y="0.0760"  z="0.01" r="0" p="0" yaw="0" />
+    <xacro:add_pipe name="back_right_pipe"  length="0.25" x="-0.1857" y="0.0760"  z="0.01" r="0" p="0" yaw="0" />
+    <xacro:add_pipe name="back_left_pipe"   length="0.25" x="-0.1857" y="-0.0760" z="0.01" r="0" p="0" yaw="0" />
+    <xacro:add_pipe name="inner_front_left_pipe"   length="0.25" x="0.1057" y="0.1690" z="0.01" r="0" p="0" yaw="0" />
+    <xacro:add_pipe name="inner_front_right_pipe"   length="0.25" x="0.1057" y="-0.1690" z="0.01" r="0" p="0" yaw="0" />
+    <xacro:add_pipe name="inner_back_left_pipe"   length="0.25" x="-0.1057" y="0.1690" z="0.01" r="0" p="0" yaw="0" />
+    <xacro:add_pipe name="inner_back_right_pipe"   length="0.25" x="-0.1057" y="-0.1690" z="0.01" r="0" p="0" yaw="0" />
+    <xacro:add_pipe name="left_mid_back_horizontal_pipe" length="0.0702" x="-0.1058" y="0.1140" z="0.0198" r="${pi/2}" p="0" yaw="0" />
+    <xacro:add_pipe name="left_mid_front_horizontal_pipe" length="0.0702" x="0.1058" y="0.1140" z="0.0198" r="${pi/2}" p="0" yaw="0" />
+    <xacro:add_pipe name="right_mid_front_horizontal_pipe" length="0.0702" x="0.1058" y="-0.1140" z="0.0198" r="${pi/2}" p="0" yaw="0" />
+    <xacro:add_pipe name="right_mid_back_horizontal_pipe" length="0.0702" x="-0.1058" y="-0.1140" z="0.0198" r="${pi/2}" p="0" yaw="0" />
+    <xacro:add_pipe name="left_mid_long_pipe" length="0.33" x="0.0007" y="0.0744" z="0.02" r="0" p="${pi/2}" yaw="0" />
+    <xacro:add_pipe name="right_mid_long_pipe" length="0.33" x="0.0007" y="-0.0744" z="0.02" r="0" p="${pi/2}" yaw="0" />
+    <xacro:add_pipe name="enclosure" length="0.35" radius="0.055" x="0.0007" y="-0.001" z="0.01" r="0" p="${pi/2}" yaw="0" />
+
+</link>
+
+  <xacro:add_imu name="imu_sensor" parent_link="base_link" update_rate="400.0" x="0" y="0" z="0" r="${pi}" p="0" yaw="0" />
+  <xacro:add_imu name="vio_imu" parent_link="base_link" update_rate="300.0" topic="/imu0" x="0" y="0" z="0" r="0" p="0" yaw="0" />
+
+  <xacro:add_thruster id="1" x="0.2201"  y="-0.1126" z="-0.0224" r="-1.571" p="1.571" yaw="-0.785" prop_type="ccw" coeff="0.02" />
+  <xacro:add_thruster id="2" x="0.2201"  y="0.1126"  z="-0.0224" r="-1.571" p="1.571" yaw="-2.356" prop_type="ccw" coeff="0.02" />
+  <xacro:add_thruster id="3" x="-0.2201" y="-0.1126" z="-0.0224" r="-1.571" p="1.571" yaw="0.785"  prop_type="cw"  coeff="-0.02" />
+  <xacro:add_thruster id="4" x="-0.2201" y="0.1126"  z="-0.0224" r="-1.571" p="1.571" yaw="0.785"  prop_type="cw"  coeff="-0.02" />
+  <xacro:add_thruster id="5" x="0.0884"  y="-0.2126" z="0.0056"  r="0" p="0" yaw="0" prop_type="ccw" coeff="0.02" />
+  <xacro:add_thruster id="6" x="0.0884"  y="0.2126"  z="0.0056"  r="0" p="0" yaw="0" prop_type="cw"  coeff="-0.02" />
+  <xacro:add_thruster id="7" x="-0.0884" y="-0.2126" z="0.0056"  r="0" p="0" yaw="0" prop_type="cw"  coeff="-0.02" />
+  <xacro:add_thruster id="8" x="-0.0884" y="0.2126"  z="0.0056"  r="0" p="0" yaw="0" prop_type="ccw" coeff="0.02" />
+
+</robot>

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="add_pipe" params="name length x y z r p yaw radius:=0.0125">
+    
+    <visual name="${name}_visual">
+      <origin xyz="${x} ${y} ${z}" rpy="${r} ${p} ${yaw}"/>
+      <geometry>
+        <cylinder radius="${radius}" length="${length}"/>
+      </geometry>
+      <material name="dark_gray">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+    
+    <collision name="${name}_collision">
+      <origin xyz="${x} ${y} ${z}" rpy="${r} ${p} ${yaw}"/>
+      <geometry>
+        <cylinder radius="${radius}" length="${length}"/>
+      </geometry>
+    </collision>
+
+  </xacro:macro>
+
+</robot>

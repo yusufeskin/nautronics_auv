@@ -34,6 +34,307 @@
           </geometry>
         </collision>
 
+      <visual name="left_top_pipe">
+        <pose>0.001 0.156 0.1417 0 1.5708 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.365</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="Left_top_pipe">
+        <pose>0.001 0.156 0.1417 0 1.5708 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.365</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="right_top_pipe">
+        <pose>0.001 -0.156 0.1417 0 1.5708 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.365</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="right_top_pipe">
+        <pose>0.001 -0.156 0.1417 0 1.5708 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.365</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+
+      <visual name="back_top_pipe">
+        <pose>-0.182 -0.0017 0.1413 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.3354</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="back_top_pipe">
+        <pose>-0.182 -0.0017 0.1413 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.3354</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="front_top_pipe">
+        <pose>0.182 -0.0017 0.1413 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.3354</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="front_top_pipe">
+        <pose>0.182 -0.0017 0.1413 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.3354</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+
+
+      <visual name="left_bottom_pipe">
+        <pose>0.001 0.156 -0.123 0 1.5708 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.365</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="Left_bottom_pipe">
+        <pose>0.001 0.156 -0.123 0 1.5708 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.365</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+
+
+      <visual name="right_bottom_pipe">
+        <pose>0.001 -0.156 -0.123 0 1.5708 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.365</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="right_bottom_pipe">
+        <pose>0.001 -0.156 -0.123 0 1.5708 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.365</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+
+
+      <visual name="back_bottom_pipe">
+        <pose>-0.182 -0.0017 -0.123 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.3354</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="back_botom_pipe">
+        <pose>-0.182 -0.0017 -0.123 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.3354</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+
+      <visual name="front_bottom_pipe">
+        <pose>0.182 -0.0017 -0.123 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.3354</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="front_bottom_pipe">
+        <pose>0.182 -0.0017 -0.123 1.5708 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.3354</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+
+
+      <visual name="front_left_pipe">
+        <pose>0.1857 -0.0760 0.01 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.25</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+    <collision name="front_left_pipe">
+      <pose>0.1857 -0.0760 0.01 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.0125</radius>
+          <length>0.25</length>   
+        </cylinder>
+      </geometry>
+    </collision>
+
+
+
+      <visual name="front_right_pipe">
+        <pose>0.1857 0.0760 0.01 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.25</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+    <collision name="front_right_pipe">
+      <pose>0.1857 0.0760 0.01 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.0125</radius>
+          <length>0.25</length>   
+        </cylinder>
+      </geometry>
+    </collision>
+
+
+      <visual name="back_right_pipe">
+        <pose>-0.1857 0.0760 0.01 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.25</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+    <collision name="back_right_pipe">
+      <pose>-0.1857 0.0760 0.01 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.0125</radius>
+          <length>0.25</length>   
+        </cylinder>
+      </geometry>
+    </collision>
+
+
+      <visual name="back_left_pipe">
+        <pose>-0.1857 -0.0760 0.01 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0125</radius>
+            <length>0.25</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.1 0.1 1</ambient> 
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+
+    <collision name="back_left_pipe">
+      <pose>-0.1857 -0.0760 0.01 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.0125</radius>
+          <length>0.25</length>   
+        </cylinder>
+      </geometry>
+    </collision>
 
 
 
@@ -480,7 +781,7 @@
       <control channel="1">
         <jointName>thruster2_joint</jointName>
         <servo_min>1100</servo_min>
-        <servo_max>1900</servo_max>
+        <servo_max>1900</servo_max>I 've added thruster  location and Ardupilot plugin to use in simulation, I must find  
         <type>COMMAND</type>
         <cmd_topic>/model/prototype/joint/thruster2_joint/cmd_thrust</cmd_topic>
         <offset>-0.5</offset>
@@ -531,7 +832,7 @@
         <offset>-0.5</offset>
         <multiplier>100</multiplier>
       </control>
-      <control channel="7">
+      <control channel="7">I 've added thruster  location and Ardupilot plugin to use in simulation, I must find  
         <jointName>thruster8_joint</jointName>
         <servo_min>1100</servo_min>
         <servo_max>1900</servo_max>

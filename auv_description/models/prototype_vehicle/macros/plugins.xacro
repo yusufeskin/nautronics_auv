@@ -5,12 +5,25 @@
     <plugin filename="gz-sim-hydrodynamics-system" name="gz::sim::systems::Hydrodynamics">
       <link_name>base_link</link_name>
       <water_density>1000.0</water_density>
-      <xDotU>0</xDotU> <yDotV>0</yDotV> <zDotW>0</zDotW>
-      <kDotP>0</kDotP> <mDotQ>0</mDotQ> <nDotR>0</nDotR>
-      <xU>0</xU> <yV>0</yV> <zW>0</zW>
-      <kP>0</kP> <mQ>0</mQ> <nR>0</nR>
-      <xUabsU>-58.42</xUabsU> <yVabsV>-55.137</yVabsV> <zWabsW>-124.818</zWabsW>
-      <kPabsP>-4.0</kPabsP>   <mQabsQ>-4.0</mQabsQ>   <nRabsR>-4.0</nRabsR>
+
+      <xDotU>5.0</xDotU> 
+      <yDotV>5.0</yDotV> 
+      <zDotW>5.0</zDotW>
+      <kDotP>0</kDotP>   
+      <mDotQ>0</mDotQ>   
+      <nDotR>0</nDotR>
+      <xU>-20.0</xU> 
+      <yV>-20.0</yV> 
+      <zW>-20.0</zW>  
+      <kP>-10.0</kP> 
+      <mQ>-10.0</mQ> 
+      <nR>-10.0</nR>
+      <xUabsU>-17.1</xUabsU>   
+      <yVabsV>-25.65</yVabsV>  
+      <zWabsW>-27.0</zWabsW>   
+      <kPabsP>-4.0</kPabsP>
+      <mQabsQ>-4.0</mQabsQ>
+      <nRabsR>-4.0</nRabsR>
     </plugin>
 
     <plugin name="ArduPilotPlugin" filename="libArduPilotPlugin.so">
@@ -33,9 +46,18 @@
     </plugin>
 
 
-        <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
       <update_rate>50</update_rate>
-      <topic>/model/prototype_vehicle/joint_state</topic> </plugin>
+      <topic>/model/prototype_vehicle/joint_state</topic> 
+    </plugin>
+
+
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <dimensions>3</dimensions>
+    </plugin>
+
   </gazebo>
 
 

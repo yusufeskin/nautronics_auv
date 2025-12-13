@@ -9,14 +9,14 @@
   <link name="base_link">
     <inertial>
       <origin xyz="0 0 -0.05" rpy="0 0 0"/>
-      <mass value="11.0"/>
+      <mass value="10.0"/>
       <inertia ixx="0.201" ixy="0" ixz="0" iyy="0.223" iyz="0" izz="0.269"/>
     </inertial>
     <visual>
-      <geometry><mesh filename="model://prototype_vehicle/meshes/sim.obj"/></geometry>
+      <geometry><mesh filename="package://auv_description/models/prototype_vehicle/meshes/sim.obj"/></geometry>
     </visual>
 
-
+ 
     <xacro:add_pipe name="left_top_pipe"   length="0.365"  x="0.001"  y="0.156"   z="0.1417" r="0" p="${pi/2}" yaw="0" />
     <xacro:add_pipe name="right_top_pipe"  length="0.365"  x="0.001"  y="-0.156"  z="0.1417" r="0" p="${pi/2}" yaw="0" />
     <xacro:add_pipe name="back_top_pipe"   length="0.3354" x="-0.182" y="-0.0017" z="0.1413" r="${pi/2}" p="0" yaw="0" />

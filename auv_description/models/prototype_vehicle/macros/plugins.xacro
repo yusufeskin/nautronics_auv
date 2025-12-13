@@ -31,5 +31,17 @@
       <control channel="6"><jointName>thruster7_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster7_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
       <control channel="7"><jointName>thruster8_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster8_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
     </plugin>
+
+
+        <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <update_rate>50</update_rate>
+      <topic>/model/prototype_vehicle/joint_state</topic> </plugin>
   </gazebo>
+
+
+
+
+
+
+
 </robot>

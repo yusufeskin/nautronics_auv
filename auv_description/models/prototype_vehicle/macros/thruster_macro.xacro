@@ -6,15 +6,14 @@
       <visual>
         <origin xyz="0 0 0" rpy="-1.571 0 0"/> 
         <geometry>
-          <mesh filename="model://bluerov2_heavy/meshes/t200_${prop_type}_prop.dae"/>
-        </geometry>
+          <mesh filename="package://auv_description/models/bluerov2_heavy/meshes/t200_${prop_type}_prop.dae"/>
+        </geometry>  
       </visual>
       <inertial>
         <mass value="0.002"/>
         <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
       </inertial>
     </link>
-
     <joint name="thruster${id}_joint" type="continuous">
       <parent link="base_link"/>
       <child link="thruster${id}"/>

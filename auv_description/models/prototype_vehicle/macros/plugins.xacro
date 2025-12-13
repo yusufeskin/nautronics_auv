@@ -5,25 +5,12 @@
     <plugin filename="gz-sim-hydrodynamics-system" name="gz::sim::systems::Hydrodynamics">
       <link_name>base_link</link_name>
       <water_density>1000.0</water_density>
-
-      <xDotU>5.0</xDotU> 
-      <yDotV>5.0</yDotV> 
-      <zDotW>5.0</zDotW>
-      <kDotP>0</kDotP>   
-      <mDotQ>0</mDotQ>   
-      <nDotR>0</nDotR>
-      <xU>-20.0</xU> 
-      <yV>-20.0</yV> 
-      <zW>-20.0</zW>  
-      <kP>-10.0</kP> 
-      <mQ>-10.0</mQ> 
-      <nR>-10.0</nR>
-      <xUabsU>-17.1</xUabsU>   
-      <yVabsV>-25.65</yVabsV>  
-      <zWabsW>-27.0</zWabsW>   
-      <kPabsP>-4.0</kPabsP>
-      <mQabsQ>-4.0</mQabsQ>
-      <nRabsR>-4.0</nRabsR>
+      <xDotU>5.0</xDotU> <yDotV>5.0</yDotV> <zDotW>5.0</zDotW>
+      <kDotP>0</kDotP> <mDotQ>0</mDotQ> <nDotR>0</nDotR>
+      <xU>-20.0</xU> <yV>-20.0</yV> <zW>-20.0</zW>  
+      <kP>-10.0</kP> <mQ>-10.0</mQ> <nR>-10.0</nR>
+      <xUabsU>-17.1</xUabsU> <yVabsV>-25.65</yVabsV> <zWabsW>-27.0</zWabsW>   
+      <kPabsP>-4.0</kPabsP> <mQabsQ>-4.0</mQabsQ> <nRabsR>-4.0</nRabsR>
     </plugin>
 
     <plugin name="ArduPilotPlugin" filename="libArduPilotPlugin.so">
@@ -35,35 +22,28 @@
       <gazeboXYZToNED>0 0 0 3.142 0 1.571</gazeboXYZToNED>
       <imuName>imu_sensor</imuName>
       
-      <control channel="0"><jointName>thruster1_joint</jointName><servo_min>1000</servo_min><servo_max>2000</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster1_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
-      <control channel="1"><jointName>thruster2_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster2_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
-      <control channel="2"><jointName>thruster3_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster3_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
-      <control channel="3"><jointName>thruster4_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster4_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
-      <control channel="4"><jointName>thruster5_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster5_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
-      <control channel="5"><jointName>thruster6_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster6_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
-      <control channel="6"><jointName>thruster7_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster7_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
-      <control channel="7"><jointName>thruster8_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype/joint/thruster8_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
+      <control channel="0"><jointName>thruster1_joint</jointName><servo_min>1000</servo_min><servo_max>2000</servo_max><type>COMMAND</type><cmd_topic>/model/prototype_vehicle/joint/thruster1_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
+      <control channel="1"><jointName>thruster2_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype_vehicle/joint/thruster2_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
+      <control channel="2"><jointName>thruster3_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype_vehicle/joint/thruster3_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
+      <control channel="3"><jointName>thruster4_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype_vehicle/joint/thruster4_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
+      <control channel="4"><jointName>thruster5_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype_vehicle/joint/thruster5_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
+      <control channel="5"><jointName>thruster6_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype_vehicle/joint/thruster6_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
+      <control channel="6"><jointName>thruster7_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype_vehicle/joint/thruster7_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
+      <control channel="7"><jointName>thruster8_joint</jointName><servo_min>1100</servo_min><servo_max>1900</servo_max><type>COMMAND</type><cmd_topic>/model/prototype_vehicle/joint/thruster8_joint/cmd_thrust</cmd_topic><offset>-0.5</offset><multiplier>100</multiplier></control>
     </plugin>
-
 
     <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
       <update_rate>50</update_rate>
-      <topic>/model/prototype_vehicle/joint_state</topic> 
+      <topic>joint_states</topic> 
     </plugin>
-
 
     <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
       <odom_frame>odom</odom_frame>
       <robot_base_frame>base_link</robot_base_frame>
       <dimensions>3</dimensions>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <tf_topic>/model/prototype_vehicle/tf</tf_topic> 
     </plugin>
-
   </gazebo>
-
-
-
-
-
-
 
 </robot>

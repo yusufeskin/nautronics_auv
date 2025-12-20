@@ -2,7 +2,7 @@ name: ROS 2 Build Test
 
 on:
   push:
-    branches: [ main, 'fix/**' ]
+    branches: [ main, 'fix/**', 'feat/**']
   pull_request:
     branches: [ main ]
 
@@ -28,14 +28,11 @@ jobs:
           sudo apt-get install -y python3-vcstool
           cd src
           
-          # AKILLI ÇÖZÜM: Dosyayı nerede olursa olsun buluyoruz
-          # (İster root'ta olsun ister src içinde)
+          # .repos dosyasını dinamik olarak bul
           REPO_FILE=$(find nautronics_auv -name "nautronics.repos" | head -n 1)
           
           if [ -z "$REPO_FILE" ]; then
-            echo "::error::nautronics.repos dosyası bulunamadı! Dosya yapısı listeleniyor:"
-            ls -R nautronics_auv
-            exit 1
+            echo "::warning::nautronics.repos dosyası bulunamadı."
           else
             echo "Dosya bulundu: $REPO_FILE"
             vcs import < "$REPO_FILE"
@@ -44,9 +41,20 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
+          
+          REQ_FILE=$(find src -name "requirements.txt" | head -n 1)
+          
+          if [ -z "$REQ_FILE" ]; then
+             echo "::warning::requirements.txt bulunamadı, pip kurulumu atlanıyor."
+          else
+             echo "Python gereksinimleri kuruluyor: $REQ_FILE"
+             pip3 install -r "$REQ_FILE"
+          fi
+
           rosdep update
           rosdep install --from-paths src --ignore-src -r -y
 
+      # 5. Derle
       - name: Build Workspace
         shell: bash
         run: |

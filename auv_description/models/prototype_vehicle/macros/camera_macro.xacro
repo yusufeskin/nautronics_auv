@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="add_camera" params="name parent_link topic x y z r p yaw color">
+
+    <link name="${name}_link">
+      <visual>
+        <geometry>
+          <box size="0.03 0.03 0.03"/>
+        </geometry>
+        <material name="${name}_mat">
+            <color rgba="0.5 0.5 0.5 1"/>
+        </material>
+      </visual>
+      
+      <collision>
+        <geometry>
+          <box size="0.01 0.01 0.01"/>
+        </geometry>
+      </collision>
+
+      <inertial>
+        <mass value="0.00000001"/>
+        <inertia ixx="0.00000001" ixy="0" ixz="0" iyy="0.00000001" iyz="0" izz="0.00000001"/>
+      </inertial>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="${name}_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="${r} ${p} ${yaw}"/>
+    </joint>
+    <gazebo reference="${name}_link">
+      <material>Gazebo/${color}</material> <!-- Simülasyondaki Renk -->
+      
+      <sensor name="${name}" type="camera">
+        <pose>0 0 0 0 0 0</pose>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov> <!-- 60 Derece -->
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+        
+        <always_on>true</always_on>
+
+        <update_rate>30</update_rate>
+        <visualize>true</visualize>
+        <topic>${topic}</topic> 
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+</robot>

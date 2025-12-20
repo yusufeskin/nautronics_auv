@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<!-- SONAR MACRO FILE (to import simulation), we are using gazebo's lidar sensor to imitate bluerobotics' sonar 1D
+a cone created, which apical angle is approximately 30 degree (as like blue sonar), 
+and the parameters can be adjusted depending intended usage case -->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="add_sonar" params="name parent_link topic x y z r p yaw">
+
+    <link name="${name}_link">
+      <inertial>
+        <mass value="0.00000001"/> <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.00000001" ixy="0" ixz="0" iyy="0.00000001" iyz="0" izz="0.00000001"/>
+      </inertial>
+      
+      <visual>
+        <origin xyz="0 0 0" rpy="0 1.5707 0"/>
+        <geometry>
+          <cylinder length="0.022" radius="0.018"/>
+        </geometry>
+        <material name="ping_blue">
+          <color rgba="0.1 0.1 0.8 1"/> </material>
+      </visual>
+      
+      <collision>
+        <origin xyz="0 0 0" rpy="0 1.5707 0"/>
+        <geometry>
+          <cylinder length="0.022" radius="0.018"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="${name}_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="${r} ${p} ${yaw}"/>
+    </joint>
+
+    <gazebo reference="${name}_link">
+      <sensor name="${name}_sensor" type="gpu_lidar">
+        <pose>0 0 0 0 0 0</pose>
+        
+        <topic>${topic}</topic>
+        
+        <update_rate>30</update_rate>
+        
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        
+        <gz_frame_id>${name}_link</gz_frame_id>
+        
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>32</samples> <resolution>1</resolution>
+              <min_angle>-0.26</min_angle> <max_angle>0.26</max_angle>  </horizontal>
+
+            <vertical>
+              <samples>32</samples> <resolution>1</resolution>
+              <min_angle>-0.26</min_angle> <max_angle>0.26</max_angle>  </vertical>
+          </scan>
+          
+          <range>
+            <min>0.2</min>
+            <max>30.0</max> <resolution>0.01</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.02</stddev> </noise>
+        </lidar>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+</robot>

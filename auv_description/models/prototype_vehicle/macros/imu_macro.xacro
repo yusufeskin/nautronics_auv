@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="add_imu" params="name parent_link update_rate topic:='' x y z r p yaw">
+    
+    <gazebo reference="${parent_link}">
+      <sensor name="${name}" type="imu">
+        <pose>${x} ${y} ${z} ${r} ${p} ${yaw}</pose>
+        
+        <always_on>1</always_on>
+        <update_rate>${update_rate}</update_rate>
+        
+        <xacro:if value="${topic != ''}">
+          <topic>${topic}</topic>
+        </xacro:if>
+        
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

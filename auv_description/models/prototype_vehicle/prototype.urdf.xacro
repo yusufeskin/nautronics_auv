@@ -6,6 +6,7 @@
   <xacro:include filename="macros/plugins.xacro" />
   <xacro:include filename="macros/imu_macro.xacro"/>
   <xacro:include filename="macros/sonar_macro.xacro" />
+  <xacro:include filename="macros/camera_macro.xacro" />
 
   <link name="base_link">
     
@@ -44,6 +45,33 @@
       topic="sensors/sonar/front"
       x="0.188254" y="-0.038661" z="0.09952" 
       r="0.0" p="0.0" yaw="0.0" />
+
+  <xacro:add_camera
+    name="front_camera"
+    parent_link="base_link"
+    topic="/camera/front"
+    x="0.178062" y="0.0" z="0.0"
+    r="0.0" p="0.0" yaw="0.0"
+    color="Blue" />
+
+    <xacro:add_camera
+    name="bottom_camera"
+    parent_link="base_link"
+    topic="/camera/bottom"
+    x="0.0" y="0.0" z="-0.043071"
+    r="0.0" p="1.57" yaw="0.0"
+    color="Green" />
+
+    <xacro:add_camera
+    name="back_camera"
+    parent_link="base_link"
+    topic="/camera/back"
+    x="-0.177035" y="0.0" z="0.0"
+    r="0.0" p="0.0" yaw="3.14"
+    color="Green" />
+
+
+
 
   <xacro:add_thruster id="1" x="0.2201"  y="-0.1126" z="-0.0224" r="-1.571" p="1.571" yaw="-0.785" prop_type="ccw" coeff="0.02" />
   <xacro:add_thruster id="2" x="0.2201"  y="0.1126"  z="-0.0224" r="-1.571" p="1.571" yaw="-2.356" prop_type="ccw" coeff="0.02" />

@@ -16,32 +16,32 @@
   gz_type_name: "gz.msgs.Pose_V"
   direction: GZ_TO_ROS
   
-- ros_topic_name: "/prototype_vehicle/front_camera"
-  gz_topic_name: "/prototype_vehicle/front_camera"
-  ros_type_name: "sensor_msgs/msg/Image"
-  gz_type_name: "gz.msgs.Image"
-  direction: GZ_TO_ROS
-
 - ros_topic_name: "/model/prototype_vehicle/imu"
   gz_topic_name: "/model/prototype_vehicle/imu"
   ros_type_name: "sensor_msgs/msg/Imu"
   gz_type_name: "gz.msgs.IMU"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/prototype_vehicle/camera_info"
-  gz_topic_name: "/prototype_vehicle/camera_info"
+- ros_topic_name: "/camera/camera_info"
+  gz_topic_name: "/camera/camera_info"
   ros_type_name: "sensor_msgs/msg/CameraInfo"
   gz_type_name: "gz.msgs.CameraInfo"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/prototype_vehicle/stereo/right/image_raw"
-  gz_topic_name: "/prototype_vehicle/stereo/right/image_raw"
+- ros_topic_name: "/camera/front"
+  gz_topic_name: "/camera/front"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/prototype_vehicle/stereo/left/image_raw"
-  gz_topic_name: "/prototype_vehicle/stereo/left/image_raw"
+- ros_topic_name: "/camera/bottom"
+  gz_topic_name: "/camera/bottom"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/camera/back"
+  gz_topic_name: "/camera/back"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS

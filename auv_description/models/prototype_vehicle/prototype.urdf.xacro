@@ -11,12 +11,11 @@
   <link name="base_link">
     
     <inertial>
-      <origin xyz="0 0 -0.06" rpy="0 0 0"/>
-      <mass value="10.5"/> 
-      <inertia 
-          ixx="0.073" ixy="0" ixz="0" 
-          iyy="0.121" iyz="0" 
-          izz="0.125"/>    
+      <origin xyz="0 0 -0.0114" rpy="0 0 0"/> 
+      <mass value="12.8"/> <inertia 
+        ixx="0.26" ixy="0" ixz="0" 
+        iyy="0.23" iyz="0" 
+        izz="0.37"/>    
     </inertial>
 
     <visual>
@@ -27,8 +26,9 @@
     </visual>
 
     <collision name="base_collision">
+      <origin xyz="0 0 0.376" rpy="0 0 0"/> 
       <geometry>
-        <box size="0.30 0.20 0.19"/> 
+        <box size="0.457 0.575 0.05"/> 
       </geometry>
     </collision>
   </link>
@@ -50,7 +50,7 @@
     name="front_camera"
     parent_link="base_link"
     topic="/camera/front"
-    x="0.178062" y="0.0" z="0.0"
+    x="0.177035" y="0.0" z="0.0"
     r="0.0" p="0.0" yaw="0.0"
     color="Blue" />
 
@@ -76,7 +76,7 @@
   <xacro:add_thruster id="1" x="0.2201"  y="-0.1126" z="-0.0224" r="-1.571" p="1.571" yaw="-0.785" prop_type="ccw" coeff="0.02" />
   <xacro:add_thruster id="2" x="0.2201"  y="0.1126"  z="-0.0224" r="-1.571" p="1.571" yaw="-2.356" prop_type="ccw" coeff="0.02" />
   <xacro:add_thruster id="3" x="-0.2201" y="-0.1126" z="-0.0224" r="-1.571" p="1.571" yaw="0.785"  prop_type="cw"  coeff="-0.02" />
-  <xacro:add_thruster id="4" x="-0.2201" y="0.1126"  z="-0.0224" r="-1.571" p="1.571" yaw="0.785"  prop_type="cw"  coeff="-0.02" />
+  <xacro:add_thruster id="4" x="-0.2201" y="0.1126"  z="-0.0224" r="-1.571" p="1.571" yaw="2.356"  prop_type="cw"  coeff="-0.02" />
   
   <xacro:add_thruster id="5" x="0.0884"  y="-0.2126" z="0.0056"  r="0" p="0" yaw="0" prop_type="ccw" coeff="0.02" />
   <xacro:add_thruster id="6" x="0.0884"  y="0.2126"  z="0.0056"  r="0" p="0" yaw="0" prop_type="cw"  coeff="-0.02" />

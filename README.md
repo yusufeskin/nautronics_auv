@@ -1,6 +1,7 @@
 ## Requirements
 
 - **ArduPilot**
+
   https://github.com/ArduPilot/ardupilot
 
 - **ArduPilot Gazebo**  
@@ -12,7 +13,7 @@
 
 ## Installation
 
-Aşağıdaki adımları takip ederek projeyi kurabilirsiniz:
+Aşağıdaki adımları takip ederek projeyi kurabilirsiniz: (Bu kısımları daha düzenli hale getiririz şimdilik geliştirme yapmak için kurulum anlatılsa yeterli)
 
 ```bash
 mkdir -p ~/nautronics_auv/src
@@ -21,7 +22,8 @@ cd ~/nautronics_auv/src
 
 ```bash
 git clone https://github.com/yusufeskin/nautronics_auv
-cd ..
+cd ~/nautronics_auv
+
 
 vcs import src < src/nautronics_auv/nautronics.repos
 pip3 install -r src/nautronics_auv/requirements.txt
@@ -30,13 +32,18 @@ sudo apt update
 rosdep update
 rosdep install --from-paths src --ignore-src -r -y
 
+colcon build --symlink-install
+source install/setup.bash
+
+
+
 ```
 
 
 
 ## ArduPilot Gazebo Export Ayarlarının `.bashrc` Dosyasına Eklenmesi
 
-Aşağıdaki komutları terminale yapıştırarak tüm gerekli modelleri ve dünyaları `~/.bashrc` dosyasına ekleyebilirsiniz:
+Aşağıdaki komutları terminale yapıştırarak tüm gerekli modelleri ve dünyaları `~/.bashrc` dosyasına ekleyebilirsiniz: (Bu kısım düzeltilecek)
 
 ```bash
 echo 'export GZ_SIM_RESOURCE_PATH=$HOME/ardupilot_gazebo/models:$HOME/ardupilot_gazebo/worlds:$HOME/nautronics_auv/src/auv_description/models:$HOME/nautronics_auv/src/auv_description/worlds:${GZ_SIM_RESOURCE_PATH}' >> ~/.bashrc

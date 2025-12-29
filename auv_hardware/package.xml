@@ -13,7 +13,9 @@
   <test_depend>python3-pytest</test_depend>
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
 
+  <exec_depend>python3-pymavlink</exec_depend>
   <exec_depend>realsense2_camera</exec_depend>
   <exec_depend>realsense2_description</exec_depend>
   <exec_depend>image_transport_plugins</exec_depend>

@@ -27,6 +27,11 @@
         <pose>0 7 -10 0 0 0</pose>
     </include>
 
+    <include>
+      <uri>model://robosub_gate</uri>
+      <pose>3 0 -1.5 0 0 0</pose>
+    </include>
+
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"></plugin>
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"></plugin>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"></plugin>

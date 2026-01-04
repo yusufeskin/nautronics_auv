@@ -36,7 +36,7 @@
   <xacro:add_imu name="imu_sensor" parent_link="base_link" update_rate="400.0" 
                  x="0" y="0" z="0" r="${pi}" p="0" yaw="0" />
                  
-  <xacro:add_imu name="vio_imu" parent_link="base_link" update_rate="300.0" topic="/imu0" 
+  <xacro:add_imu name="vio_imu" parent_link="base_link" update_rate="50.0" topic="/imu0" 
                  x="0" y="0" z="0" r="0" p="0" yaw="0" />
 
   <xacro:add_sonar 

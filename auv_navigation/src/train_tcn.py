@@ -7,7 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import StandardScaler
 import joblib 
 import matplotlib.pyplot as plt
-
+#for the training of tcn model
 # --- AYARLAR ---
 CSV_FILE_PATH = '/home/sye/nautronics_auv/src/auv_navigation/src/egitim_verisi_20260109_011437.csv' 
 MODEL_SAVE_PATH = 'auv_tcn_model.pth'

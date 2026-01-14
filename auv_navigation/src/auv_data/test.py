@@ -6,10 +6,10 @@ import joblib
 import matplotlib.pyplot as plt
 
 # --- AYARLAR ---
-CSV_FILE_PATH = '/home/sye/nautronics_auv/src/auv_navigation/src/egitim_verisi_20260109_011437.csv' 
-MODEL_PATH = '/home/sye/nautronics_auv/src/auv_tcn_model.pth'
-SCALER_X_PATH = 'scaler_x.pkl'
-SCALER_Y_PATH = 'scaler_y.pkl'
+CSV_FILE_PATH = '/home/sye/nautronics_auv/src/auv_navigation/src/egitim_verisi_20260114_144054.csv' 
+MODEL_PATH = '/home/sye/nautronics_auv/src/auv_navigation/src/auv_tcn_model.pth'
+SCALER_X_PATH = '/home/sye/nautronics_auv/src/auv_navigation/src/scaler_x.pkl'
+SCALER_Y_PATH = '/home/sye/nautronics_auv/src/auv_navigation/src/scaler_y.pkl'
 
 # Parametreler (Eğitimle aynı)
 WINDOW_SIZE = 50
@@ -66,7 +66,7 @@ def main():
     df = pd.read_csv(CSV_FILE_PATH)
     
     # --- KRİTİK NOKTA: Sadece son %20'yi alıyoruz ---
-    train_size = int(len(df) * 0.8)
+    train_size = int(len(df) * 0.05)
     df_test = df[train_size:].reset_index(drop=True) # Görmediği veri
     
     print(f"Toplam Veri: {len(df)}")
@@ -115,20 +115,31 @@ def main():
     target_array = np.array(targets)
 
     # Grafik
-    plt.figure(figsize=(14, 8))
+    fig, axes = plt.subplots(3, 1, figsize=(15, 12), sharex=True)
     
-    # Sadece Surge (İleri Hız) örneği
-    plt.plot(target_array[:, 0], label='Gerçek (Ground Truth)', color='black', alpha=0.6, linewidth=2)
-    plt.plot(pred_real[:, 0], label='Yapay Zeka Tahmini (Unseen Data)', color='red', linestyle='--', linewidth=2)
+    titles = ['Surge Hızı (X)', 'Sway Hızı (Y)', 'Heave Hızı (Z)']
+    colors = ['red', 'blue', 'green']
     
-    plt.title("GÖRÜLMEMİŞ VERİ TESTİ: Surge Hızı")
-    plt.xlabel("Zaman Adımı")
-    plt.ylabel("Hız (m/s)")
-    plt.legend()
-    plt.grid()
-    plt.savefig('gercek_sinav_sonucu.png')
-    print("✅ Test bitti! 'gercek_sinav_sonucu.png' dosyasına bak.")
-    # plt.show() # SSH kullanıyorsan kapat
+    for i in range(3):
+        # Gerçek veri
+        axes[i].plot(target_array[:, i], label='Gerçek (Ground Truth)', 
+                     color='black', alpha=0.5, linewidth=1.5)
+        
+        # Tahmin verisi
+        axes[i].plot(pred_real[:, i], label=f'TCN Tahmini', 
+                     color=colors[i], linestyle='--', linewidth=1.5)
+        
+        axes[i].set_title(titles[i], fontsize=14)
+        axes[i].set_ylabel("Hız (m/s)")
+        axes[i].legend(loc='upper right')
+        axes[i].grid(True, which='both', linestyle='--', alpha=0.5)
 
+    plt.xlabel("Zaman Adımı (Window Step)")
+    plt.tight_layout() # Grafiklerin birbirine girmesini engeller
+    
+    save_path = 'auv_tüm_eksenler_test_sonucu.png'
+    plt.savefig(save_path)
+    print(f"✅ Analiz bitti! Tüm eksenlerin grafiği '{save_path}' dosyasına kaydedildi.")
+    # plt.show() # Eğer ekranın varsa açabilirsin
 if __name__ == "__main__":
     main()

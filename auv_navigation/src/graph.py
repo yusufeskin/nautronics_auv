@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # --- BURAYA SENİN CSV DOSYANIN ADINI YAZ ---
-csv_file = '/home/sye/nautronics_auv/src/auv_navigation/src/egitim_verisi_20260109_011437.csv'  # Dosya ismini kontrol et!
+csv_file = '/home/sye/nautronics_auv/src/auv_navigation/src/egitim_verisi_20260114_144054.csv'  # Dosya ismini kontrol et!
 
 try:
     df = pd.read_csv(csv_file)

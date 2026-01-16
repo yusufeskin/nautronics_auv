@@ -30,7 +30,8 @@ setup(
             'pwm_router_node = auv_hardware.pwm_router:main',
             'pixhawk_baro_reader = auv_hardware.baro_publisher:main',
             'ping_sonar_node = auv_hardware.ping_sonar:main',
-            'state_publisher = auv_hardware.state_publisher:main'
+            'state_publisher = auv_hardware.state_publisher:main',
+            'change_mode_service = auv_hardware.change_mode:main'
         ],
     },
 )

@@ -10,6 +10,7 @@ import rclpy
 import sys
 import gate.behaviors.imu
 from rclpy.qos import qos_profile_sensor_data
+import common_behaviors.state
 def tutorial_create_root() -> py_trees.behaviour.Behaviour:
     """
     Create a basic tree and start a 'Topics2BB' work sequence that
@@ -18,6 +19,7 @@ def tutorial_create_root() -> py_trees.behaviour.Behaviour:
     Returns:
         the root of the tree
     """
+
     root = py_trees.composites.Parallel(
         name="Tutorial One",
         policy=py_trees.common.ParallelPolicy.SuccessOnAll(
@@ -25,15 +27,24 @@ def tutorial_create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    topics2bb = py_trees.composites.Sequence(name="Topics2BB", memory=True)
+    topics2bb = py_trees.composites.Parallel(
+    name="Topics2BB",
+    policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False)
+)
     imu2bb = gate.behaviors.imu.ToBlackboard(
         name="Imu2BB",
         topic_name="/imu0",
         qos_profile=qos_profile_sensor_data
     )
 
+    status2bb = common_behaviors.state.ToBlackboard(
+        name="status2BB",
+        topic_name="/vehicle/state",
+        qos_profile=py_trees_ros.utilities.qos_profile_unlatched())
+
     root.add_child(topics2bb)
     topics2bb.add_child(imu2bb)
+    topics2bb.add_child(status2bb)
 
 
     return root

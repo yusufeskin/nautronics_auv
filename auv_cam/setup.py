@@ -24,7 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'camera_calibration_node = auv_cam.camera_calibration_node:main'
+            'camera_calibration_node = auv_cam.camera_calibration_node:main',
+            'gate_detector = auv_cam.gate_detector_node:main',
         ],
     },
 )

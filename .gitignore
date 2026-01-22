@@ -2,3 +2,4 @@
 *.pkl
 *.csv
 *.db3
+gate_dataset/

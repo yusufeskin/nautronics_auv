@@ -1,7 +1,6 @@
 from setuptools import find_packages, setup
-from glob import glob
-import os
-package_name = 'auv_hardware'
+
+package_name = 'auv_control'
 
 setup(
     name=package_name,
@@ -11,8 +10,6 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
-        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,11 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'pwm_router_node = auv_hardware.pwm_router:main',
-            'pixhawk_baro_reader = auv_hardware.baro_publisher:main',
-            'ping_sonar_node = auv_hardware.ping_sonar:main',
-            'state_publisher = auv_hardware.state_publisher:main',
-            'change_mode_service = auv_hardware.change_mode:main'
+            'point_follower = auv_control.point_follower:main',
         ],
     },
 )

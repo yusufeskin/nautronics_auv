@@ -5,6 +5,7 @@ import py_trees
 import py_trees_ros.trees
 import py_trees.console as console
 import rclpy
+import operator
 import sys
 import gate.behaviors.imu
 from rclpy.qos import qos_profile_sensor_data
@@ -37,25 +38,37 @@ def tutorial_create_root() -> py_trees.behaviour.Behaviour:
         qos_profile=qos_profile_sensor_data
     )
 
-    mode_request = SetVehicleMode.Request()
-    mode_request.mode_name = "ALT_HOLD"
+    status2bb = common_behaviors.state.ToBlackboard(
+        name="status2BB",
+        topic_name="/vehicle/state",
+        qos_profile=py_trees_ros.utilities.qos_profile_unlatched())
+    
+    tasks = py_trees.composites.Selector("Tasks", memory=False)
 
+    mode_request = SetVehicleMode.Request()
+    mode_request.mode_name = "GUIDED"
     switch_mode_node = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToAltHold",
+        name="SwitchToGuided",
         service_type=SetVehicleMode,
         service_name="/change_mode",
         service_request=mode_request
     )
 
-    status2bb = common_behaviors.state.ToBlackboard(
-        name="status2BB",
-        topic_name="/vehicle/state",
-        qos_profile=py_trees_ros.utilities.qos_profile_unlatched())
 
+    check_mode = py_trees.behaviours.CheckBlackboardVariableValue(
+    name="Check Guided Mode",
+    check=py_trees.common.ComparisonExpression(
+        variable="is_guided",
+        value=True,
+        operator=operator.eq
+    )
+)
     root.add_child(topics2bb)
-    root.add_child(switch_mode_node)
+    root.add_child(tasks)
     topics2bb.add_child(imu2bb)
     topics2bb.add_child(status2bb)
+    tasks.add_children([check_mode, switch_mode_node])
+
 
 
     return root

@@ -22,7 +22,17 @@ class ToBlackboard(subscribers.ToBlackboard):
                          blackboard_variables={"state": None},
                          clearing_policy=py_trees.common.ClearingPolicy.NEVER
                          )
+        self.blackboard.register_key(
+            key="vehicle_mode",
+            access=py_trees.common.Access.WRITE
+        )
 
+        self.blackboard.register_key(
+            key="is_guided",
+            access=py_trees.common.Access.WRITE
+        )
+        self.blackboard.vehicle_mode = "UNKNOWN"
+        self.blackboard.is_guided = False
         self.blackboard.state = auv_interfaces.msg.VehicleStatus()
         self.blackboard.state.header.frame_id = "base_link"
         self.blackboard.state.mode = "UNKNOWN"
@@ -41,5 +51,10 @@ class ToBlackboard(subscribers.ToBlackboard):
         self.logger.debug("%s.update()" % self.__class__.__name__)
         status = super(ToBlackboard, self).update()
         if status != py_trees.common.Status.RUNNING:
-            pass
+            current_msg = self.blackboard.state
+            self.blackboard.vehicle_mode = current_msg.mode
+            if current_msg.mode == "GUIDED":
+                self.blackboard.is_guided = True
+            else:
+                self.blackboard.is_guided = False
         return status

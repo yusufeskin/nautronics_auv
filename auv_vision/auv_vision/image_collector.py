@@ -6,6 +6,7 @@ import cv2
 import os
 import time
 
+OUTPUT_DIR_NAME = "gate_dataset"
 
 class ImageCollector(Node):
     def __init__(self):
@@ -20,10 +21,10 @@ class ImageCollector(Node):
 
         self.bridge = CvBridge()
 
-        # Directory configuration - Saving directly to Desktop
-        # Get the home directory dynamically (works for any user)
-        home_dir = os.path.expanduser('~')
-        self.output_dir = os.path.join(home_dir, 'Desktop', 'gate_dataset')
+        # nautronics_auv/auv_vision/gate_dataset
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        package_root = os.path.dirname(script_dir)
+        self.output_dir = os.path.join(package_root, OUTPUT_DIR_NAME)
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 

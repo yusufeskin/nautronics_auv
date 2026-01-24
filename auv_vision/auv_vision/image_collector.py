@@ -10,21 +10,21 @@ OUTPUT_DIR_NAME = "gate_dataset"
 
 class ImageCollector(Node):
     def __init__(self):
-        super().__init__('image_collector_node')
+        super().__init__("image_collector_node")
 
         # Change '/camera/front' to your actual camera topic if different
         self.subscription = self.create_subscription(
             Image, 
-            '/camera/front', 
+            "/camera/front", 
             self.camera_callback, 
             10)
 
         self.bridge = CvBridge()
 
-        # nautronics_auv/auv_vision/gate_dataset
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        package_root = os.path.dirname(script_dir)
-        self.output_dir = os.path.join(package_root, OUTPUT_DIR_NAME)
+        # nautronics_auv//gate_dataset
+        ws_root = os.path.abspath(__file__)
+        for i in range(7): ws_root = os.path.dirname(ws_root)
+        self.output_dir = os.path.join(ws_root, OUTPUT_DIR_NAME)
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
@@ -33,7 +33,6 @@ class ImageCollector(Node):
         self.capture_interval = 0.5  # Seconds
 
         self.get_logger().info('Image Collector started. Saving images to: ' + self.output_dir)
-
 
     def camera_callback(self, msg):
         current_time = time.time()

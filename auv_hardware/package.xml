@@ -20,6 +20,7 @@
   <exec_depend>image_transport_plugins</exec_depend>
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>bno055</exec_depend>
+  <exec_depend>python3-pymavlink</exec_depend>
 
 
   <export>

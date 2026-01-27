@@ -25,6 +25,7 @@ setup(
     entry_points={
     'console_scripts': [
         'image_collector = auv_vision.image_collector:main',
+        'model_tester = auv_vision.model_tester:main',
     ],
 	},
 )

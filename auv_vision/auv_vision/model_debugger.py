@@ -7,8 +7,8 @@ import cv2
 import os
 
 MODEL_NAME = "gate"
-INPUT_TOPIC_NAME = "/camera/front"
-OUTPUT_TOPIC_NAME = "/auv_vision/debug_output"
+INPUT_TOPIC = "/camera/front"
+OUTPUT_TOPIC = "/auv_vision/model_debug"
 
 class ModelTester(Node):
     def __init__(self):
@@ -17,10 +17,10 @@ class ModelTester(Node):
         for i in range(7): ws_root = os.path.dirname(ws_root)
 
         self.model_path = os.path.join(ws_root, f"src/nautronics_auv/auv_vision/models/{MODEL_NAME}.pt")
-        self.camera_topic = INPUT_TOPIC_NAME
+        self.camera_topic = INPUT_TOPIC
         self.conf_threshold = 0.5 # %50 confidence
         self.bridge = CvBridge()
-        self.publisher_ = self.create_publisher(Image, OUTPUT_TOPIC_NAME, 10)
+        self.publisher_ = self.create_publisher(Image, OUTPUT_TOPIC, 10)
         self.subscription = self.create_subscription(Image, self.camera_topic, self.image_callback, 10)
         
         self.get_logger().info(f"Loading model: {self.model_path}...")

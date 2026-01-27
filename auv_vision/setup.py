@@ -25,7 +25,8 @@ setup(
     entry_points={
     'console_scripts': [
         'image_collector = auv_vision.image_collector:main',
-        'model_tester = auv_vision.model_tester:main',
+        'model_debugger = auv_vision.model_debugger:main',
+        'gate_pnp_debugger = auv_vision.gate_pnp_debugger:main',
     ],
 	},
 )

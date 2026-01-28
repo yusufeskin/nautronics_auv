@@ -5,7 +5,6 @@ import shutil
 
 MODEL_NAME = "gate"
 IMG_DIR_NAME = "gate_dataset"
-
 NUM_KPTS = 5 # keypoints
 CLASS_ID = 0 # label/skeleton ID
 
@@ -15,8 +14,8 @@ model_path = os.path.join(ws_root, f"src/nautronics_auv/auv_vision/models/{MODEL
 
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 output_base_dir = os.path.join(desktop_path, f"{MODEL_NAME}_auto")
-dest_image_dir = os.path.join(output_base_dir, "images")
-dest_label_dir = os.path.join(output_base_dir, "labels")
+dest_image_dir = os.path.join(output_base_dir, "images/train")
+dest_label_dir = os.path.join(output_base_dir, "labels/train")
 
 os.makedirs(dest_image_dir, exist_ok=True)
 os.makedirs(dest_label_dir, exist_ok=True)

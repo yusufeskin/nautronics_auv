@@ -5,7 +5,7 @@ This script uses a mini model created with few samples and using that model to a
 * A .pt model trained with few samples (~60 depending on the sample count)
 
 ## Steps
-*All file and folder paths are given as and should be exactly same related to workspace root*
+*All file and folder paths are given as and should be exactly same related to workspace root.*
 *All import and export formats are Ultralytics YOLO Pose 1.0*
 
 ### 1. Taking the data.yaml and train.txt

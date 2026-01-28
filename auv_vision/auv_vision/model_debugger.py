@@ -10,9 +10,9 @@ MODEL_NAME = "gate"
 INPUT_TOPIC = "/camera/front"
 OUTPUT_TOPIC = "/auv_vision/model_debug"
 
-class ModelTester(Node):
+class ModelDebugger(Node):
     def __init__(self):
-        super().__init__("model_tester_node")
+        super().__init__("model_debugger_node")
         ws_root = os.path.abspath(__file__) # File is running from builded ros2 nodes folder
         for i in range(7): ws_root = os.path.dirname(ws_root)
 
@@ -44,7 +44,7 @@ class ModelTester(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ModelTester()
+    node = ModelDebugger()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

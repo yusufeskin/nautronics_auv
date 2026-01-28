@@ -6,7 +6,7 @@ This script uses a mini model created with few samples and using that model to a
 
 ## Steps
 *All file and folder paths are given as and should be exactly same related to workspace root*
-*ALl import and export formats are Ultralytics YOLO Pose 1.0*
+*All import and export formats are Ultralytics YOLO Pose 1.0*
 
 ### 1. Taking the data.yaml and train.txt
 You should have a task in cvat that contains all dataset and a skeleton structure. *(e.g. a gate label with 5 keypoints)*

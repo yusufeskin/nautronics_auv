@@ -7,6 +7,7 @@ import os
 import time
 
 OUTPUT_DIR_NAME = "gate_dataset"
+IMAGES_PER_SECOND = 5
 
 class ImageCollector(Node):
     def __init__(self):
@@ -30,7 +31,7 @@ class ImageCollector(Node):
 
         self.img_count = 0
         self.last_capture_time = time.time()
-        self.capture_interval = 0.5  # Seconds
+        self.capture_interval = 1 / IMAGES_PER_SECOND
 
         self.get_logger().info("Image Collector started. Saving images to: " + self.output_dir)
 
@@ -56,7 +57,6 @@ class ImageCollector(Node):
 
             except Exception as e:
                 self.get_logger().error(f"Failed to save image: {str(e)}")
-
 
 def main(args=None):
     rclpy.init(args=args)

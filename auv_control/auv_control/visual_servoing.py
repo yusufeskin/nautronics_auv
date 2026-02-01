@@ -31,22 +31,29 @@ class VisualServoingController(Node):
         x_norm = u_centered / self.fx
         y_norm = v_centered / self.fy
         #interaciton matrix
+        # interaction matrix (L)
+        # We want to control [vx, vy, vz, wy] -> Camera Surge, Sway, Heave, Yaw
         L = np.array([
-            [-1/self.z,   0,      x_norm/self.z,   y_norm],
-            [ 0,    -1/self.z,    y_norm/self.z,  -x_norm]
+            [-1/self.z,   0,      x_norm/self.z,   -(1 + x_norm**2)],
+            [ 0,    -1/self.z,    y_norm/self.z,   -x_norm * y_norm]
         ])
-        #because target point is (0,0) instead of writing ([x_norm - 0], [y_norm - 0]) I wrote directly [x_norm], [y_norm]
+        
+        # because target point is (0,0) -> error is just [x_norm, y_norm]
         error_vector = np.array([[x_norm], [y_norm]])
         try:
-            # Pseudo-Inverse, because its not square matrix
+            # Pseudo-Inverse
             L_inv = np.linalg.pinv(L)
-            # find the velocities
+            
+            # Velocities in Camera Frame: [v_cam_x, v_cam_y, v_cam_z, w_cam_y]
             velocities = -self.lambda_gain * np.dot(L_inv, error_vector)
-            self.get_logger().info(f'{velocities}')
-            cmd.linear.x = float(velocities[0])
-            cmd.linear.y = float(velocities[1])
-            cmd.linear.z = float(velocities[2])
-            cmd.angular.z = float(velocities[3])
+            
+            self.get_logger().info(f'Cam Vels: {velocities.flatten()}')
+            # frame transformation
+            cmd.linear.x = float(velocities[2])   # Surge = Cam Forward
+            cmd.linear.y = -float(velocities[0])  # Sway = -Cam Right 
+            cmd.linear.z = -float(velocities[1])  # Heave = -Cam Down
+            cmd.angular.z = -float(velocities[3]) # Yaw = -Cam Pan
+            
             self.publisher.publish(cmd)
             
             

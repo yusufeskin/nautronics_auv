@@ -48,17 +48,18 @@ class TorpedoPnPNode(Node):
         self.dist_coeffs = np.zeros((4,1))
         
         # --- 3D OBJECT POINTS (Local Frame) ---
-        # 0: Top-Left, 1: Top-Right, 2: Bottom-Right, 3: Bottom-Left
+        # ORDER MATTERS: Must match the order of keypoints from YOLO model!
+        # Assuming YOLO detects: Top-Left -> Top-Right -> Bottom-Right -> Bottom-Left
         w = self.target_width 
         h = self.target_height 
         self.object_points = np.array([
-            [0, 0, 0],   # Top-Left
-            [w, 0, 0],   # Top-Right
-            [w, h, 0],   # Bottom-Right
-            [0, h, 0]    # Bottom-Left
+            [0, 0, 0],   # 0: Top-Left
+            [w, 0, 0],   # 1: Top-Right
+            [w, h, 0],   # 2: Bottom-Right
+            [0, h, 0]    # 3: Bottom-Left
         ], dtype=np.float32)
 
-        self.get_logger().info("PnP Node (Legacy + Pixel Corners) Ready.")
+        self.get_logger().info("PnP Node (Keypoint Mode) Ready.")
 
     def image_callback(self, msg):
         try:
@@ -79,29 +80,32 @@ class TorpedoPnPNode(Node):
 
         results = self.model(frame, verbose=False)
 
-        if len(results) > 0 and len(results[0].boxes) > 0:
-            box = results[0].boxes[0]
-            xyxy = box.xyxy[0].cpu().numpy()
-            x_min, y_min, x_max, y_max = xyxy
+        # Check if we have detections AND keypoints
+        if len(results) > 0 and results[0].keypoints is not None and len(results[0].keypoints.xy) > 0:
             
-            # 1. Center Pixel Calculation (LEGACY)
-            pixel_center_x = (x_min + x_max) / 2.0
-            pixel_center_y = (y_min + y_max) / 2.0
+            # --- KEYPOINT EXTRACTION (THE FIX) ---
+            # Get the keypoints of the first detected object
+            # shape: (Num_Keypoints, 2) -> e.g., (4, 2)
+            kpts = results[0].keypoints.xy[0].cpu().numpy()
+            
+            # Check if we detected enough points (we need 4 for the rectangle)
+            if len(kpts) == 4:
+                image_points = np.array(kpts, dtype=np.float32)
 
-            # 2. Corner Pixels (NEW - PIXEL ONLY)
-            image_points = np.array([
-                [x_min, y_min], # Top-Left
-                [x_max, y_min], # Top-Right
-                [x_max, y_max], # Bottom-Right
-                [x_min, y_max]  # Bottom-Left
-            ], dtype=np.float32)
+                # Calculate Center Pixel (Average of 4 corners is more accurate for rotated objects)
+                pixel_center_x = np.mean(image_points[:, 0])
+                pixel_center_y = np.mean(image_points[:, 1])
 
-            success, rvec, tvec = cv2.solvePnP(
-                self.object_points, image_points, self.camera_matrix, self.dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE
-            )
+                # Solve PnP using REAL KEYPOINTS
+                success, rvec, tvec = cv2.solvePnP(
+                    self.object_points, image_points, self.camera_matrix, self.dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE
+                )
 
-            if success:
-                self.publish_data(tvec, rvec, image_points, pixel_center_x, pixel_center_y, detected=True)
+                if success:
+                    self.publish_data(tvec, rvec, image_points, pixel_center_x, pixel_center_y, detected=True)
+            else:
+                # Detected but not 4 points (maybe occlusion?)
+                self.publish_data(None, None, None, 0, 0, detected=False)
         
         else:
              self.publish_data(None, None, None, 0, 0, detected=False)
@@ -113,7 +117,7 @@ class TorpedoPnPNode(Node):
             # --- LEGACY CALCULATIONS (CENTER 3D) ---
             rotation_matrix, _ = cv2.Rodrigues(rvec)
             
-            # Center Calculation
+            # Center Calculation (Offset from Top-Left to Center)
             center_offset_object = np.array([[self.target_width/2.0], [self.target_height/2.0], [0.0]])
             center_offset_cam = np.dot(rotation_matrix, center_offset_object)
             tvec_center = tvec + center_offset_cam
@@ -133,7 +137,8 @@ class TorpedoPnPNode(Node):
             msg.orientation_vec = Vector3(x=float(euler[0]), y=float(euler[1]), z=float(euler[2]))
             msg.pixel_vec = Vector3(x=float(center_x), y=float(center_y), z=0.0)
 
-            # -- FILL PIXEL CORNERS (2D) --
+            # -- FILL PIXEL CORNERS (FROM KEYPOINTS) --
+            # Assuming standard order: TL, TR, BR, BL
             msg.pixel_top_left = Vector3(x=float(image_points[0][0]), y=float(image_points[0][1]), z=0.0)
             msg.pixel_top_right = Vector3(x=float(image_points[1][0]), y=float(image_points[1][1]), z=0.0)
             msg.pixel_bottom_right = Vector3(x=float(image_points[2][0]), y=float(image_points[2][1]), z=0.0)

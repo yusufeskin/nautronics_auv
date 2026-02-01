@@ -19,7 +19,7 @@ class PwmRouter(Node):
 
 
     def connect_pixhawk(self):
-        self.connection_string = '/dev/ttyACM0'
+        self.connection_string = 'udpin:0.0.0.0:14550'
         self.baudrate = 57600
         self.master = mavutil.mavlink_connection(self.connection_string, baud=self.baudrate)
         self.master.wait_heartbeat()

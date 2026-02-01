@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'point_follower = auv_control.point_follower:main',
+            'thruster_mixer = auv_control.thruster_mixer:main',
         ],
     },
 )

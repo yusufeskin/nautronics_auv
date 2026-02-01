@@ -31,7 +31,8 @@ setup(
             'pixhawk_baro_reader = auv_hardware.baro_publisher:main',
             'ping_sonar_node = auv_hardware.ping_sonar:main',
             'state_publisher = auv_hardware.state_publisher:main',
-            'change_mode_service = auv_hardware.change_mode:main'
+            'change_mode_service = auv_hardware.change_mode:main',
+            'battery_node = auv_hardware.battery_node:main',
         ],
     },
 )

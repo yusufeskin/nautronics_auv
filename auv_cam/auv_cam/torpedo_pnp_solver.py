@@ -20,26 +20,23 @@ class TorpedoPnPNode(Node):
         super().__init__('torpedo_pnp_node')
 
         # --- SETTINGS ---
-        self.target_width = 0.6   # Meters (Real world width)
-        self.target_height = 0.6  # Meters (Real world height)
-        self.norm_focal_length = 0.866 # Simulation focal length multiplier
+        self.target_width = 0.6   # Meters
+        self.target_height = 0.6  # Meters
+        self.norm_focal_length = 0.866 
         
         # --- MODEL LOADING ---
-        # Dynamically find the model path using ROS 2 package share directory
         pkg_share_dir = get_package_share_directory('auv_cam')
         model_path = os.path.join(pkg_share_dir, 'model', 'best.pt')
-        
-        self.get_logger().info(f"Model Path Found: {model_path}")
+        self.get_logger().info(f"Model Path: {model_path}")
         self.model = YOLO(model_path)
         
-        # --- QOS SETTINGS ---
+        # --- QOS ---
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
             depth=10
         )
 
-        # --- SUBSCRIBERS & PUBLISHERS ---
         self.img_topic = '/camera/front'
         self.subscription = self.create_subscription(
             Image, self.img_topic, self.image_callback, qos_profile) 
@@ -50,15 +47,18 @@ class TorpedoPnPNode(Node):
         self.camera_matrix = None
         self.dist_coeffs = np.zeros((4,1))
         
-        # --- 3D OBJECT POINTS ---
-        # Defining corners of the target relative to top-left (0,0,0)
+        # --- 3D OBJECT POINTS (Local Frame) ---
+        # 0: Top-Left, 1: Top-Right, 2: Bottom-Right, 3: Bottom-Left
         w = self.target_width 
         h = self.target_height 
         self.object_points = np.array([
-            [0, 0, 0], [w, 0, 0], [w, h, 0], [0, h, 0]  
+            [0, 0, 0],   # Top-Left
+            [w, 0, 0],   # Top-Right
+            [w, h, 0],   # Bottom-Right
+            [0, h, 0]    # Bottom-Left
         ], dtype=np.float32)
 
-        self.get_logger().info("PnP Node Ready.")
+        self.get_logger().info("PnP Node (Legacy + Pixel Corners) Ready.")
 
     def image_callback(self, msg):
         try:
@@ -67,7 +67,6 @@ class TorpedoPnPNode(Node):
         except Exception:
             return
 
-        # Initialize Camera Matrix (if not done)
         if self.camera_matrix is None:
             focal_length_pixel = self.norm_focal_length * width
             center_x = width / 2.0
@@ -78,7 +77,6 @@ class TorpedoPnPNode(Node):
                 [0, 0, 1]
             ], dtype=np.float32)
 
-        # YOLO Inference
         results = self.model(frame, verbose=False)
 
         if len(results) > 0 and len(results[0].boxes) > 0:
@@ -86,70 +84,76 @@ class TorpedoPnPNode(Node):
             xyxy = box.xyxy[0].cpu().numpy()
             x_min, y_min, x_max, y_max = xyxy
             
-            # Calculate Center Pixel
+            # 1. Center Pixel Calculation (LEGACY)
             pixel_center_x = (x_min + x_max) / 2.0
             pixel_center_y = (y_min + y_max) / 2.0
 
-            # 2D Image Points
+            # 2. Corner Pixels (NEW - PIXEL ONLY)
             image_points = np.array([
-                [x_min, y_min], [x_max, y_min], 
-                [x_max, y_max], [x_min, y_max]  
+                [x_min, y_min], # Top-Left
+                [x_max, y_min], # Top-Right
+                [x_max, y_max], # Bottom-Right
+                [x_min, y_max]  # Bottom-Left
             ], dtype=np.float32)
 
-            # Solve PnP
             success, rvec, tvec = cv2.solvePnP(
                 self.object_points, image_points, self.camera_matrix, self.dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE
             )
 
             if success:
-                self.publish_data(tvec, rvec, pixel_center_x, pixel_center_y, detected=True)
+                self.publish_data(tvec, rvec, image_points, pixel_center_x, pixel_center_y, detected=True)
         
         else:
-            # Publish zeros if not detected
-             self.publish_data(np.zeros((3,1)), np.zeros((3,1)), 0, 0, detected=False)
+             self.publish_data(None, None, None, 0, 0, detected=False)
 
-    def publish_data(self, tvec, rvec, pix_x, pix_y, detected):
+    def publish_data(self, tvec, rvec, image_points, center_x, center_y, detected):
         msg = TorpedoTarget()
         
         if detected:
-            # --- MATH / TRANSFORMATIONS ---
-            
-            # 1. Offset Calculation (Shift from corner to center)
+            # --- LEGACY CALCULATIONS (CENTER 3D) ---
             rotation_matrix, _ = cv2.Rodrigues(rvec)
+            
+            # Center Calculation
             center_offset_object = np.array([[self.target_width/2.0], [self.target_height/2.0], [0.0]])
             center_offset_cam = np.dot(rotation_matrix, center_offset_object)
             tvec_center = tvec + center_offset_cam
             
-            # 2. Axis Conversion (Camera Frame -> AUV Frame)
-            # AUV: X=Forward, Y=Left, Z=Up
-            auv_x = float(tvec_center[2][0])  # Camera Z -> AUV X
-            auv_y = float(-tvec_center[0][0]) # Camera -X -> AUV Y
-            auv_z = float(-tvec_center[1][0]) # Camera -Y -> AUV Z
+            # AUV Frame Conversion
+            auv_x = float(tvec_center[2][0])
+            auv_y = float(-tvec_center[0][0])
+            auv_z = float(-tvec_center[1][0])
             
-            # 3. Rotation Calculation (Euler Angles)
+            # Orientation
             r = R.from_matrix(rotation_matrix)
             euler = r.as_euler('xyz', degrees=False) 
 
-            # --- POPULATE MESSAGE ---
-
-            # 1. DISTANCE
+            # -- FILL LEGACY FIELDS --
             msg.distance = float(math.sqrt(auv_x**2 + auv_y**2 + auv_z**2))
-
-            # 2. VECTORS
             msg.position_vec = Vector3(x=auv_x, y=auv_y, z=auv_z)
             msg.orientation_vec = Vector3(x=float(euler[0]), y=float(euler[1]), z=float(euler[2]))
-            msg.pixel_vec = Vector3(x=float(pix_x), y=float(pix_y), z=0.0)
-            
-            # Optional Logging
-            # self.get_logger().info(
-            #     f"DISTANCE: {msg.distance:.2f}m | PIXEL: {pix_x:.0f},{pix_y:.0f}"
-            # )
+            msg.pixel_vec = Vector3(x=float(center_x), y=float(center_y), z=0.0)
+
+            # -- FILL PIXEL CORNERS (2D) --
+            msg.pixel_top_left = Vector3(x=float(image_points[0][0]), y=float(image_points[0][1]), z=0.0)
+            msg.pixel_top_right = Vector3(x=float(image_points[1][0]), y=float(image_points[1][1]), z=0.0)
+            msg.pixel_bottom_right = Vector3(x=float(image_points[2][0]), y=float(image_points[2][1]), z=0.0)
+            msg.pixel_bottom_left = Vector3(x=float(image_points[3][0]), y=float(image_points[3][1]), z=0.0)
+
         else:
-            # If target not found, publish zeros
+            # RESET ALL FIELDS
+            zero_vec = Vector3(x=0.0, y=0.0, z=0.0)
+            
+            # Legacy
             msg.distance = 0.0
-            msg.position_vec = Vector3(x=0.0, y=0.0, z=0.0)
-            msg.orientation_vec = Vector3(x=0.0, y=0.0, z=0.0)
-            msg.pixel_vec = Vector3(x=0.0, y=0.0, z=0.0)
+            msg.position_vec = zero_vec
+            msg.orientation_vec = zero_vec
+            msg.pixel_vec = zero_vec
+            
+            # Pixel Corners
+            msg.pixel_top_left = zero_vec
+            msg.pixel_top_right = zero_vec
+            msg.pixel_bottom_right = zero_vec
+            msg.pixel_bottom_left = zero_vec
 
         self.target_publisher.publish(msg)
 

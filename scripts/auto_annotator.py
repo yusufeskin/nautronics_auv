@@ -5,7 +5,7 @@ import shutil
 
 MODEL_NAME = "gate"
 IMG_DIR_NAME = "gate_dataset"
-NUM_KPTS = 5 # keypoints
+NUM_KPTS = 8 # keypoints
 CLASS_ID = 0 # label/skeleton ID
 
 ws_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))

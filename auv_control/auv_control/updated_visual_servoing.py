@@ -19,32 +19,62 @@ class VisualServoingController(Node):
         self.lambda_gain = 0.2
         self.subscriber = self.create_subscription(TorpedoTarget, '/auv/torpedo_data', self.visual_servoing, 10)
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
+
+        self.targets = [
+        (237, 127), # top_left
+        (433, 128), # top_right
+        (429, 322), # bottom_right
+        (239, 322)  # bottom_left
+    ]
+
+
+
+
     def visual_servoing(self, msg):
         cmd = Twist()
         self.z = msg.distance
         self.u = msg.pixel_vec.x
         self.v = msg.pixel_vec.y
+
+        self.current_points = [
+        (msg.pixel_top_left.x,     msg.pixel_top_left.y),
+        (msg.pixel_top_right.x,    msg.pixel_top_right.y),
+        (msg.pixel_bottom_right.x, msg.pixel_bottom_right.y),
+        (msg.pixel_bottom_left.x,  msg.pixel_bottom_left.y)
+    ]
         self.get_logger().warn(f"{self.z}, {self.u}, {self.v}")
-        #interaction matrix (L) assumes fx=1 and fy=1, we should normalize our pixel coordinates to give (L) 
-        u_centered = self.u - self.cu 
-        v_centered = self.v - self.cv
-        x_norm = u_centered / self.fx
-        y_norm = v_centered / self.fy
-        # interaction matrix (L)
-        # We want to control [vx, vy, vz, wy] -> Camera Surge, Sway, Heave, Yaw
-        L = np.array([
-            [-1/self.z,   0,      x_norm/self.z,   -(1 + x_norm**2)],
-            [ 0,    -1/self.z,    y_norm/self.z,   -x_norm * y_norm]
-        ])
+
+        L_stacked = []
+        error_stacked = []
+
+        for i in range(4):
+            curr_u, curr_v = self.current_points[i]
+            x = (curr_u - self.cu) / self.fx
+            y = (curr_v - self.cv) / self.fy
+            
+            tar_u, tar_v = self.targets[i]
+            x_star = (tar_u - self.cu) / self.fx
+            y_star = (tar_v - self.cv) / self.fy
+            
+            L_i = np.array([
+                [-1/self.z,    0,     x/self.z,   -(1 + x**2)],
+                [ 0,    -1/self.z,    y/self.z,   -x * y]
+            ])
+
+            e_i = np.array([[x - x_star], [y - y_star]])
         
-        # because target point is (0,0) -> error is just [x_norm, y_norm]
-        error_vector = np.array([[x_norm], [y_norm]])
+            L_stacked.append(L_i)
+            error_stacked.append(e_i)
+
+        #vertical stacking
+        L_total = np.vstack(L_stacked)
+        e_total = np.vstack(error_stacked)
         try:
             # Pseudo-Inverse
-            L_inv = np.linalg.pinv(L)
+            L_inv = np.linalg.pinv(L_total)
             
             # Velocities in Camera Frame: [v_cam_x, v_cam_y, v_cam_z, w_cam_y]
-            velocities = -self.lambda_gain * np.dot(L_inv, error_vector)
+            velocities = -self.lambda_gain * np.dot(L_inv, e_total)
             
             self.get_logger().info(f'Cam Vels: {velocities.flatten()}')
             # frame transformation

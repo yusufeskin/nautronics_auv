@@ -2,3 +2,6 @@
 *.pkl
 *.csv
 *.db3
+gate_dataset/
+__pycache__/
+*.pyc

@@ -27,6 +27,7 @@ setup(
             'point_follower = auv_control.point_follower:main',
             'thruster_mixer = auv_control.thruster_mixer:main',
             'visual_servoing = auv_control.visual_servoing:main',
+            'updated_visual_servoing = auv_control.updated_visual_servoing:main',
         ],
     },
 )

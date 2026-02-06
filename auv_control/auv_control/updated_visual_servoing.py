@@ -6,8 +6,6 @@ from auv_interfaces.msg import TorpedoTarget
 from geometry_msgs.msg import Twist
 
 
-
-
 class VisualServoingController(Node):
     def __init__(self):
         super().__init__('visual_servoing')
@@ -26,15 +24,13 @@ class VisualServoingController(Node):
         (429, 322), # bottom_right
         (239, 322)  # bottom_left
     ]
-
-
-
-
     def visual_servoing(self, msg):
         cmd = Twist()
         self.z = msg.distance
         self.u = msg.pixel_vec.x
         self.v = msg.pixel_vec.y
+        yaw_error = msg.orientation_vec.z 
+        w_yaw = -self.lambda_gain * yaw_error
 
         self.current_points = [
         (msg.pixel_top_left.x,     msg.pixel_top_left.y),
@@ -69,26 +65,42 @@ class VisualServoingController(Node):
         #vertical stacking
         L_total = np.vstack(L_stacked)
         e_total = np.vstack(error_stacked)
-        try:
-            # Pseudo-Inverse
-            L_inv = np.linalg.pinv(L_total)
-            
-            # Velocities in Camera Frame: [v_cam_x, v_cam_y, v_cam_z, w_cam_y]
-            velocities = -self.lambda_gain * np.dot(L_inv, e_total)
-            
-            self.get_logger().info(f'Cam Vels: {velocities.flatten()}')
-            # frame transformation
-            cmd.linear.x = float(velocities[2])   # Surge = Cam Forward
-            cmd.linear.y = -float(velocities[0])  # Sway = -Cam Right 
-            cmd.linear.z = -float(velocities[1])  # Heave = -Cam Down
-            cmd.angular.z = float(velocities[3]) # Yaw = -Cam Pan
-            
-            self.publisher.publish(cmd)
-            
-            
-        except np.linalg.LinAlgError:
-            self.get_logger().error("inversion failed!")
+        error_norm = np.linalg.norm(e_total)
+        self.get_logger().info(f"{error_norm}")
+        if error_norm < 0.05:
+            self.stop_robot()
             return
+        
+        L_v = L_total[:, 0:3]  # 8x3)
+        L_w = L_total[:, 3:]   # (8x1)
+
+        try:
+            L_v_inv = np.linalg.pinv(L_v)
+
+            # hybrid visual servoing (https://inria.hal.science/inria-00350638v1/document)
+            # v = -lambda * L_v_inv * (error - L_w * w_yaw)
+            compensated_error = e_total - (L_w * w_yaw)
+            linear_velocities = -self.lambda_gain * np.dot(L_v_inv, compensated_error)
+            
+            v_surge = np.clip(linear_velocities[2], -0.5, 0.5)
+            v_sway  = np.clip(linear_velocities[0], -0.5, 0.5)
+            v_heave = np.clip(linear_velocities[1], -0.5, 0.5)
+            
+            v_yaw = np.clip(w_yaw, -0.3, 0.3)
+
+            self.get_logger().info(f'Surge: {v_surge}, Sway: {v_sway}, Yaw: {v_yaw}')
+            cmd.linear.x = float(v_surge)
+            cmd.linear.y = -float(v_sway)
+            cmd.linear.z = -float(v_heave)
+            cmd.angular.z = float(v_yaw)
+
+            self.publisher.publish(cmd)
+
+        except np.linalg.LinAlgError:
+            return        
+    def stop_robot(self):
+        self.publisher.publish(Twist())
+
 
 
 def main(args=None):

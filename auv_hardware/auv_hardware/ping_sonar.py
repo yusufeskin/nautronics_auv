@@ -11,7 +11,7 @@ class PingUARTNode(Node):
     def __init__(self):
         super().__init__('ping_sonar_node')
         self.USE_SERIAL = True
-        self.SERIAL_PORT = '/dev/ttyTHS1'
+        self.SERIAL_PORT = '/dev/ttyACM0'
         self.BAUDRATE = 115200
         self.publisher_ = self.create_publisher(Range, 'sonar', 10)
         

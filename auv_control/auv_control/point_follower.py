@@ -10,7 +10,7 @@ class PointFollower(Node):
         self.subscription = self.create_subscription(PoseStamped, '/target_point', self.callback,10)
 
     def connect_mavlink(self):
-        connection_string = 'udpin:0.0.0.0:14550'
+        connection_string = '/dev/ttyACM0'  
         self.master = mavutil.mavlink_connection(connection_string)
         self.master.wait_heartbeat()
         self.get_logger().info("connected to mavlink")

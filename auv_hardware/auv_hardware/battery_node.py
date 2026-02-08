@@ -11,7 +11,7 @@ class BatteryNode(Node):
         
         # If using Simulator: 'udpin:0.0.0.0:14550'
         # If using USB:       '/dev/ttyACM0'
-        self.connection_string = 'udpin:0.0.0.0:14550' 
+        self.connection_string = '/dev/ttyACM0' 
         self.baud_rate = 57600
         
         self.get_logger().info(f'Connecting to Pixhawk at {self.connection_string}...')

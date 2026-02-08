@@ -30,7 +30,7 @@ class rc_data_reader(Node):
 
         
     def connect_mavlink(self):
-        self.connection = mavutil.mavlink_connection('tcp:127.0.0.1:5762') #I used tcp instead of udp because there was buffer problems due to the data stream rate 
+        self.connection = mavutil.mavlink_connection('/dev/ttyACM0') #I used tcp instead of udp because there was buffer problems due to the data stream rate 
         #and tcp more suitable for now, if we face an issue like that in real env we should put "--streamrate=-1" when executing the mavproxy.py
         #https://github.com/ArduPilot/ardupilot/issues/19761, I found the solution from this topic
         self.connection.wait_heartbeat()

@@ -82,11 +82,11 @@ class VisualServoingController(Node):
             compensated_error = e_total - (L_w * w_yaw)
             linear_velocities = -self.lambda_gain * np.dot(L_v_inv, compensated_error)
             
-            v_surge = np.clip(linear_velocities[2], -0.5, 0.5)
-            v_sway  = np.clip(linear_velocities[0], -0.5, 0.5)
-            v_heave = np.clip(linear_velocities[1], -0.5, 0.5)
+            v_surge = np.clip(linear_velocities[2], -1, 1)
+            v_sway  = np.clip(linear_velocities[0], -1, 1)
+            v_heave = np.clip(linear_velocities[1], -1, 1)
             
-            v_yaw = np.clip(w_yaw, -0.3, 0.3)
+            v_yaw = np.clip(w_yaw, -1, 1)
 
             self.get_logger().info(f'Surge: {v_surge}, Sway: {v_sway}, Yaw: {v_yaw}')
             cmd.linear.x = float(v_surge)

@@ -1,0 +1,9 @@
+# Goal
+geometry_msgs/Point[] target_points  # 4 adet (x,y) noktası içeren liste
+---
+# Result
+bool success
+---
+# Feedback
+float32 current_distance
+float32 current_error

@@ -613,7 +613,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <kinematic>0</kinematic>
       </link>
     </model>
-    <!-- <include>
+     <include>
       <uri>model://robosub_gate</uri>
       <name>robosub_gate_1</name>
       <pose>-5 6 -1.5 0 0 0.4</pose>
@@ -621,7 +621,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <include>
       <uri>model://robosub_torpedo</uri>
       <name>robosub_torpedo_1</name>
-      <pose>7 3.75 -2 1.57 0 2.94159</pose>
+      <pose>7 3.75 -2 1.57 0 0</pose>
     </include>
     <include>
       <uri>model://robosub_bin</uri>
@@ -647,8 +647,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       <uri>model://robosub_slalom</uri>
       <name>robosub_slalom_1_3</name>
       <pose>2.25 5.75 -1.35 0 0 1.57</pose>
-    </include>
- -->
+    </include> 
+
 
 
 

@@ -39,7 +39,7 @@
 
         <include>
       <uri>model://robosub_torpedo</uri>
-      <pose>2 0 -1.5 1.57 0 0</pose>
+      <pose>2 0 -1.0 1.57 0 0</pose>
     </include>
 
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"></plugin>

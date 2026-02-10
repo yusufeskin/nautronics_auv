@@ -13,7 +13,7 @@ def generate_launch_description():
     
     # 1. Dosya Yolları
     xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'prototype.urdf.xacro')
-    world_file = os.path.join(pkg_share, 'worlds', 'deneme.world')
+    world_file = os.path.join(pkg_share, 'worlds', 'pool.world')
     bridge_config_path = os.path.join(pkg_share, 'config', 'bridge.yaml')
     rviz_config_path = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
     # 2. Robot Tanımı (Xacro -> URDF)
@@ -71,7 +71,7 @@ def generate_launch_description():
     spawn_entity = Node(
         package='ros_gz_sim',
         executable='create',
-        arguments=['-topic', 'robot_description', '-name', 'prototype_vehicle', '-z', '-1.0'], # Biraz aşağıda doğsun
+        arguments=['-topic', 'robot_description', '-name', 'prototype_vehicle', '-z', '-1.0', '-x', '-9', '-y', '5'], # Biraz aşağıda doğsun
         output='screen'
     )
 

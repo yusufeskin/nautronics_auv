@@ -16,6 +16,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetVehicleMode.srv"   
   "msg/VehicleStatus.msg"    
   "msg/TorpedoTarget.msg"    
+  "action/ServoToTorpedo.action"
   DEPENDENCIES std_msgs geometry_msgs
 )
 

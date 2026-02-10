@@ -4,20 +4,14 @@ from rclpy.node import Node
 from pymavlink import mavutil
 from auv_interfaces.srv import SetVehicleMode
 
-CONNECTION_STRING = 'udpin:0.0.0.0:14550'
+CONNECTION_STRING = '/dev/ttyACM0'  
 BAUD_RATE = 57600
 
 class VehicleManager(Node):
     def __init__(self):
         super().__init__('vehicle_manager')
         self.get_logger().info(f"Pixhawk aranıyor: {CONNECTION_STRING}...")
-        try:
-            self.connection = mavutil.mavlink_connection(CONNECTION_STRING, baud=BAUD_RATE)
-            self.connection.wait_heartbeat()
-            self.get_logger().info("BAĞLANDI! Pixhawk Heartbeat alındı.")
-        except Exception as e:
-            self.get_logger().error(f"Bağlantı Hatası: {e}")
-            self.connection = None
+        self.link_bridge()
 
         self.srv = self.create_service(
             SetVehicleMode, 
@@ -31,6 +25,15 @@ class VehicleManager(Node):
             'POSHOLD': 16, 'MANUAL': 19
         }
 
+    def link_bridge(self):
+        try:
+            self.connection = mavutil.mavlink_connection(CONNECTION_STRING, baud=BAUD_RATE)
+            self.connection.wait_heartbeat()
+            self.get_logger().info("BAĞLANDI! Pixhawk Heartbeat alındı.")
+        except Exception as e:
+            self.get_logger().error(f"Bağlantı Hatası: {e}")
+            self.connection = None
+        
     def handle_mode_service(self, request, response):
         target_mode = request.mode_name.upper()
         self.get_logger().info(f"[SERVİS] Mod Değiştirme İsteği: {target_mode}")
@@ -49,6 +52,18 @@ class VehicleManager(Node):
             except Exception as e:
                 response.success = False
                 response.message = f"MAVLink Hatası: {e}"
+
+        elif target_mode == 'ARM':
+            self.connection.arducopter_arm()
+            response.success = True
+            response.message = "Arm edildi, komutlara hazır"
+
+        elif target_mode == 'DISARM':
+            self.connection.arducopter_disarm()
+            response.success = True
+            response.message = "Disarm edildi, komutlara kapali"
+
+        
         else:
             response.success = False
             response.message = f"Geçersiz Mod: {target_mode}"

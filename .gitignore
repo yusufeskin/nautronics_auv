@@ -4,4 +4,4 @@
 *.db3
 gate_dataset/
 __pycache__/
-*.pyc
+*.pycadditional_drivers/

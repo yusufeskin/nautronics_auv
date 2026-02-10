@@ -29,7 +29,7 @@ class VisualServoingActionServer(Node):
         self.msg_received = False
 
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
-        
+        #will be changed
         self.subscriber = self.create_subscription(
             TorpedoTarget, 
             '/auv/torpedo_data', 
@@ -124,7 +124,7 @@ class VisualServoingActionServer(Node):
                 
                 L_stacked.append(L_i)
                 error_stacked.append(e_i)
-
+            #vertical stacking
             L_total = np.vstack(L_stacked)
             e_total = np.vstack(error_stacked)
             error_norm = np.linalg.norm(e_total)
@@ -145,7 +145,8 @@ class VisualServoingActionServer(Node):
                 L_w = L_total[:, 3:] 
 
                 L_v_inv = np.linalg.pinv(L_v)
-
+                # hybrid visual servoing (https://inria.hal.science/inria-00350638v1/document)
+                # v = -lambda * L_v_inv * (error - L_w * w_yaw)
                 compensated_error = e_total - (L_w * w_yaw_val)
                 v_linear_raw = -self.lambda_gain * np.dot(L_v_inv, compensated_error)
 

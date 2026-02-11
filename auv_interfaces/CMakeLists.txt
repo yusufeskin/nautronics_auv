@@ -17,6 +17,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/VehicleStatus.msg"    
   "msg/TorpedoTarget.msg"    
   "action/ServoToTorpedo.action"
+  "action/YawAndScan.action"
+
   DEPENDENCIES std_msgs geometry_msgs
 )
 

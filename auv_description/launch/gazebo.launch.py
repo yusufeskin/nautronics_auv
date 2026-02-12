@@ -6,6 +6,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch.substitutions import Command, LaunchConfiguration
 from launch.conditions import IfCondition
+from launch.actions import SetEnvironmentVariable
 
 def generate_launch_description():
     pkg_name = 'auv_description'
@@ -91,5 +92,8 @@ def generate_launch_description():
         ros_gz_bridge,
         gz_sim,
         spawn_entity,
-        rviz_node
+        SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1'),
+        SetEnvironmentVariable('__GLX_VENDOR_LIBRARY_NAME', 'nvidia'),
+        SetEnvironmentVariable('GZ_SIM_RENDER_ENGINE', 'ogre2')
+        # rviz_node
     ])

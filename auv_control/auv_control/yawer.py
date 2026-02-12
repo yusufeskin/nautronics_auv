@@ -41,7 +41,7 @@ class ScanActionServer(Node):
 
         self.imu_sub = self.create_subscription(
             Imu, 
-            '/imu', 
+            '/imu0', 
             self.imu_callback, 
             10,
             callback_group=self.callback_group
@@ -50,7 +50,7 @@ class ScanActionServer(Node):
         self.current_yaw = 0.0
         self.is_imu_received = False
         
-        self.get_logger().info('Scan Action Server Hazır. /imu konusu dinleniyor...')
+        self.get_logger().info('Scan Action Server Hazır. /imu topici dinleniyor...')
 
     def imu_callback(self, msg):
         q = msg.orientation
@@ -59,7 +59,7 @@ class ScanActionServer(Node):
 
     def goal_callback(self, goal_request):
         if not self.is_imu_received:
-            self.get_logger().warn('REDDEDİLDİ: /imu konusundan henüz veri gelmiyor!')
+            self.get_logger().warn('REDDEDİLDİ: /imu topici veri publishlemiyor')
             return GoalResponse.REJECT
 
         if goal_request.angular_speed <= 0.0:
@@ -75,7 +75,7 @@ class ScanActionServer(Node):
 
     async def execute_callback(self, goal_handle):
         target_deg_relative = goal_handle.request.target_angle_deg
-        speed = goal_handle.request.angular_speed
+        max_speed = goal_handle.request.angular_speed
 
         start_yaw = self.current_yaw
         target_yaw_abs = normalize_angle(start_yaw + math.radians(target_deg_relative))
@@ -84,7 +84,10 @@ class ScanActionServer(Node):
         result = YawAndScan.Result()
         cmd = Twist()
 
-        TOLERANCE_RAD = 0.05 
+        TOLERANCE_RAD = 0.01
+        Kp = 1  #degistirilebilir
+        MIN_SPEED = 0.2 #surtunmeyi yenmesi icin
+
         rate = self.create_rate(20) 
 
         while rclpy.ok():
@@ -95,21 +98,34 @@ class ScanActionServer(Node):
                 result.message = "Operasyon iptal edildi."
                 return result
 
-            error = normalize_angle(target_yaw_abs - self.current_yaw)
+            error = normalize_angle(-target_yaw_abs + self.current_yaw)
 
             turned_amount = normalize_angle(self.current_yaw - start_yaw)
             feedback_msg.current_angle_deg = math.degrees(turned_amount)
             goal_handle.publish_feedback(feedback_msg)
 
             if abs(error) < TOLERANCE_RAD:
+                self.stop_robot()
+                self.get_logger().info("Hedefe varıldı, duruluyor...")
                 break
 
-            direction = 1.0 if error > 0 else -1.0
-            cmd.angular.z = speed * direction
+            calculated_speed = error * Kp
+
+            
+            if calculated_speed > max_speed:
+                calculated_speed = max_speed
+            elif calculated_speed < -max_speed:
+                calculated_speed = -max_speed
+
+            
+            if abs(calculated_speed) < MIN_SPEED:
+                calculated_speed = math.copysign(MIN_SPEED, calculated_speed)
+
+         
+            cmd.angular.z = calculated_speed
             self.vel_pub.publish(cmd)
             
             rate.sleep()
-
         self.stop_robot()
         
 
@@ -126,7 +142,6 @@ class ScanActionServer(Node):
         return result
 
     def stop_robot(self):
-        """Robotu güvenli bir şekilde durdurur."""
         cmd = Twist()
         cmd.angular.z = 0.0
         self.vel_pub.publish(cmd)
@@ -143,9 +158,21 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        action_server.stop_robot() #motorları kapatıyoruz sonsuza kadar son veriyle donmesin diye
-        action_server.destroy_node()
-        rclpy.shutdown()
+        try:
+            executor.shutdown()
+        except Exception:
+            pass
 
+        stop_cmd = Twist()
+        stop_cmd.angular.z = 0.0
+        
+        action_server.get_logger().info('Motorlar durduruluyor...')
+        for _ in range(4):
+            action_server.vel_pub.publish(stop_cmd)
+            time.sleep(0.1)
+            
+        action_server.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 if __name__ == '__main__':
     main()

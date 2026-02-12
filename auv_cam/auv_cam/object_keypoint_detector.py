@@ -7,13 +7,17 @@ import numpy as np
 from ultralytics import YOLO
 import os
 from ament_index_python.packages import get_package_share_directory 
-from auv_interfaces.msg import ObjectDetection, DetectionArray 
+from auv_interfaces.msg import DetectedObject, DetectionArray 
 from geometry_msgs.msg import Point
 from object_config import OBJECT_REGISTRY 
 
 class MultiObjectPnPNode(Node):
     def __init__(self):
         super().__init__('multi_object_pnp_node')
+        
+        pkg_share_dir = get_package_share_directory('auv_cam')
+        model_path = os.path.join(pkg_share_dir, 'model', 'best.pt')
+        self.model = YOLO(model_path)
 
         self.cu = 320.0
         self.cv = 240.0
@@ -27,14 +31,9 @@ class MultiObjectPnPNode(Node):
         ], dtype=np.float32)
         
         self.dist_coeffs = np.zeros((4,1))
-
-        self.object_library = {} 
+        self.object_library = {}
         self.load_object_config()
 
-        pkg_share_dir = get_package_share_directory('auv_cam')
-        model_path = os.path.join(pkg_share_dir, 'model', 'best.pt')
-        self.model = YOLO(model_path)
-        
         self.create_subscription(Image, '/camera/front', self.image_callback, 10) 
         self.target_publisher = self.create_publisher(DetectionArray, '/yolo_detections', 10)
         self.bridge = CvBridge()
@@ -70,26 +69,24 @@ class MultiObjectPnPNode(Node):
         for box, kpts in zip(boxes, kpts_batch):
             cls_id = int(box.cls[0])
 
-            obj_msg = ObjectDetection()
+            obj_msg = DetectedObject()
             obj_msg.class_id = cls_id
             obj_msg.class_name = self.object_library[cls_id]['name']
             obj_msg.confidence = float(box.conf[0])
             
             keypoints_2d = []
-            temp_points = []
-            for kp in kpts:
-                p = Point(x=float(kp[0]), y=float(kp[1]), z=0.0)
-                temp_points.append(p)
-                keypoints_2d.append([float(kp[0]), float(kp[1])])
-           
-            for i in range(len(temp_points)):
-                obj_msg.keypoints[i].x = temp_points[i].x
-                obj_msg.keypoints[i].y = temp_points[i].y
-                obj_msg.keypoints[i].z = 0.0
+            # index = keypoint index
+            for index in range(len(np.array(kpts))):
+                point = Point(x=float(kpts[index][0]), y=float(kpts[index][1]), z=0.0)
+                obj_msg.keypoints[index].x = point.x
+                obj_msg.keypoints[index].y = point.y
+                obj_msg.keypoints[index].z = 0.0
+                keypoints_2d.append([float(kpts[index][0]), float(kpts[index][1])])
 
             object_3d_points = self.object_library[cls_id]['points']
             image_2d_points = np.array(keypoints_2d, dtype=np.float32)
 
+            # distance -1 = no detection
             try:
                 success, rvec, tvec = cv2.solvePnP(
                     object_3d_points,
@@ -98,12 +95,8 @@ class MultiObjectPnPNode(Node):
                     self.dist_coeffs, 
                     flags=cv2.SOLVEPNP_ITERATIVE
                 )
-                
-                if success:
-                    obj_msg.distance = float(tvec[2][0])
-                else:
-                    obj_msg.distance = -1.0
-
+                if success: obj_msg.distance = float(tvec[2][0])
+                else: obj_msg.distance = -1.0
             except Exception:
                 obj_msg.distance = -1.0
 

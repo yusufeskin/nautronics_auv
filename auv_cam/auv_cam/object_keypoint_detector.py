@@ -76,11 +76,17 @@ class MultiObjectPnPNode(Node):
             obj_msg.confidence = float(box.conf[0])
             
             keypoints_2d = []
+            temp_points = []
             for kp in kpts:
                 p = Point(x=float(kp[0]), y=float(kp[1]), z=0.0)
-                obj_msg.keypoints.append(p)
+                temp_points.append(p)
                 keypoints_2d.append([float(kp[0]), float(kp[1])])
-            
+           
+            for i in range(len(temp_points)):
+                obj_msg.keypoints[i].x = temp_points[i].x
+                obj_msg.keypoints[i].y = temp_points[i].y
+                obj_msg.keypoints[i].z = 0.0
+
             object_3d_points = self.object_library[cls_id]['points']
             image_2d_points = np.array(keypoints_2d, dtype=np.float32)
 

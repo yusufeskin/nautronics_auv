@@ -27,7 +27,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'torpedo_pnp_solver = auv_cam.torpedo_pnp_solver:main',
+            'image_collector = auv_cam.image_collector:main',
         ],
     },
 )

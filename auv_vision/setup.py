@@ -27,6 +27,8 @@ setup(
         'image_collector = auv_vision.image_collector:main',
         'model_debugger = auv_vision.model_debugger:main',
         'gate_pnp_debugger = auv_vision.gate_pnp_debugger:main',
+        'object_keypoint_detector = auv_vision.object_keypoint_detector:main',
+        'torpedo_pnp_solver = auv_vision.torpedo_pnp_solver:main',
     ],
 	},
 )

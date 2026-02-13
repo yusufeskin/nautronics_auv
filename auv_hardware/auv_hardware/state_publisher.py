@@ -4,7 +4,7 @@ from rclpy.node import Node
 from auv_interfaces.msg import VehicleStatus
 
 
-MAVLINK_PORT = "udpin:0.0.0.0:14550"
+MAVLINK_PORT = "/dev/ttyACM0"
 BAUD_RATE = 57600
 ROS_TOPIC = 'vehicle/state'
 NODE_NAME = 'state_publisher'

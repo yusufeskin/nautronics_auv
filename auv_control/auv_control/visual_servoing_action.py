@@ -6,7 +6,7 @@ from rclpy.executors import MultiThreadedExecutor
 
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
-from auv_interfaces.msg import TorpedoTarget
+from auv_interfaces.msg import DetectionArray
 from auv_interfaces.action import ServoToTorpedo 
 
 import numpy as np
@@ -15,7 +15,7 @@ import time
 class VisualServoingActionServer(Node):
     def __init__(self):
         super().__init__('visual_servoing_action_server')
-        self.get_logger().info("Visual Servoing Action Server (Simple) Başladı")
+
 
         self.cu = 320
         self.cv = 240
@@ -31,8 +31,8 @@ class VisualServoingActionServer(Node):
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         #will be changed
         self.subscriber = self.create_subscription(
-            TorpedoTarget, 
-            '/auv/torpedo_data', 
+            DetectionArray, 
+            '/yolo_detections', 
             self.listener_callback, 
             10,
             callback_group=self.callback_group
@@ -41,7 +41,7 @@ class VisualServoingActionServer(Node):
         self._action_server = ActionServer(
             self,
             ServoToTorpedo,
-            'torpedo_servo',
+            'visual_servoing',
             execute_callback=self.execute_callback,
             goal_callback=self.goal_callback,
             cancel_callback=self.cancel_callback,
@@ -73,6 +73,7 @@ class VisualServoingActionServer(Node):
         result = ServoToTorpedo.Result()
 
         req_targets = goal_handle.request.target_points
+        req_object = goal_handle.request.target_object
         target_points_xy = [(pt.x, pt.y) for pt in req_targets]
 
         loop_rate = self.create_rate(10)
@@ -89,18 +90,25 @@ class VisualServoingActionServer(Node):
                 self.get_logger().warn("Veri bekleniyor...", throttle_duration_sec=1)
                 loop_rate.sleep()
                 continue
-
-            msg = self.latest_msg
-            z = msg.distance 
-            
+            target_obj = next(
+                (obj for obj in self.latest_msg.detections if obj.class_name == req_object), 
+                None
+            )
+            if target_obj is None:
+                self.get_logger().warn(f" i cant see! '{req_object}' ", throttle_duration_sec=1)
+                self.stop_robot()
+                loop_rate.sleep()
+                continue
+            z = target_obj.distance
+            kpts = target_obj.keypoints
             current_detected_points = [
-                (msg.pixel_top_left.x,     msg.pixel_top_left.y),
-                (msg.pixel_top_right.x,    msg.pixel_top_right.y),
-                (msg.pixel_bottom_right.x, msg.pixel_bottom_right.y),
-                (msg.pixel_bottom_left.x,  msg.pixel_bottom_left.y)
+                (kpts[0].x,     kpts[0].y),
+                (kpts[1].x,    kpts[1].y),
+                (kpts[2].x, kpts[2].y),
+                (kpts[3].x,  kpts[3].y)
             ]
 
-            yaw_error = msg.orientation_vec.z
+            yaw_error = target_obj.yaw_angle
             w_yaw_val = -self.lambda_gain * yaw_error
 
             L_stacked = []
@@ -133,7 +141,7 @@ class VisualServoingActionServer(Node):
             feedback_msg.current_error = float(error_norm)
             goal_handle.publish_feedback(feedback_msg)
 
-            if error_norm < 0.2:
+            if error_norm < 0.05:
                 self.get_logger().info(f"Hedefe Ulaşıldı! Hata: {error_norm:.4f}")
                 self.stop_robot()
                 goal_handle.succeed()

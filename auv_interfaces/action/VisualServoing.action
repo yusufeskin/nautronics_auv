@@ -1,5 +1,6 @@
 # Goal
 geometry_msgs/Point[] target_points  # 4 adet (x,y) noktası içeren liste
+string target_object
 ---
 # Result
 bool success

@@ -1,5 +1,6 @@
 from setuptools import find_packages, setup
-
+import os
+from glob import glob
 package_name = 'auv_vision'
 
 setup(
@@ -10,6 +11,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'model'), glob('model/*.pt')),
+
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,6 +30,8 @@ setup(
         'image_collector = auv_vision.image_collector:main',
         'model_debugger = auv_vision.model_debugger:main',
         'gate_pnp_debugger = auv_vision.gate_pnp_debugger:main',
+        'object_keypoint_detector = auv_vision.object_keypoint_detector:main',
+        'torpedo_pnp_solver = auv_vision.torpedo_pnp_solver:main',
     ],
 	},
 )

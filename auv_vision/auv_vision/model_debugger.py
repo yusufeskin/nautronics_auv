@@ -16,7 +16,7 @@ class ModelDebugger(Node):
         ws_root = os.path.abspath(__file__) # File is running from builded ros2 nodes folder
         for i in range(7): ws_root = os.path.dirname(ws_root)
 
-        self.model_path = os.path.join(ws_root, f"src/nautronics_auv/auv_vision/models/{MODEL_NAME}.pt")
+        self.model_path = os.path.join(ws_root, f"src/nautronics_auv/auv_vision/model/{MODEL_NAME}.pt")
         self.camera_topic = INPUT_TOPIC
         self.conf_threshold = 0.5 # %50 confidence
         self.bridge = CvBridge()

@@ -4,13 +4,13 @@
 OBJECT_REGISTRY = {
     0: {
         'name': 'torpedo',
-        'width': 0.60,
-        'height': 0.60
+        'width': 0.6,
+        'height': 0.6
     },
     1: {
         'name': 'gate',
-        'width': 1.50,
-        'height': 1.00
+        'width': 0.6,
+        'height': 0.6
     },
     2: {
         'name': 'buoy',

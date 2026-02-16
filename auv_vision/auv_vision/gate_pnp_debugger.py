@@ -9,7 +9,7 @@ import os
 import math
 from rclpy.qos import qos_profile_sensor_data
 
-MODEL_NAME = "gate"
+MODEL_NAME = "multimodel"
 
 class PnPDebugger(Node):
     def __init__(self):
@@ -18,24 +18,17 @@ class PnPDebugger(Node):
         # --- 1. Model Path Configuration ---
         ws_root = os.path.abspath(__file__)
         for i in range(7): ws_root = os.path.dirname(ws_root)
-        self.model_path = os.path.join(ws_root, f"src/nautronics_auv/auv_vision/models/{MODEL_NAME}.pt")
+        self.model_path = os.path.join(ws_root, f"src/auv_vision/model/{MODEL_NAME}.pt")
         
-        W_HALF = 1.524
-        H_HALF = 0.762
-        TOP_Y = -H_HALF
+        W_HALF = 0.6
+        H_HALF = 0.6
 
-        # 0: Bottom Left, 1: Middle Left, 2: Top Left
-        # 3: Middle Bar Bottom, 4: Middle Bar Top
-        # 5: Bottom Right, 6: Middle Right, 7: Top Right
+# Order: 0=Top Left, 1=Top Right, 2=Bottom Right, 3=Bottom Left
         self.object_points = np.array([
-            [-W_HALF, 0.6096, 0.0],         # 0: Bottom Left
-            [-W_HALF, 0, 0.0],              # 1: Middle Left
-            [-W_HALF, TOP_Y, 0.0],          # 2: Top Left
-            [ 0.0,    TOP_Y + 0.6096, 0.0], # 3: Middle Bar Bottom
-            [ 0.0,    TOP_Y, 0.0],          # 4: Middle Bar Top
-            [ W_HALF, 0.6096, 0.0],         # 5: Bottom Right
-            [ W_HALF, 0, 0.0],              # 6: Middle Right
-            [ W_HALF, TOP_Y, 0.0]           # 7: Top Right
+            [-W_HALF, -H_HALF, 0.0],  # 0: Top Left (sol üst)
+            [ W_HALF, -H_HALF, 0.0],  # 1: Top Right (sağ üst)
+            [ W_HALF,  H_HALF, 0.0],  # 2: Bottom Right (sağ alt)
+            [-W_HALF,  H_HALF, 0.0],  # 3: Bottom Left (sol alt)
         ], dtype=np.float32)
 
         # Vision Tools

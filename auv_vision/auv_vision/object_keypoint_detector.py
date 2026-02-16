@@ -9,13 +9,15 @@ import os
 from ament_index_python.packages import get_package_share_directory 
 from auv_interfaces.msg import DetectedObject, DetectionArray 
 from geometry_msgs.msg import Point
-from object_config import OBJECT_REGISTRY 
+from .object_config import OBJECT_REGISTRY 
+from scipy.spatial.transform import Rotation as R
+
 
 class MultiObjectPnPNode(Node):
     def __init__(self):
         super().__init__('multi_object_pnp_node')
         
-        pkg_share_dir = get_package_share_directory('auv_cam')
+        pkg_share_dir = get_package_share_directory('auv_vision')
         model_path = os.path.join(pkg_share_dir, 'model', 'best.pt')
         self.model = YOLO(model_path)
 
@@ -76,7 +78,7 @@ class MultiObjectPnPNode(Node):
             
             keypoints_2d = []
             # index = keypoint index
-            for index in range(len(np.array(kpts))):
+            for index in range(min(len(kpts), 4)):
                 point = Point(x=float(kpts[index][0]), y=float(kpts[index][1]), z=0.0)
                 obj_msg.keypoints[index].x = point.x
                 obj_msg.keypoints[index].y = point.y
@@ -95,10 +97,20 @@ class MultiObjectPnPNode(Node):
                     self.dist_coeffs, 
                     flags=cv2.SOLVEPNP_ITERATIVE
                 )
-                if success: obj_msg.distance = float(tvec[2][0])
-                else: obj_msg.distance = -1.0
+                if success: 
+                    obj_msg.distance = float(tvec[2][0])
+                    rmat, _ = cv2.Rodrigues(rvec)
+                    #if i face with an issue i will check below(note for myself) note2: i faced and i changed now its working(2 hours later)
+                    rot = R.from_matrix(rmat)
+                    euler = rot.as_euler('xyz', degrees=False)
+                    yaw = euler[2]
+                    obj_msg.yaw_angle = float(yaw)
+                else: 
+                    obj_msg.distance = -1.0
+                    obj_msg.yaw_angle = 0.0
             except Exception:
                 obj_msg.distance = -1.0
+                obj_msg.yaw_angle = 0.0
 
             det_array.detections.append(obj_msg)
 

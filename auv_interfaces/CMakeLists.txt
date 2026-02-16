@@ -18,7 +18,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TorpedoTarget.msg"
   "msg/DetectedObject.msg"
   "msg/DetectionArray.msg"
-  "action/ServoToTorpedo.action"
+  "action/VisualServoing.action"
   "action/YawAndScan.action"
 
   DEPENDENCIES std_msgs geometry_msgs

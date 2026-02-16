@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'torpedo_pnp_solver = auv_cam.torpedo_pnp_solver:main',
+            'gstreamer_cam_node = auv_cam.gstreamer_cam_node:main',
         ],
     },
 )

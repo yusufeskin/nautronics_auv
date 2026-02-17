@@ -17,15 +17,15 @@ class ToBlackboard(subscribers.ToBlackboard):
                          clearing_policy=py_trees.common.ClearingPolicy.NEVER
                          )
         self.blackboard.register_key(
-            key="is_gate_founded",
+            key="is_gate_found",
             access=py_trees.common.Access.WRITE
         )
         self.blackboard.register_key(
-            key="is_torpedo_founded",
+            key="is_torpedo_found",
             access=py_trees.common.Access.WRITE
         )
-        self.blackboard.is_gate_founded = False
-        self.blackboard.is_torpedo_founded = False
+        self.blackboard.is_gate_found = False
+        self.blackboard.is_torpedo_found = False
         self.blackboard.yolo_detections = DetectionArray()
         self.blackboard.yolo_detections.detections = []
         
@@ -33,9 +33,9 @@ class ToBlackboard(subscribers.ToBlackboard):
     def update(self) -> py_trees.common.Status:
         self.logger.debug("%s.update()" % self.__class__.__name__)
         status = super(ToBlackboard, self).update()
-        if status == py_trees.common.Status.SUCCESS:
+        if status != py_trees.common.Status.RUNNING: 
             detected_names = [obj.class_name for obj in self.blackboard.yolo_detections.detections]
-            self.blackboard.is_gate_founded = "gate" in detected_names
-            self.blackboard.is_torpedo_founded = "torpedo" in detected_names
+            self.blackboard.is_gate_found = "gate" in detected_names
+            self.blackboard.is_torpedo_found = "torpedo" in detected_names
 
         return status

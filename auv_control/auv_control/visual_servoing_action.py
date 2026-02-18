@@ -7,7 +7,7 @@ from rclpy.executors import MultiThreadedExecutor
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from auv_interfaces.msg import DetectionArray
-from auv_interfaces.action import ServoToTorpedo 
+from auv_interfaces.action import VisualServoing
 
 import numpy as np
 import time
@@ -40,7 +40,7 @@ class VisualServoingActionServer(Node):
 
         self._action_server = ActionServer(
             self,
-            ServoToTorpedo,
+            VisualServoing,
             'visual_servoing',
             execute_callback=self.execute_callback,
             goal_callback=self.goal_callback,
@@ -69,8 +69,8 @@ class VisualServoingActionServer(Node):
     async def execute_callback(self, goal_handle):
         self.get_logger().info('Visual Servoing Başlatılıyor...')
         
-        feedback_msg = ServoToTorpedo.Feedback()
-        result = ServoToTorpedo.Result()
+        feedback_msg = VisualServoing.Feedback()
+        result = VisualServoing.Result()
 
         req_targets = goal_handle.request.target_points
         req_object = goal_handle.request.target_object

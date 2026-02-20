@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'behaviour_tree = gate.behaviour_tree:main',
+            'gate_behaviour_tree = gate.gate_behaviour_tree:main',
         ],
     },
 )

@@ -8,23 +8,37 @@ import py_trees
 import py_trees_ros.trees
 import py_trees.console as console
 import py_trees_ros.service_clients
+import py_trees_ros.action_clients
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import qos_profile_sensor_data
-from auv_interfaces.srv import SetVehicleMode
 import gate.behaviours.check_depth
 import gate.behaviours.arrange_depth_action
+import gate.behaviours.object2bb
 import gate.behaviours.depth
 import common_behaviours.state 
-from auv_control import visual_servoing_action
-from auv_control import blind_push_action
+from auv_interfaces.action import VisualServoing
+from auv_interfaces.action import BlindPush
+from auv_interfaces.action import YawAndScan
+from auv_interfaces.srv import SetVehicleMode
+
+
 def create_root() -> py_trees.behaviour.Behaviour:
     root = py_trees.composites.Parallel(
         name="Main Parallel Root",
         policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False)
     )
 
-    publishers_sequence = py_trees.composites.Sequence("Publishers", memory=False)
+    publishers_parallel = py_trees.composites.Parallel(
+        name="Publishers",
+        policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False)
+    )
 
     main_mission_sequence = py_trees.composites.Sequence("Stabilize and Hold", memory=True)
+
+    one_shot_mission = py_trees.decorators.OneShot(
+        name="Mission OneShot",
+        child=main_mission_sequence,
+        policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION)
 
     depth2bb = gate.behaviours.depth.ToBlackboard(
         name="Depth2BB",
@@ -37,9 +51,15 @@ def create_root() -> py_trees.behaviour.Behaviour:
         topic_name="/vehicle/state_mode"
     )
 
-    check_arrange_depth_selector = py_trees.composites.Selector("Check Depth or Arrange", memory=False)
+    object2bb = gate.behaviours.object2bb.ToBlackboard(
+        name="Object2BB",
+        topic_name="/yolo_detections",  
+        qos_profile=qos_profile_sensor_data
+    )
 
-    check_depth_switch_althold_sequence = py_trees.composites.Sequence("Check Depth and Switch to AltHold", memory=False)
+    check_arrange_depth_selector = py_trees.composites.Selector("Check Depth or Arrange", memory=True)
+
+    check_depth_switch_althold_sequence = py_trees.composites.Sequence("Check Depth and Switch to AltHold", memory=True)
 
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=False)   
 
@@ -75,8 +95,6 @@ def create_root() -> py_trees.behaviour.Behaviour:
         speed=0.2             
     )
 
-    switch_althold_sequence = py_trees.composites.Sequence("Switch to AltHold", memory=False)
-
     mode_request_althold_second = SetVehicleMode.Request()
     mode_request_althold_second.mode_name = "ALT_HOLD"
     switch_mode_althold_second = py_trees_ros.service_clients.FromConstant(
@@ -86,16 +104,44 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_althold_second
     )
 
-    check_althold_mode = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Check AltHold Mode",
-        check=py_trees.common.ComparisonExpression(
-            variable="vehicle_mode",
-            value="ALT_HOLD",
-            operator=operator.eq
-        )
+    check_detected_selector = py_trees.composites.Selector("Check if Detected", memory=True)
+
+    check_gate_first = py_trees.behaviours.CheckBlackboardVariableValue(
+    name="Is Gate Detected?",
+    check=py_trees.common.ComparisonExpression(
+        variable="is_gate_found",
+        value=True,
+        operator=operator.eq
+    )
+)
+    
+    search_gate_sequence = py_trees.composites.Sequence("Turn and Find Gate", memory=True)
+
+    goal_msg = YawAndScan.Goal()
+    goal_msg.target_angle_deg = 15.0
+    goal_msg.angular_speed = 0.3  
+    
+    rotate_15_deg = py_trees_ros.action_clients.FromConstant(
+        name="Turn 15 degrees",
+        action_type=YawAndScan,
+        action_name="/yaw_and_scan", 
+        action_goal=goal_msg
     )
 
-    check_detected_selector = py_trees.composites.Selector("Check if Detected", memory=False)
+    check_gate_second = py_trees.behaviours.CheckBlackboardVariableValue(
+    name="Is Gate Detected?",
+    check=py_trees.common.ComparisonExpression(
+        variable="is_gate_found",
+        value=True,
+        operator=operator.eq
+    )
+)
+    
+    retry_search = py_trees.decorators.Retry(
+    name="retry (max)x24",
+    child=search_gate_sequence,
+    num_failures=24
+)
 
     allign_sequence = py_trees.composites.Sequence("Align to Gate", memory=False)
 
@@ -108,15 +154,6 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_manual
     )
 
-    check_manual_mode = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Check Manual Mode",
-        check=py_trees.common.ComparisonExpression(
-            variable="vehicle_mode",
-            value="MANUAL",
-            operator=operator.eq
-        )
-    )
-
     target_points = [
     (200.0, 100.0), # Top Left
     (440.0, 100.0), # Top Right
@@ -124,17 +161,24 @@ def create_root() -> py_trees.behaviour.Behaviour:
     (200.0, 380.0)  # Bottom Left
 ]
     
-    allign_node = visual_servoing_action.VisualServoingActionServer(
+    allign_node = py_trees_ros.action_clients.FromConstant(
         name="Visual Servoing to Gate",
-        target_object="gate",
-        target_points=target_points  
+        action_type=VisualServoing,
+        action_name="/visual_servoing_action",
+        action_goal=VisualServoing.Goal(
+            target_object="gate",
+            target_points=target_points
+        )
     )
 
-    blind_push_node = blind_push_action.BlindPushActionServer(
+    blind_push_node = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",
-        topic_cmd="/cmd_vel",
-        duration=5.0,
-        speed=0.3
+        action_type=BlindPush,
+        action_name="/blind_push_action",
+        action_goal=BlindPush.Goal(
+            duration=5.0,
+            speed=0.3
+        )
     )
 
     switch_althold_sequence_second = py_trees.composites.Sequence("Switch to AltHold", memory=False)
@@ -158,16 +202,20 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
 
-    root.add_child(publishers_sequence)
-    root.add_child(main_mission_sequence)
+    root.add_child(publishers_parallel)
+    root.add_child(one_shot_mission)
     
-    publishers_sequence.add_children([depth2bb, mode2bb])
-    main_mission_sequence.add_children([check_arrange_depth_selector])
+    publishers_parallel.add_children([depth2bb, mode2bb, object2bb])
+    main_mission_sequence.add_children([check_arrange_depth_selector, check_detected_selector, allign_sequence])
 
-    check_arrange_depth_selector.add_children([check_depth_switch_althold_sequence, arrange_depth_sequence])
+    check_arrange_depth_selector.add_children([check_depth_switch_althold_sequence, arrange_depth_sequence])   
+    arrange_depth_sequence.add_children([switch_mode_manual_first, arrange_depth_node, switch_mode_althold_second])
     check_depth_switch_althold_sequence.add_children([check_depth, switch_mode_althold_first])
-    arrange_depth_sequence.add_children([switch_mode_manual_first, arrange_depth_node, switch_althold_sequence])
-    switch_althold_sequence.add_children([switch_mode_althold_second, check_althold_mode])
+    check_detected_selector.add_children([check_gate_first, retry_search])
+    search_gate_sequence.add_children([rotate_15_deg, check_gate_second])
+    allign_sequence.add_children([switch_mode_manual_second, allign_node, blind_push_node, switch_althold_sequence_second])
+    switch_althold_sequence_second.add_children([switch_mode_althold_third, check_althold_mode_second])
+
     
     return root
 
@@ -181,6 +229,7 @@ def main():
 
     try:
         tree.setup(timeout=15)
+        print(py_trees.display.unicode_tree(root))
     except py_trees_ros.exceptions.TimedOutError as e:
         console.logerror(console.red + "Setup Error: Connection failed [{}]".format(str(e)) + console.reset)
         tree.shutdown()
@@ -195,13 +244,20 @@ def main():
     print("Starting Behavior Tree... (Press CTRL+Z to stop)")
     tree.tick_tock(period_ms=100.0)
 
+    # --- DEĞİŞEN KISIM BURASI ---
     try:
-        rclpy.spin(tree.node)
+        # Tek işlemci yerine Çoklu işlemci kullanıyoruz
+        executor = MultiThreadedExecutor()
+        executor.add_node(tree.node)
+        executor.spin()
     except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
         pass
     finally:
         tree.shutdown()
         rclpy.try_shutdown()
+
+if __name__ == '__main__':
+    main()
 
 if __name__ == '__main__':
     main()

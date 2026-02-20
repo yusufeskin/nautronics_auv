@@ -94,7 +94,7 @@ class BlindPushActionServer(Node):
             self.publisher.publish(cmd)
 
             # 4. Publish Feedback
-            feedback_msg.time_remaining = float(remaining)
+            feedback_msg.remaining_time = float(remaining)
             goal_handle.publish_feedback(feedback_msg)
 
             loop_rate.sleep()

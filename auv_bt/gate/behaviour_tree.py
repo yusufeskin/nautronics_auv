@@ -3,6 +3,7 @@
 
 import sys
 import operator
+from geometry_msgs.msg import Point
 import rclpy
 import py_trees
 import py_trees_ros.trees
@@ -15,7 +16,7 @@ import gate.behaviours.check_depth
 import gate.behaviours.arrange_depth_action
 import gate.behaviours.object2bb
 import gate.behaviours.depth
-import common_behaviours.state 
+import common_behaviors.state 
 from auv_interfaces.action import VisualServoing
 from auv_interfaces.action import BlindPush
 from auv_interfaces.action import YawAndScan
@@ -35,7 +36,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     main_mission_sequence = py_trees.composites.Sequence("Stabilize and Hold", memory=True)
 
-    one_shot_mission = py_trees.decorators.OneShot(
+    one_shot_main_mission = py_trees.decorators.OneShot(
         name="Mission OneShot",
         child=main_mission_sequence,
         policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION)
@@ -46,9 +47,11 @@ def create_root() -> py_trees.behaviour.Behaviour:
         qos_profile=qos_profile_sensor_data
     )
 
-    mode2bb = common_behaviours.state.ToBlackboard(
+    mode2bb = common_behaviors.state.ToBlackboard(
         name="Mode2BB",
-        topic_name="/vehicle/state_mode"
+        topic_name="/vehicle/state_mode",
+        qos_profile=qos_profile_sensor_data
+
     )
 
     object2bb = gate.behaviours.object2bb.ToBlackboard(
@@ -57,9 +60,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
         qos_profile=qos_profile_sensor_data
     )
 
-    check_arrange_depth_selector = py_trees.composites.Selector("Check Depth or Arrange", memory=True)
+    check_arrange_depth_selector = py_trees.composites.Selector("Check Depth or Arrange", memory=False)
 
-    check_depth_switch_althold_sequence = py_trees.composites.Sequence("Check Depth and Switch to AltHold", memory=True)
+    check_depth_switch_althold_sequence = py_trees.composites.Sequence("Check Depth and Switch to AltHold", memory=False)
 
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=False)   
 
@@ -107,9 +110,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
     check_detected_selector = py_trees.composites.Selector("Check if Detected", memory=True)
 
     check_gate_first = py_trees.behaviours.CheckBlackboardVariableValue(
-    name="Is Gate Detected?",
+    name="Is Torpedo Detected?",
     check=py_trees.common.ComparisonExpression(
-        variable="is_gate_found",
+        variable="is_torpedo_found",
         value=True,
         operator=operator.eq
     )
@@ -129,9 +132,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     check_gate_second = py_trees.behaviours.CheckBlackboardVariableValue(
-    name="Is Gate Detected?",
+    name="Is Torpedo Detected?",
     check=py_trees.common.ComparisonExpression(
-        variable="is_gate_found",
+        variable="is_torpedo_found",
         value=True,
         operator=operator.eq
     )
@@ -143,7 +146,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     num_failures=24
 )
 
-    allign_sequence = py_trees.composites.Sequence("Align to Gate", memory=False)
+    allign_sequence = py_trees.composites.Sequence("Align to Gate", memory=True)
 
     mode_request_manual = SetVehicleMode.Request()
     mode_request_manual.mode_name = "MANUAL"
@@ -154,19 +157,25 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_manual
     )
 
+
+    one_shot_mission = py_trees.decorators.OneShot(
+        name="Mission OneShot",
+        child=switch_mode_manual_second,
+        policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION)
+
     target_points = [
-    (200.0, 100.0), # Top Left
-    (440.0, 100.0), # Top Right
-    (440.0, 380.0), # Bottom Right
-    (200.0, 380.0)  # Bottom Left
+    Point(x=237.0, y=127.0, z=0.0),  # Top Left
+    Point(x=433.0, y=128.0, z=0.0),  # Top Right
+    Point(x=429.0, y=322.0, z=0.0),  # Bottom Right
+    Point(x=239.0, y=322.0, z=0.0)   # Bottom Left
 ]
     
     allign_node = py_trees_ros.action_clients.FromConstant(
         name="Visual Servoing to Gate",
         action_type=VisualServoing,
-        action_name="/visual_servoing_action",
+        action_name="/visual_servoing",
         action_goal=VisualServoing.Goal(
-            target_object="gate",
+            target_object="torpedo",
             target_points=target_points
         )
     )
@@ -174,7 +183,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     blind_push_node = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",
         action_type=BlindPush,
-        action_name="/blind_push_action",
+        action_name="/blind_push",
         action_goal=BlindPush.Goal(
             duration=5.0,
             speed=0.3
@@ -192,18 +201,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_althold_third
     )
 
-    check_althold_mode_second = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Check AltHold Mode",
-        check=py_trees.common.ComparisonExpression(
-            variable="vehicle_mode",
-            value="ALT_HOLD",
-            operator=operator.eq
-        )
-    )
-
-
     root.add_child(publishers_parallel)
-    root.add_child(one_shot_mission)
+    root.add_child(one_shot_main_mission)
     
     publishers_parallel.add_children([depth2bb, mode2bb, object2bb])
     main_mission_sequence.add_children([check_arrange_depth_selector, check_detected_selector, allign_sequence])
@@ -213,8 +212,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
     check_depth_switch_althold_sequence.add_children([check_depth, switch_mode_althold_first])
     check_detected_selector.add_children([check_gate_first, retry_search])
     search_gate_sequence.add_children([rotate_15_deg, check_gate_second])
-    allign_sequence.add_children([switch_mode_manual_second, allign_node, blind_push_node, switch_althold_sequence_second])
-    switch_althold_sequence_second.add_children([switch_mode_althold_third, check_althold_mode_second])
+    allign_sequence.add_children([one_shot_mission, allign_node, blind_push_node, switch_althold_sequence_second])
+    switch_althold_sequence_second.add_children([switch_mode_althold_third])
 
     
     return root

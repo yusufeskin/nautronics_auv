@@ -3,20 +3,22 @@
 
 import sys
 import operator
-from geometry_msgs.msg import Point
 import rclpy
+from geometry_msgs.msg import Point
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.qos import qos_profile_sensor_data
+
 import py_trees
 import py_trees_ros.trees
 import py_trees.console as console
 import py_trees_ros.service_clients
 import py_trees_ros.action_clients
-from rclpy.executors import MultiThreadedExecutor
-from rclpy.qos import qos_profile_sensor_data
-import gate.behaviours.check_depth
+
 import gate.behaviours.arrange_depth_action
 import gate.behaviours.object2bb
 import gate.behaviours.depth
 import common_behaviors.state 
+
 from auv_interfaces.action import VisualServoing
 from auv_interfaces.action import BlindPush
 from auv_interfaces.action import YawAndScan
@@ -24,6 +26,9 @@ from auv_interfaces.srv import SetVehicleMode
 
 
 def create_root() -> py_trees.behaviour.Behaviour:
+
+# 1. MAIN TREE STRUCTURE
+
     root = py_trees.composites.Parallel(
         name="Main Parallel Root",
         policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False)
@@ -39,7 +44,10 @@ def create_root() -> py_trees.behaviour.Behaviour:
     one_shot_main_mission = py_trees.decorators.OneShot(
         name="Mission OneShot",
         child=main_mission_sequence,
-        policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION)
+        policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION
+    )
+
+# 2. PUBLISHERS BRANCH
 
     depth2bb = gate.behaviours.depth.ToBlackboard(
         name="Depth2BB",
@@ -49,9 +57,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     mode2bb = common_behaviors.state.ToBlackboard(
         name="Mode2BB",
-        topic_name="/vehicle/state_mode",
+        topic_name="/vehicle/state",
         qos_profile=qos_profile_sensor_data
-
     )
 
     object2bb = gate.behaviours.object2bb.ToBlackboard(
@@ -60,33 +67,19 @@ def create_root() -> py_trees.behaviour.Behaviour:
         qos_profile=qos_profile_sensor_data
     )
 
-    check_arrange_depth_selector = py_trees.composites.Selector("Check Depth or Arrange", memory=False)
+    publishers_parallel.add_children([depth2bb, mode2bb, object2bb])
 
-    check_depth_switch_althold_sequence = py_trees.composites.Sequence("Check Depth and Switch to AltHold", memory=False)
+# 3. ARRANGE DEPTH BRANCH
 
-    arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=False)   
+    arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)   
 
-    check_depth = gate.behaviours.check_depth.CheckDepth(
-        name="Depth OK? (Main)",
-        topic_name="/odom" 
-    ) 
-
-    mode_request_althold_first = SetVehicleMode.Request()
-    mode_request_althold_first.mode_name = "ALT_HOLD"
-    switch_mode_althold_first = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToAltHold",
-        service_type=SetVehicleMode,
-        service_name="/change_mode",
-        service_request=mode_request_althold_first
-    )
-
-    mode_request_manual = SetVehicleMode.Request()
-    mode_request_manual.mode_name = "MANUAL"
+    mode_request_manual_1 = SetVehicleMode.Request()
+    mode_request_manual_1.mode_name = "MANUAL"
     switch_mode_manual_first = py_trees_ros.service_clients.FromConstant(
         name="SwitchToManual",
         service_type=SetVehicleMode,
         service_name="/change_mode",
-        service_request=mode_request_manual
+        service_request=mode_request_manual_1
     )
 
     arrange_depth_node = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
@@ -98,25 +91,32 @@ def create_root() -> py_trees.behaviour.Behaviour:
         speed=0.2             
     )
 
-    mode_request_althold_second = SetVehicleMode.Request()
-    mode_request_althold_second.mode_name = "ALT_HOLD"
-    switch_mode_althold_second = py_trees_ros.service_clients.FromConstant(
+    mode_request_althold_first = SetVehicleMode.Request()
+    mode_request_althold_first.mode_name = "ALT_HOLD"
+    switch_mode_althold_first = py_trees_ros.service_clients.FromConstant(
         name="SwitchToAltHold",
         service_type=SetVehicleMode,
         service_name="/change_mode",
-        service_request=mode_request_althold_second
+        service_request=mode_request_althold_first
     )
+
+    arrange_depth_sequence.add_children([
+        switch_mode_manual_first, 
+        arrange_depth_node, 
+        switch_mode_althold_first
+    ])
+
+# 4. SEARCH GATE (CHECK DETECTED) BRANCH
 
     check_detected_selector = py_trees.composites.Selector("Check if Detected", memory=True)
 
     check_gate_first = py_trees.behaviours.CheckBlackboardVariableValue(
-    name="Is Torpedo Detected?",
-    check=py_trees.common.ComparisonExpression(
-        variable="is_torpedo_found",
-        value=True,
-        operator=operator.eq
+        name="Is Torpedo Detected?",
+        check=py_trees.common.ComparisonExpression(
+            variable="is_torpedo_found",
+            value=True,
+            operator=operator.eq)
     )
-)
     
     search_gate_sequence = py_trees.composites.Sequence("Turn and Find Gate", memory=True)
 
@@ -132,43 +132,48 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     check_gate_second = py_trees.behaviours.CheckBlackboardVariableValue(
-    name="Is Torpedo Detected?",
-    check=py_trees.common.ComparisonExpression(
-        variable="is_torpedo_found",
-        value=True,
-        operator=operator.eq
+        name="Is Torpedo Detected?",
+        check=py_trees.common.ComparisonExpression(
+            variable="is_torpedo_found",
+            value=True,
+            operator=operator.eq)
     )
-)
-    
-    retry_search = py_trees.decorators.Retry(
-    name="retry (max)x24",
-    child=search_gate_sequence,
-    num_failures=24
-)
+
+    search_gate_sequence.add_children([rotate_15_deg, check_gate_second])
+
+    retry_search_gate = py_trees.decorators.Retry(
+        name="retry (max)x24",
+        child=search_gate_sequence,
+        num_failures=24
+    )
+
+    check_detected_selector.add_children([check_gate_first, retry_search_gate])
+
+# 5. ALIGN TO GATE BRANCH
 
     allign_sequence = py_trees.composites.Sequence("Align to Gate", memory=True)
 
-    mode_request_manual = SetVehicleMode.Request()
-    mode_request_manual.mode_name = "MANUAL"
+    mode_request_manual_2 = SetVehicleMode.Request()
+    mode_request_manual_2.mode_name = "MANUAL"
     switch_mode_manual_second = py_trees_ros.service_clients.FromConstant(
         name="SwitchToManual",
         service_type=SetVehicleMode,
         service_name="/change_mode",
-        service_request=mode_request_manual
+        service_request=mode_request_manual_2
     )
 
-
-    one_shot_mission = py_trees.decorators.OneShot(
-        name="Mission OneShot",
+    one_shot_manual_second = py_trees.decorators.OneShot(
+        name="Manual Second OneShot",
         child=switch_mode_manual_second,
-        policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION)
+        policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION
+    )
 
     target_points = [
-    Point(x=237.0, y=127.0, z=0.0),  # Top Left
-    Point(x=433.0, y=128.0, z=0.0),  # Top Right
-    Point(x=429.0, y=322.0, z=0.0),  # Bottom Right
-    Point(x=239.0, y=322.0, z=0.0)   # Bottom Left
-]
+        Point(x=237.0, y=127.0, z=0.0),  # Top Left
+        Point(x=433.0, y=128.0, z=0.0),  # Top Right
+        Point(x=429.0, y=322.0, z=0.0),  # Bottom Right
+        Point(x=239.0, y=322.0, z=0.0)   # Bottom Left
+    ]
     
     allign_node = py_trees_ros.action_clients.FromConstant(
         name="Visual Servoing to Gate",
@@ -190,33 +195,36 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    switch_althold_sequence_second = py_trees.composites.Sequence("Switch to AltHold", memory=False)
-
-    mode_request_althold_third = SetVehicleMode.Request()
-    mode_request_althold_third.mode_name = "ALT_HOLD"
-    switch_mode_althold_third = py_trees_ros.service_clients.FromConstant(
+    mode_request_althold_second = SetVehicleMode.Request()
+    mode_request_althold_second.mode_name = "ALT_HOLD"
+    switch_mode_althold_second = py_trees_ros.service_clients.FromConstant(
         name="SwitchToAltHold",
         service_type=SetVehicleMode,
         service_name="/change_mode",
-        service_request=mode_request_althold_third
+        service_request=mode_request_althold_second
     )
 
+    allign_sequence.add_children([
+        one_shot_manual_second, 
+        allign_node, 
+        blind_push_node, 
+        switch_mode_althold_second
+    ])
+
+# 6. ASSEMBLE MAIN MISSION
+
+    main_mission_sequence.add_children([
+        arrange_depth_sequence, 
+        check_detected_selector, 
+        allign_sequence
+    ])  
+    
     root.add_child(publishers_parallel)
     root.add_child(one_shot_main_mission)
     
-    publishers_parallel.add_children([depth2bb, mode2bb, object2bb])
-    main_mission_sequence.add_children([check_arrange_depth_selector, check_detected_selector, allign_sequence])
-
-    check_arrange_depth_selector.add_children([check_depth_switch_althold_sequence, arrange_depth_sequence])   
-    arrange_depth_sequence.add_children([switch_mode_manual_first, arrange_depth_node, switch_mode_althold_second])
-    check_depth_switch_althold_sequence.add_children([check_depth, switch_mode_althold_first])
-    check_detected_selector.add_children([check_gate_first, retry_search])
-    search_gate_sequence.add_children([rotate_15_deg, check_gate_second])
-    allign_sequence.add_children([one_shot_mission, allign_node, blind_push_node, switch_althold_sequence_second])
-    switch_althold_sequence_second.add_children([switch_mode_althold_third])
-
-    
     return root
+
+# ROS 2 MAIN EXECUTION
 
 def main():
     rclpy.init(args=None)
@@ -243,9 +251,7 @@ def main():
     print("Starting Behavior Tree... (Press CTRL+Z to stop)")
     tree.tick_tock(period_ms=100.0)
 
-    # --- DEĞİŞEN KISIM BURASI ---
     try:
-        # Tek işlemci yerine Çoklu işlemci kullanıyoruz
         executor = MultiThreadedExecutor()
         executor.add_node(tree.node)
         executor.spin()
@@ -255,8 +261,6 @@ def main():
         tree.shutdown()
         rclpy.try_shutdown()
 
-if __name__ == '__main__':
-    main()
 
 if __name__ == '__main__':
     main()

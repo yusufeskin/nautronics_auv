@@ -162,12 +162,6 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_manual_2
     )
 
-    one_shot_manual_second = py_trees.decorators.OneShot(
-        name="Manual Second OneShot",
-        child=switch_mode_manual_second,
-        policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION
-    )
-
     target_points = [
         Point(x=237.0, y=127.0, z=0.0),  # Top Left
         Point(x=433.0, y=128.0, z=0.0),  # Top Right
@@ -205,7 +199,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     allign_sequence.add_children([
-        one_shot_manual_second, 
+        switch_mode_manual_second, 
         allign_node, 
         blind_push_node, 
         switch_mode_althold_second

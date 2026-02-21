@@ -7,13 +7,14 @@ from auv_interfaces.srv import SetVehicleMode
 import math
 
 DEADZONE = 0.20
-SCALE_SURGE = 1.0
-SCALE_HEAVE = 0.8
-SCALE_YAW = 1.5 
 
 class AUVTeleop(Node):
     def __init__(self):
         super().__init__('auv_teleop_joy')
+
+        self.declare_parameter('scale_surge', 1.0)
+        self.declare_parameter('scale_heave', 0.8)
+        self.declare_parameter('scale_yaw', 1.5)
 
         self.AXIS_LEFT_STICK_Y = 1   # Heave için
         self.AXIS_RIGHT_STICK_Y = 4  # Surge için 
@@ -80,18 +81,22 @@ class AUVTeleop(Node):
 
 
         if self.is_armed:
+            scale_surge = self.get_parameter('scale_surge').value
+            scale_heave = self.get_parameter('scale_heave').value
+            scale_yaw = self.get_parameter('scale_yaw').value
+
             heave_input = self._apply_deadzone(msg.axes[self.AXIS_LEFT_STICK_Y])
             surge_input = self._apply_deadzone(msg.axes[self.AXIS_RIGHT_STICK_Y])
         
-            twist.linear.z = heave_input * SCALE_HEAVE
-            twist.linear.x = surge_input * SCALE_SURGE
+            twist.linear.z = heave_input * scale_heave
+            twist.linear.x = surge_input * scale_surge
 
             l2_val = (1.0 - msg.axes[self.AXIS_L2]) / 2.0
             r2_val = (1.0 - msg.axes[self.AXIS_R2]) / 2.0
             l2_input = self._apply_deadzone(l2_val)
             r2_input = self._apply_deadzone(r2_val)
 
-            twist.angular.z = (l2_input - r2_input) * SCALE_YAW
+            twist.angular.z = (l2_input - r2_input) * scale_yaw
 
         else:
 

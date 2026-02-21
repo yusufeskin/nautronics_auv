@@ -5,3 +5,4 @@
 gate_dataset/
 __pycache__/
 *.pycadditional_drivers/
+.vscode/

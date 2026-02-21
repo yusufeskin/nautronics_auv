@@ -24,24 +24,24 @@ Follow these steps to set up the development environment:
 
 1. **Create a Workspace**
    ```bash
-   mkdir -p ~/nautronics_auv/src
-   cd ~/nautronics_auv/src
+   mkdir -p ~/nautronics_ws/src
+   cd ~/nautronics_ws/src
    ```
 
 2. **Clone the Repository**
    ```bash
-   git clone https://github.com/yusufeskin/nautronics_auv .
-   cd ~/nautronics_auv
+   git clone https://github.com/yusufeskin/nautronics_auv
+   cd ~/nautronics_ws
    ```
 
 3. **Import Dependencies**
    ```bash
-   vcs import src < src/nautronics.repos
+   vcs import src < src/nautronics_auv/nautronics.repos
    ```
 
 4. **Install Python Requirements**
    ```bash
-   pip3 install -r src/requirements.txt
+   pip3 install -r src/nautronics_auv/requirements.txt
    ```
 
 5. **Install ROS Dependencies**

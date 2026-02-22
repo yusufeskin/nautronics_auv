@@ -86,7 +86,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         name="Arrange Depth",
         topic_odom="/odom",
         topic_cmd="/cmd_vel",  
-        target_depth=-1.5,
+        target_depth=-0.5,
         tolerance=0.2,   
         speed=0.2             
     )
@@ -111,9 +111,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
     check_detected_selector = py_trees.composites.Selector("Check if Detected", memory=True)
 
     check_gate_first = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Torpedo Detected?",
+        name="Is Gate Detected?",
         check=py_trees.common.ComparisonExpression(
-            variable="is_torpedo_found",
+            variable="is_gate_found",
             value=True,
             operator=operator.eq)
     )
@@ -132,9 +132,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     check_gate_second = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Torpedo Detected?",
+        name="Is Gate Detected?",
         check=py_trees.common.ComparisonExpression(
-            variable="is_torpedo_found",
+            variable="is_gate_found",
             value=True,
             operator=operator.eq)
     )
@@ -163,10 +163,10 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     target_points = [
-        Point(x=237.0, y=127.0, z=0.0),  # Top Left
-        Point(x=433.0, y=128.0, z=0.0),  # Top Right
-        Point(x=429.0, y=322.0, z=0.0),  # Bottom Right
-        Point(x=239.0, y=322.0, z=0.0)   # Bottom Left
+        Point(x=254.0, y=23.0, z=0.0),  # Top Left
+        Point(x=327.0, y=22.0, z=0.0),  # Top Right
+        Point(x=327.0, y=96.0, z=0.0),  # Bottom Right
+        Point(x=254.0, y=96.0, z=0.0)   # Bottom Left
     ]
     
     allign_node = py_trees_ros.action_clients.FromConstant(
@@ -174,7 +174,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=VisualServoing,
         action_name="/visual_servoing",
         action_goal=VisualServoing.Goal(
-            target_object="torpedo",
+            target_object="gate",
             target_points=target_points
         )
     )
@@ -184,7 +184,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=5.0,
+            duration=7.0,
             speed=0.3
         )
     )

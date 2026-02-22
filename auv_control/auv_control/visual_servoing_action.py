@@ -21,7 +21,7 @@ class VisualServoingActionServer(Node):
         self.cv = 240
         self.fx = 556
         self.fy = 556
-        self.lambda_gain = 0.2
+        self.lambda_gain = 0.05
 
         self.callback_group = ReentrantCallbackGroup()
 
@@ -160,10 +160,10 @@ class VisualServoingActionServer(Node):
 
                 v_linear = v_linear_raw.flatten() 
 
-                v_surge = np.clip(v_linear[2], -0.5, 0.5)
-                v_sway  = np.clip(v_linear[0], -0.5, 0.5)
-                v_heave = np.clip(v_linear[1], -0.5, 0.5)
-                v_yaw   = np.clip(w_yaw_val, -0.3, 0.3)
+                v_surge = np.clip(v_linear[2], -0.15, 0.15)
+                v_sway  = np.clip(v_linear[0], -0.15, 0.15)
+                v_heave = np.clip(v_linear[1], -0.15, 0.15)
+                v_yaw   = np.clip(w_yaw_val, -0.15, 0.15)
 
                 cmd = Twist()
                 cmd.linear.x = float(v_surge)

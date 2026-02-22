@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DetectionArray.msg"
   "action/VisualServoing.action"
   "action/YawAndScan.action"
+  "action/BlindPush.action"
 
   DEPENDENCIES std_msgs geometry_msgs
 )

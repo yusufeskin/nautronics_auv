@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'mission_node = gate.mission:tutorial_main',
+            'gate_behaviour_tree = gate.gate_behaviour_tree:main',
         ],
     },
 )

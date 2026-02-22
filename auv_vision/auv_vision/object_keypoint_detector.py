@@ -114,8 +114,8 @@ class MultiObjectPnPNode(Node):
 
             det_array.detections.append(obj_msg)
 
-        if len(det_array.detections) > 0:
-            self.target_publisher.publish(det_array)
+        self.target_publisher.publish(det_array)
+            
 
 def main(args=None):
     rclpy.init(args=args)

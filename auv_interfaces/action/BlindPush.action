@@ -1,0 +1,9 @@
+# Goal
+float32 duration   
+float32 speed      
+---
+# Result
+bool success      
+---
+# Feedback
+float32 remaining_time 

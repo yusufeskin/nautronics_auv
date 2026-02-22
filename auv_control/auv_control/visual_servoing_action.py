@@ -7,7 +7,7 @@ from rclpy.executors import MultiThreadedExecutor
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from auv_interfaces.msg import DetectionArray
-from auv_interfaces.action import ServoToTorpedo 
+from auv_interfaces.action import VisualServoing
 
 import numpy as np
 import time
@@ -21,7 +21,7 @@ class VisualServoingActionServer(Node):
         self.cv = 240
         self.fx = 556
         self.fy = 556
-        self.lambda_gain = 0.2
+        self.lambda_gain = 0.05
 
         self.callback_group = ReentrantCallbackGroup()
 
@@ -40,7 +40,7 @@ class VisualServoingActionServer(Node):
 
         self._action_server = ActionServer(
             self,
-            ServoToTorpedo,
+            VisualServoing,
             'visual_servoing',
             execute_callback=self.execute_callback,
             goal_callback=self.goal_callback,
@@ -69,8 +69,8 @@ class VisualServoingActionServer(Node):
     async def execute_callback(self, goal_handle):
         self.get_logger().info('Visual Servoing Başlatılıyor...')
         
-        feedback_msg = ServoToTorpedo.Feedback()
-        result = ServoToTorpedo.Result()
+        feedback_msg = VisualServoing.Feedback()
+        result = VisualServoing.Result()
 
         req_targets = goal_handle.request.target_points
         req_object = goal_handle.request.target_object
@@ -160,10 +160,10 @@ class VisualServoingActionServer(Node):
 
                 v_linear = v_linear_raw.flatten() 
 
-                v_surge = np.clip(v_linear[2], -0.5, 0.5)
-                v_sway  = np.clip(v_linear[0], -0.5, 0.5)
-                v_heave = np.clip(v_linear[1], -0.5, 0.5)
-                v_yaw   = np.clip(w_yaw_val, -0.3, 0.3)
+                v_surge = np.clip(v_linear[2], -0.15, 0.15)
+                v_sway  = np.clip(v_linear[0], -0.15, 0.15)
+                v_heave = np.clip(v_linear[1], -0.15, 0.15)
+                v_yaw   = np.clip(w_yaw_val, -0.15, 0.15)
 
                 cmd = Twist()
                 cmd.linear.x = float(v_surge)

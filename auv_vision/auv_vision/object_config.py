@@ -4,8 +4,8 @@
 OBJECT_REGISTRY = {
     0: {
         'name': 'gate',
-        'width': 3.048,
-        'height': 1.524
+        'width': 0.305,
+        'height': 0.305
     },
     1: {
         'name': 'torpedo',

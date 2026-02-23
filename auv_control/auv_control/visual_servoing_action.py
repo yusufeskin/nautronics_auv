@@ -12,16 +12,18 @@ from auv_interfaces.action import VisualServoing
 import numpy as np
 import time
 
+from submodules import pid_controller
+
 class VisualServoingActionServer(Node):
     def __init__(self):
         super().__init__('visual_servoing_action_server')
-
 
         self.cu = 320
         self.cv = 240
         self.fx = 556
         self.fy = 556
-        self.lambda_gain = 0.05
+        self.pid_controller = pid_controller.PID(0.24, 0, 0.3)
+        self.pid_controller2 = pid_controller.PID(0.24, 0, 0.3)
 
         self.callback_group = ReentrantCallbackGroup()
 
@@ -109,7 +111,8 @@ class VisualServoingActionServer(Node):
             ]
 
             yaw_error = target_obj.yaw_angle
-            w_yaw_val = -self.lambda_gain * yaw_error
+            # w_yaw_val = -0.2 * yaw_error
+            w_yaw_val = -self.pid_controller.calculate_power(yaw_error)
 
             L_stacked = []
             error_stacked = []
@@ -156,15 +159,24 @@ class VisualServoingActionServer(Node):
                 # hybrid visual servoing (https://inria.hal.science/inria-00350638v1/document)
                 # v = -lambda * L_v_inv * (error - L_w * w_yaw)
                 compensated_error = e_total - (L_w * w_yaw_val)
-                v_linear_raw = -self.lambda_gain * np.dot(L_v_inv, compensated_error)
-
+                v_linear_raw = -self.pid_controller2.calculate_power(np.dot(L_v_inv, compensated_error))
+                # v_linear_raw = -0.2 * np.dot(L_v_inv, compensated_error)
                 v_linear = v_linear_raw.flatten() 
 
-                v_surge = np.clip(v_linear[2], -0.15, 0.15)
-                v_sway  = np.clip(v_linear[0], -0.15, 0.15)
-                v_heave = np.clip(v_linear[1], -0.15, 0.15)
-                v_yaw   = np.clip(w_yaw_val, -0.15, 0.15)
-
+                v_surge = np.clip(v_linear[2], -0.5, 0.5)
+                v_sway  = np.clip(v_linear[0], -0.5, 0.5)
+                v_heave = np.clip(v_linear[1], -0.5, 0.5)
+                v_yaw   = np.clip(w_yaw_val, -0.3, 0.3)
+                
+                self.get_logger().info(f"""
+                    ---------------------------
+                    v_surge: {v_surge}
+                    v_sway = {v_sway}
+                    v_heave = {v_heave}
+                    v_yaw = {v_yaw}
+                    ---------------------------
+                """)
+                # time.sleep(1)
                 cmd = Twist()
                 cmd.linear.x = float(v_surge)
                 cmd.linear.y = -float(v_sway)

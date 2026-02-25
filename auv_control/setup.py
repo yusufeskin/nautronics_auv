@@ -27,6 +27,7 @@ setup(
             'point_follower = auv_control.point_follower:main',
             'visual_servoing = auv_control.visual_servoing:main',
             'thruster_mixer_3T = auv_control.thruster_mixer_3T:main',
+            'teleop = auv_control.teleop:main'
         ],
     },
 )

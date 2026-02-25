@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="torpedo_model">
 
+  <xacro:arg name="torp_id" default="1"/>
+
   <link name="torpedo_body">
     <inertial>
       <mass value="0.05"/>
@@ -9,18 +11,12 @@
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 1.5708 0"/>
-      <geometry>
-        <cylinder radius="0.03" length="0.2"/>
-      </geometry>
-      <material name="orange">
-        <color rgba="1.0 0.5 0.0 1.0"/>
-      </material>
+      <geometry><cylinder radius="0.03" length="0.2"/></geometry>
+      <material name="orange"><color rgba="1.0 0.5 0.0 1.0"/></material>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 1.5708 0"/>
-      <geometry>
-        <cylinder radius="0.04" length="0.2"/>
-      </geometry>
+      <geometry><cylinder radius="0.04" length="0.2"/></geometry>
     </collision>
   </link>
 
@@ -37,26 +33,16 @@
     <origin xyz="-0.1 0 0" rpy="0 0 0"/>
     <axis xyz="1 0 0"/>
   </joint>
-
-  <gazebo reference="torpedo_body">
-    <visual>
-      <material>
-        <ambient>1.0 0.0 0.0 1.0</ambient> <diffuse>1.0 0.0 0.0 1.0</diffuse>
-        <specular>0.1 0.1 0.1 1.0</specular>
-      </material>
-    </visual>
-  </gazebo>
-
 <gazebo>
     <plugin filename="gz-sim-thruster-system" name="gz::sim::systems::Thruster">
-      <namespace>torpedo</namespace>
       <joint_name>propeller_joint</joint_name>
       <thrust_coefficient>0.01</thrust_coefficient>
       <fluid_density>1000.0</fluid_density>
       <propeller_diameter>0.05</propeller_diameter>
       <velocity_control>true</velocity_control>
-      <topic>/torpedo/cmd_thrust</topic>
+      <topic>/torpedo/cmd_thrust$(arg torp_id)</topic> 
     </plugin>
   </gazebo>
+
 
 </robot>

@@ -79,6 +79,8 @@ class MultiObjectPnPNode(Node):
 
             object_3d_points = self.object_library[cls_id]['points']
             image_2d_points = np.array(keypoints_2d, dtype=np.float32)
+            if len(image_2d_points) != len(object_3d_points) or len(image_2d_points) < 4:
+                continue
 
             # distance -1 = no detection
             try:

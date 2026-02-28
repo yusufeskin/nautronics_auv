@@ -1,4 +1,6 @@
+from glob import glob
 from setuptools import find_packages, setup
+import os
 
 package_name = 'auv_control'
 
@@ -10,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -26,9 +29,9 @@ setup(
         'console_scripts': [
             'point_follower = auv_control.point_follower:main',
             'thruster_mixer = auv_control.thruster_mixer:main',
-            'updated_visual_servoing = auv_control.updated_visual_servoing:main',
             'visual_servoing_action = auv_control.visual_servoing_action:main',
-            'yawer=auv_control.yawer:main'
+            'yawer=auv_control.yawer:main',
+            'blind_push_action = auv_control.blind_push_action:main'
         ],
     },
 )

@@ -17,6 +17,9 @@ def generate_launch_description():
     world_file = os.path.join(pkg_share, 'worlds', 'pool.world')
     bridge_config_path = os.path.join(pkg_share, 'config', 'bridge.yaml')
     rviz_config_path = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
+    torpedo_xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'macros', 'torpedo.xacro')
+    torpedo_desc_1 = Command(['xacro ', torpedo_xacro_file, ' torp_id:=1'])
+    torpedo_desc_2 = Command(['xacro ', torpedo_xacro_file, ' torp_id:=2'])
     # 2. Robot Tanımı (Xacro -> URDF)
     robot_desc_content = Command(['xacro ', xacro_file])
 
@@ -76,6 +79,28 @@ def generate_launch_description():
         output='screen'
     )
 
+    spawn_torpedo1 = Node(
+        package='ros_gz_sim',
+        executable='create',
+        arguments=[
+            '-string', torpedo_desc_1, 
+            '-name', 'torpedo_model1',
+            '-z', '-1.2', '-x', '-9', '-y', '5.1'
+        ],
+        output='screen'
+    )
+
+    spawn_torpedo2 = Node(
+        package='ros_gz_sim',
+        executable='create',
+        arguments=[
+            '-string', torpedo_desc_2, 
+            '-name', 'torpedo_model2',
+            '-z', '-1.2', '-x', '-9', '-y', '4.9'
+        ],
+        output='screen'
+    )
+
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -92,6 +117,8 @@ def generate_launch_description():
         ros_gz_bridge,
         gz_sim,
         spawn_entity,
+        spawn_torpedo1,
+        spawn_torpedo2,
         SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1'),
         SetEnvironmentVariable('__GLX_VENDOR_LIBRARY_NAME', 'nvidia'),
         SetEnvironmentVariable('GZ_SIM_RENDER_ENGINE', 'ogre2')

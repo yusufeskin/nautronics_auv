@@ -4,7 +4,7 @@ from rclpy.node import Node
 from pymavlink import mavutil
 from auv_interfaces.srv import SetVehicleMode
 
-CONNECTION_STRING = '/dev/ttyACM0'  
+CONNECTION_STRING = 'udpin:0.0.0.0:14550'  
 BAUD_RATE = 57600
 
 class VehicleManager(Node):

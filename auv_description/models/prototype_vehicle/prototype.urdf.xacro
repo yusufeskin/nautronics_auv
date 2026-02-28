@@ -70,9 +70,6 @@
     r="0.0" p="0.0" yaw="3.14"
     color="Green" />
 
-
-
-
   <xacro:add_thruster id="1" x="0.2201"  y="-0.1126" z="-0.0224" r="-1.571" p="1.571" yaw="-0.785" prop_type="ccw" coeff="0.02" />
   <xacro:add_thruster id="2" x="0.2201"  y="0.1126"  z="-0.0224" r="-1.571" p="1.571" yaw="-2.356" prop_type="ccw" coeff="0.02" />
   <xacro:add_thruster id="3" x="-0.2201" y="-0.1126" z="-0.0224" r="-1.571" p="1.571" yaw="0.785"  prop_type="cw"  coeff="-0.02" />
@@ -82,5 +79,32 @@
   <xacro:add_thruster id="6" x="0.0884"  y="0.2126"  z="0.0056"  r="0" p="0" yaw="0" prop_type="cw"  coeff="-0.02" />
   <xacro:add_thruster id="7" x="-0.0884" y="-0.2126" z="0.0056"  r="0" p="0" yaw="0" prop_type="cw"  coeff="-0.02" />
   <xacro:add_thruster id="8" x="-0.0884" y="0.2126"  z="0.0056"  r="0" p="0" yaw="0" prop_type="ccw" coeff="0.02" />
+
+<gazebo reference="base_link">
+    <self_collide>true</self_collide>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="gz-sim-detachable-joint-system" name="gz::sim::systems::DetachableJoint">
+      <parent_link>base_link</parent_link>
+      
+      <child_model>torpedo_model1</child_model>
+      <child_link>torpedo_body</child_link>
+      
+      <detach_topic>/torpedo/fire1</detach_topic>
+    </plugin>
+  </gazebo>
+
+    <gazebo>
+    <plugin filename="gz-sim-detachable-joint-system" name="gz::sim::systems::DetachableJoint">
+      <parent_link>base_link</parent_link>
+      
+      <child_model>torpedo_model2</child_model>
+      <child_link>torpedo_body</child_link>
+      
+      <detach_topic>/torpedo/fire2</detach_topic>
+    </plugin>
+  </gazebo>
+
 
 </robot>

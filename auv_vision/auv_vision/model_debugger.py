@@ -6,7 +6,7 @@ from ultralytics import YOLO
 import cv2
 import os
 
-MODEL_NAME = "gate"
+MODEL_NAME = "best"
 INPUT_TOPIC = "/camera/front"
 OUTPUT_TOPIC = "/auv_vision/model_debug"
 

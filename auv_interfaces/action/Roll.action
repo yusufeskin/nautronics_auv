@@ -1,0 +1,10 @@
+# Request 
+float64 target_angle_deg
+float64 angular_speed
+---
+# Result 
+bool success
+string message
+---
+# Feedback 
+float64 current_angle_deg

@@ -22,6 +22,7 @@ import common_behaviors.state
 from auv_interfaces.action import VisualServoing
 from auv_interfaces.action import BlindPush
 from auv_interfaces.action import YawAndScan
+from auv_interfaces.action import Roll  
 from auv_interfaces.srv import SetVehicleMode
 
 
@@ -179,12 +180,32 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    blind_push_node = py_trees_ros.action_clients.FromConstant(
+    blind_push_node1 = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
+            duration=4.0,
+            speed=0.3
+        )
+    )
+
+    roll_node = py_trees_ros.action_clients.FromConstant(
+        name="720 Degree Roll",
+        action_type=Roll,
+        action_name="/roll",
+        action_goal=Roll.Goal(
+            target_angle_deg=720.0,
+            angular_speed=0.5
+        )
+    )
+
+    blind_push_node2 = py_trees_ros.action_clients.FromConstant(
+        name="Blind Push Through Gate",
+        action_type=BlindPush,
+        action_name="/blind_push",
+        action_goal=BlindPush.Goal(
+            duration=2.0,
             speed=0.3
         )
     )
@@ -201,7 +222,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
     allign_sequence.add_children([
         switch_mode_manual_second, 
         allign_node, 
-        blind_push_node, 
+        blind_push_node1, 
+        roll_node,
+        blind_push_node2,
         switch_mode_althold_second
     ])
 

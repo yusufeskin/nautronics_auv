@@ -11,6 +11,13 @@ def generate_launch_description():
         output='screen'
     )
 
+    roller = Node(
+        package='auv_control',
+        executable='roller',
+        name='roller',
+        output='screen'
+    )
+
     blind_push_action = Node(
         package='auv_control',
         executable='blind_push_action',
@@ -39,6 +46,13 @@ def generate_launch_description():
         output='screen',
     )
 
+    object_keypoint_detector = Node(
+        package='auv_vision',
+        executable='object_keypoint_detector',
+        name='object_keypoint_detector',
+        output='screen'
+    )
+
     change_mode_service = Node(
         package='auv_hardware',
         executable='change_mode_service',
@@ -53,10 +67,10 @@ def generate_launch_description():
         output='screen'
     )
 
-    object_keypoint_detector = Node(
-        package='auv_vision',
-        executable='object_keypoint_detector',
-        name='object_keypoint_detector',
+    change_mode_service = Node(
+        package='auv_hardware',
+        executable='change_mode_service',
+        name='change_mode_service',
         output='screen'
     )
 
@@ -83,7 +97,7 @@ def generate_launch_description():
         ),
         TimerAction(
             period=10.0,
-            actions=[change_mode_service]
+            actions=[object_keypoint_detector]
         ),
         TimerAction(
             period=12.0,
@@ -91,10 +105,14 @@ def generate_launch_description():
         ),
         TimerAction(
             period=14.0,
-            actions=[object_keypoint_detector]
+            actions=[change_mode_service]
         ),
         TimerAction(
-            period=17.0,
+            period=16.0,
+            actions=[roller]
+        ),
+        TimerAction(
+            period=19.0,
             actions=[LogInfo(msg="===================================\nALL NODES HAVE STARTED SUCCESSFULLY\n===================================")]
         )
     ])

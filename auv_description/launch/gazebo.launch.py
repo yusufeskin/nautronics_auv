@@ -106,8 +106,5 @@ def generate_launch_description():
         gz_sim,
         spawn_entity,
         spawn_torpedo,
-        SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1'),
-        SetEnvironmentVariable('__GLX_VENDOR_LIBRARY_NAME', 'nvidia'),
-        SetEnvironmentVariable('GZ_SIM_RENDER_ENGINE', 'ogre2')
         # rviz_node
     ])

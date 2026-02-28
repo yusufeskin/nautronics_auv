@@ -58,7 +58,7 @@
     name="bottom_camera"
     parent_link="base_link"
     topic="/camera/bottom"
-    x="0.0" y="0.0" z="-0.043071"
+    x="0.5" y="0.0" z="-0.043071"
     r="0.0" p="1.57" yaw="0.0"
     color="Green" />
 

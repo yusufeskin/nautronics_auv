@@ -33,6 +33,7 @@ setup(
             'state_publisher = auv_hardware.state_publisher:main',
             'change_mode_service = auv_hardware.change_mode:main',
             'battery_node = auv_hardware.battery_node:main',
+            'solution = auv_control.solution:main'
         ],
     },
 )

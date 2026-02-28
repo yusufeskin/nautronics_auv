@@ -168,14 +168,14 @@ class VisualServoingActionServer(Node):
                 v_heave = np.clip(v_linear[1], -0.5, 0.5)
                 v_yaw   = np.clip(w_yaw_val, -0.3, 0.3)
                 
-                self.get_logger().info(f"""
-                    ---------------------------
-                    v_surge: {v_surge}
-                    v_sway = {v_sway}
-                    v_heave = {v_heave}
-                    v_yaw = {v_yaw}
-                    ---------------------------
-                """)
+                # self.get_logger().info(f"""
+                #     ---------------------------
+                #     v_surge: {v_surge}
+                #     v_sway = {v_sway}
+                #     v_heave = {v_heave}
+                #     v_yaw = {v_yaw}
+                #     ---------------------------
+                # """)
                 # time.sleep(1)
                 cmd = Twist()
                 cmd.linear.x = float(v_surge)

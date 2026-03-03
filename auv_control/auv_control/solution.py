@@ -36,7 +36,7 @@ class OpticalFlowStationKeeping(Node):
         self.old_gray = None
         self.p0 = None
         self.total_sway_pixels = 0.0
-        self.total_yaw_degrees = 0.0
+        self.total_surge_pixels = 0.0
 
     def image_callback(self, msg):
         try:
@@ -70,23 +70,33 @@ class OpticalFlowStationKeeping(Node):
                 if transform_matrix is not None:
 
                     dx = transform_matrix[0, 2] 
+                    dy = transform_matrix[1, 2]
 
                     self.total_sway_pixels += dx
+                    self.total_surge_pixels += dy
 
-                    if abs(dx) < dead_band :
-                        dx =0
-
-                    Kp_sway = -0.0005  # Her 1 piksel kayma için 0.005 m/s hız ver
-                    Kd_sway = -0.005
+                    Kp_sway = -0.002
+                    Kd_sway = -0.03
+                    Kp_surge = -0.002
+                    Kd_surge = -0.03
                     
                     twist_msg = Twist()
+                  
                     twist_msg.linear.y = float((self.total_sway_pixels * Kp_sway) + (dx * Kd_sway))     
-                    if abs(self.total_sway_pixels) < 1.5:
+                    twist_msg.linear.x = float((self.total_surge_pixels * Kp_surge) + (dy * Kd_surge)) 
+                    MAX_SPEED = 0.15
+                    twist_msg.linear.y = max(min(twist_msg.linear.y, MAX_SPEED), -MAX_SPEED)
+                    twist_msg.linear.x = max(min(twist_msg.linear.x, MAX_SPEED), -MAX_SPEED)
+                    
+                    if abs(self.total_sway_pixels) < 1.5 and dx == 0 :
                         twist_msg.linear.y = 0.0
+
+                    if abs(self.total_surge_pixels) < 1.5 and dy == 0:
+                        twist_msg.linear.x = 0.0
 
                     self.publisher_.publish(twist_msg)
 
-                    self.get_logger().info(f"total hata: {self.total_sway_pixels:.2f} hata {dx:.2f} | Verilen Hız: {twist_msg.linear.y:.4f}")
+                    self.get_logger().info(f"total hata sway: {self.total_sway_pixels:.2f} total hata surge:{self.total_surge_pixels:.2f}  swayhata {dx:.2f} surgehata {dy:.2f} | Verilen Hız: {twist_msg.linear.y:.4f}{twist_msg.linear.x:.4f}")
                     
 
             #update

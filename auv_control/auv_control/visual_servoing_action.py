@@ -22,8 +22,8 @@ class VisualServoingActionServer(Node):
         self.cv = 240
         self.fx = 556
         self.fy = 556
-        self.pid_controller = pid_controller.PID(0.24, 0, 0.3)
-        self.pid_controller2 = pid_controller.PID(0.24, 0, 0.3)
+        self.pid_controller = pid_controller.PID(0.2, 0, 0.0)
+        self.pid_controller2 = pid_controller.PID(0.2, 0, 0.0)
 
         self.callback_group = ReentrantCallbackGroup()
 
@@ -144,7 +144,7 @@ class VisualServoingActionServer(Node):
             feedback_msg.current_error = float(error_norm)
             goal_handle.publish_feedback(feedback_msg)
 
-            if error_norm < 0.20:
+            if error_norm < 0.05:
                 self.get_logger().info(f"Hedefe Ulaşıldı! Hata: {error_norm:.4f}")
                 self.stop_robot()
                 goal_handle.succeed()

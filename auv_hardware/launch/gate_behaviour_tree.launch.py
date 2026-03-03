@@ -32,10 +32,10 @@ def generate_launch_description():
         output='screen'
     )
 
-    pwm_router_node = Node(
+    pwm_router = Node(
         package='auv_hardware',
-        executable='pwm_router_node',
-        name='pwm_router_node',
+        executable='pwm_router',
+        name='pwm_router',
         output='screen',
     )
 
@@ -88,7 +88,7 @@ def generate_launch_description():
         ),
         TimerAction(
             period=8.0,
-            actions=[pwm_router_node]
+            actions=[pwm_router]
         ),
         TimerAction(
             period=10.0,

@@ -18,10 +18,10 @@ import behaviours.arrange_depth_action
 import behaviours.object2bb
 import behaviours.depth
 import behaviours.state 
-from behaviours.torpedo_igniter import TorpedoIgniter
+import behaviours.stop_vehicle
+from std_srvs.srv import Trigger
 
-from auv_interfaces.action import VisualServoing
-from auv_interfaces.action import YawAndScan
+from auv_interfaces.action import BlindPush, VisualServoing, YawAndScan
 from auv_interfaces.srv import SetVehicleMode
 
 def create_root() -> py_trees.behaviour.Behaviour:
@@ -161,20 +161,20 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_manual_2
     )
 
-    target_points = [
-        Point(x=150.0, y=48.0, z=0.0),  # Top Left
-        Point(x=517.0, y=48.0, z=0.0),  # Top Right
-        Point(x=517.0, y=414.0, z=0.0),  # Bottom Right
-        Point(x=150.0, y=414.0, z=0.0)   # Bottom Left
+    target_points1 = [
+        Point(x=245.0, y=288.0, z=0.0),  # Top Left
+        Point(x=406.0, y=288.0, z=0.0),  # Top Right
+        Point(x=406.0, y=449.0, z=0.0),  # Bottom Right
+        Point(x=245.0, y=449.0, z=0.0)   # Bottom Left
     ]
     
-    allign_node = py_trees_ros.action_clients.FromConstant(
+    allign_node1 = py_trees_ros.action_clients.FromConstant(
         name="Visual Servoing to Torpedo",
         action_type=VisualServoing,
         action_name="/visual_servoing",
         action_goal=VisualServoing.Goal(
             target_object="torpedo",
-            target_points=target_points
+            target_points=target_points1
         )
     )
 
@@ -187,13 +187,46 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_althold_second
     )
 
-    fire_torpedo_node = TorpedoIgniter(name="Fire Torpedo", topic_name="/torpedo/fire")
+    blind_push_node = py_trees_ros.action_clients.FromConstant(
+        name="Blind Push Through Torpedo",
+        action_type=BlindPush,
+        action_name="/blind_push",
+        action_goal=BlindPush.Goal(
+            duration=2.0,
+            speed=0.2
+        )
+    )
+
+    stop_vehicle = behaviours.stop_vehicle.StopVehicle(name="Stop Vehicle", duration=3.0)
+
+
+    fire_request_1 = Trigger.Request()
+    fire_torpedo_node1 = py_trees_ros.service_clients.FromConstant(
+        name="Fire Torpedo 1",
+        service_type=Trigger,
+        service_name="/torpedo/fire_service",
+        service_request=fire_request_1
+    )
+
+    wait_5_sec = py_trees.timers.Timer("Wait 5s", duration=5.0)
+
+    fire_request_2 = Trigger.Request()
+    fire_torpedo_node2 = py_trees_ros.service_clients.FromConstant(
+        name="Fire Torpedo 2",
+        service_type=Trigger,
+        service_name="/torpedo/fire_service",
+        service_request=fire_request_2
+    )
 
     allign_sequence.add_children([
         switch_mode_manual_second, 
-        allign_node,
+        allign_node1,
         switch_mode_althold_second,
-        fire_torpedo_node
+        blind_push_node,
+        stop_vehicle,
+        fire_torpedo_node1,
+        wait_5_sec,
+        fire_torpedo_node2
     ])
 
 # 6. ASSEMBLE MAIN MISSION

@@ -164,10 +164,10 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     target_points = [
-        Point(x=254.0, y=23.0, z=0.0),  # Top Left
-        Point(x=327.0, y=22.0, z=0.0),  # Top Right
-        Point(x=327.0, y=96.0, z=0.0),  # Bottom Right
-        Point(x=254.0, y=96.0, z=0.0)   # Bottom Left
+        Point(x=254.0, y=24.0, z=0.0),  # Top Left
+        Point(x=325.0, y=24.0, z=0.0),  # Top Right
+        Point(x=325.0, y=94.0, z=0.0),  # Bottom Right
+        Point(x=254.0, y=94.0, z=0.0)   # Bottom Left
     ]
     
     allign_node = py_trees_ros.action_clients.FromConstant(
@@ -179,6 +179,16 @@ def create_root() -> py_trees.behaviour.Behaviour:
             target_points=target_points
         )
     )
+
+    mode_request_althold_second = SetVehicleMode.Request()
+    mode_request_althold_second.mode_name = "ALT_HOLD"
+    switch_mode_althold_second = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAltHold",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_althold_second
+    )
+
 
     blind_push_node1 = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",
@@ -210,22 +220,13 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    mode_request_althold_second = SetVehicleMode.Request()
-    mode_request_althold_second.mode_name = "ALT_HOLD"
-    switch_mode_althold_second = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToAltHold",
-        service_type=SetVehicleMode,
-        service_name="/change_mode",
-        service_request=mode_request_althold_second
-    )
-
     allign_sequence.add_children([
         switch_mode_manual_second, 
         allign_node, 
+        switch_mode_althold_second,
         blind_push_node1, 
         roll_node,
         blind_push_node2,
-        switch_mode_althold_second
     ])
 
 # 6. ASSEMBLE MAIN MISSION

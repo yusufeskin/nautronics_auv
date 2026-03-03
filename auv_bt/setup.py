@@ -25,6 +25,8 @@ setup(
     entry_points={
         'console_scripts': [
             'gate_behaviour_tree = gate.gate_behaviour_tree:main',
+            'dropper_behaviour_tree = dropper.dropper_behaviour_tree:main',
+            'torpedo_behaviour_tree = torpedo.torpedo_behaviour_tree:main',
         ],
     },
 )

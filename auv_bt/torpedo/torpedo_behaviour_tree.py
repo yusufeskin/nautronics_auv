@@ -18,13 +18,11 @@ import behaviours.arrange_depth_action
 import behaviours.object2bb
 import behaviours.depth
 import behaviours.state 
+from behaviours.torpedo_igniter import TorpedoIgniter
 
 from auv_interfaces.action import VisualServoing
-from auv_interfaces.action import BlindPush
 from auv_interfaces.action import YawAndScan
-from auv_interfaces.action import Roll  
 from auv_interfaces.srv import SetVehicleMode
-
 
 def create_root() -> py_trees.behaviour.Behaviour:
 
@@ -87,7 +85,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         name="Arrange Depth",
         topic_odom="/odom",
         topic_cmd="/cmd_vel",  
-        target_depth=-0.5,
+        target_depth=-1.5,
         tolerance=0.2,   
         speed=0.2             
     )
@@ -107,19 +105,19 @@ def create_root() -> py_trees.behaviour.Behaviour:
         switch_mode_althold_first
     ])
 
-# 4. SEARCH GATE (CHECK DETECTED) BRANCH
+# 4. SEARCH TORPEDO (CHECK DETECTED) BRANCH
 
     check_detected_selector = py_trees.composites.Selector("Check if Detected", memory=True)
 
-    check_gate_first = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Gate Detected?",
+    check_torpedo_first = py_trees.behaviours.CheckBlackboardVariableValue(
+        name="Is Torpedo Detected?",
         check=py_trees.common.ComparisonExpression(
-            variable="is_gate_found",
+            variable="is_torpedo_found",
             value=True,
             operator=operator.eq)
     )
     
-    search_gate_sequence = py_trees.composites.Sequence("Turn and Find Gate", memory=True)
+    search_torpedo_sequence = py_trees.composites.Sequence("Turn and Find Torpedo", memory=True)
 
     goal_msg = YawAndScan.Goal()
     goal_msg.target_angle_deg = 15.0
@@ -132,27 +130,27 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_goal=goal_msg
     )
 
-    check_gate_second = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Gate Detected?",
+    check_torpedo_second = py_trees.behaviours.CheckBlackboardVariableValue(
+        name="Is Torpedo Detected?",
         check=py_trees.common.ComparisonExpression(
-            variable="is_gate_found",
+            variable="is_torpedo_found",
             value=True,
             operator=operator.eq)
     )
 
-    search_gate_sequence.add_children([rotate_15_deg, check_gate_second])
+    search_torpedo_sequence.add_children([rotate_15_deg, check_torpedo_second])
 
-    retry_search_gate = py_trees.decorators.Retry(
+    retry_search_torpedo = py_trees.decorators.Retry(
         name="retry (max)x24",
-        child=search_gate_sequence,
+        child=search_torpedo_sequence,
         num_failures=24
     )
 
-    check_detected_selector.add_children([check_gate_first, retry_search_gate])
+    check_detected_selector.add_children([check_torpedo_first, retry_search_torpedo])
 
-# 5. ALIGN TO GATE BRANCH
+# 5. ALIGN TO TORPEDO BRANCH
 
-    allign_sequence = py_trees.composites.Sequence("Align to Gate", memory=True)
+    allign_sequence = py_trees.composites.Sequence("Align to Torpedo", memory=True)
 
     mode_request_manual_2 = SetVehicleMode.Request()
     mode_request_manual_2.mode_name = "MANUAL"
@@ -164,49 +162,19 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     target_points = [
-        Point(x=254.0, y=23.0, z=0.0),  # Top Left
-        Point(x=327.0, y=22.0, z=0.0),  # Top Right
-        Point(x=327.0, y=96.0, z=0.0),  # Bottom Right
-        Point(x=254.0, y=96.0, z=0.0)   # Bottom Left
+        Point(x=150.0, y=48.0, z=0.0),  # Top Left
+        Point(x=517.0, y=48.0, z=0.0),  # Top Right
+        Point(x=517.0, y=414.0, z=0.0),  # Bottom Right
+        Point(x=150.0, y=414.0, z=0.0)   # Bottom Left
     ]
     
     allign_node = py_trees_ros.action_clients.FromConstant(
-        name="Visual Servoing to Gate",
+        name="Visual Servoing to Torpedo",
         action_type=VisualServoing,
         action_name="/visual_servoing",
         action_goal=VisualServoing.Goal(
-            target_object="gate",
+            target_object="torpedo",
             target_points=target_points
-        )
-    )
-
-    blind_push_node1 = py_trees_ros.action_clients.FromConstant(
-        name="Blind Push Through Gate",
-        action_type=BlindPush,
-        action_name="/blind_push",
-        action_goal=BlindPush.Goal(
-            duration=4.0,
-            speed=0.3
-        )
-    )
-
-    roll_node = py_trees_ros.action_clients.FromConstant(
-        name="720 Degree Roll",
-        action_type=Roll,
-        action_name="/roll",
-        action_goal=Roll.Goal(
-            target_angle_deg=720.0,
-            angular_speed=0.5
-        )
-    )
-
-    blind_push_node2 = py_trees_ros.action_clients.FromConstant(
-        name="Blind Push Through Gate",
-        action_type=BlindPush,
-        action_name="/blind_push",
-        action_goal=BlindPush.Goal(
-            duration=2.0,
-            speed=0.3
         )
     )
 
@@ -219,13 +187,13 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_althold_second
     )
 
+    fire_torpedo_node = TorpedoIgniter(name="Fire Torpedo", topic_name="/torpedo/fire")
+
     allign_sequence.add_children([
         switch_mode_manual_second, 
-        allign_node, 
-        blind_push_node1, 
-        roll_node,
-        blind_push_node2,
-        switch_mode_althold_second
+        allign_node,
+        switch_mode_althold_second,
+        fire_torpedo_node
     ])
 
 # 6. ASSEMBLE MAIN MISSION

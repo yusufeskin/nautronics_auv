@@ -18,7 +18,7 @@ class MultiObjectPnPNode(Node):
         super().__init__('multi_object_pnp_node')
         
         pkg_share_dir = get_package_share_directory('auv_vision')
-        model_path = os.path.join(pkg_share_dir, 'model', 'best.pt')
+        model_path = os.path.join(pkg_share_dir, 'model', 'Multimodel.pt')
         self.model = YOLO(model_path)
 
         self.cu = 320.0

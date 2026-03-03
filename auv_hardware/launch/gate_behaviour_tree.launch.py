@@ -11,13 +11,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    roller = Node(
-        package='auv_control',
-        executable='roller',
-        name='roller',
-        output='screen'
-    )
-
     blind_push_action = Node(
         package='auv_control',
         executable='blind_push_action',
@@ -53,13 +46,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    change_mode_service = Node(
-        package='auv_hardware',
-        executable='change_mode_service',
-        name='change_mode_service',
-        output='screen'
-    )
-
     state_publisher = Node(
         package='auv_hardware',
         executable='state_publisher',
@@ -74,10 +60,19 @@ def generate_launch_description():
         output='screen'
     )
 
+    roller = Node(
+        package='auv_control',
+        executable='roller',
+        name='roller',
+        output='screen'
+    )
+
+
+
     return LaunchDescription([
         TimerAction(
             period=0.0,
-            actions=[thruster_mixer]
+            actions=[roller]
         ),
         TimerAction(
             period=2.0,
@@ -101,7 +96,7 @@ def generate_launch_description():
         ),
         TimerAction(
             period=12.0,
-            actions=[state_publisher]
+            actions=[thruster_mixer]
         ),
         TimerAction(
             period=14.0,
@@ -109,7 +104,7 @@ def generate_launch_description():
         ),
         TimerAction(
             period=16.0,
-            actions=[roller]
+            actions=[state_publisher]
         ),
         TimerAction(
             period=19.0,

@@ -14,10 +14,10 @@ import py_trees.console as console
 import py_trees_ros.service_clients
 import py_trees_ros.action_clients
 
-import behaviours.arrange_depth_action
-import behaviours.object2bb
-import behaviours.depth
-import behaviours.state 
+import gate.behaviours.arrange_depth_action
+import gate.behaviours.object2bb
+import gate.behaviours.depth
+import common_behaviors.state 
 
 from auv_interfaces.action import VisualServoing
 from auv_interfaces.action import BlindPush
@@ -50,19 +50,19 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
 # 2. PUBLISHERS BRANCH
 
-    depth2bb = behaviours.depth.ToBlackboard(
+    depth2bb = gate.behaviours.depth.ToBlackboard(
         name="Depth2BB",
         topic_name="/odom",
         qos_profile=qos_profile_sensor_data
     )
 
-    mode2bb = behaviours.state.ToBlackboard(
+    mode2bb = common_behaviors.state.ToBlackboard(
         name="Mode2BB",
         topic_name="/vehicle/state",
         qos_profile=qos_profile_sensor_data
     )
 
-    object2bb = behaviours.object2bb.ToBlackboard(
+    object2bb = gate.behaviours.object2bb.ToBlackboard(
         name="Object2BB",
         topic_name="/yolo_detections",  
         qos_profile=qos_profile_sensor_data
@@ -83,7 +83,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_manual_1
     )
 
-    arrange_depth_node = behaviours.arrange_depth_action.ArrangeDepthAction(
+    arrange_depth_node = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
         name="Arrange Depth",
         topic_odom="/odom",
         topic_cmd="/cmd_vel",  

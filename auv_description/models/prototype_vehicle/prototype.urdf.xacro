@@ -88,11 +88,23 @@
     <plugin filename="gz-sim-detachable-joint-system" name="gz::sim::systems::DetachableJoint">
       <parent_link>base_link</parent_link>
       
-      <child_model>torpedo_model</child_model>
+      <child_model>torpedo_model1</child_model>
       <child_link>torpedo_body</child_link>
       
-      <detach_topic>/torpedo/fire</detach_topic>
+      <detach_topic>/torpedo/fire1</detach_topic>
     </plugin>
   </gazebo>
+
+    <gazebo>
+    <plugin filename="gz-sim-detachable-joint-system" name="gz::sim::systems::DetachableJoint">
+      <parent_link>base_link</parent_link>
+      
+      <child_model>torpedo_model2</child_model>
+      <child_link>torpedo_body</child_link>
+      
+      <detach_topic>/torpedo/fire2</detach_topic>
+    </plugin>
+  </gazebo>
+
 
 </robot>

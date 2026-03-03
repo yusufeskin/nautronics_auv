@@ -42,16 +42,8 @@ class MultiObjectPnPNode(Node):
 
     def load_object_config(self):
         for cls_id, props in OBJECT_REGISTRY.items():
-            w = props['width']
-            h = props['height']
             name = props['name']
-            
-            points_3d = np.array([
-                [0, 0, 0],
-                [w, 0, 0],
-                [w, h, 0],
-                [0, h, 0]
-            ], dtype=np.float32)
+            points_3d = np.array(props['points_3d'], dtype=np.float32)
             
             self.object_library[cls_id] = {
                 'points': points_3d,
@@ -87,6 +79,8 @@ class MultiObjectPnPNode(Node):
 
             object_3d_points = self.object_library[cls_id]['points']
             image_2d_points = np.array(keypoints_2d, dtype=np.float32)
+            if len(image_2d_points) != len(object_3d_points) or len(image_2d_points) < 4:
+                continue
 
             # distance -1 = no detection
             try:

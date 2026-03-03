@@ -75,10 +75,10 @@ class OpticalFlowStationKeeping(Node):
                     self.total_sway_pixels += dx
                     self.total_surge_pixels += dy
 
-                    Kp_sway = -0.002
-                    Kd_sway = -0.03
-                    Kp_surge = -0.002
-                    Kd_surge = -0.03
+                    Kp_sway = -0.001
+                    Kd_sway = -0.04
+                    Kp_surge = -0.001
+                    Kd_surge = -0.04
                     
                     twist_msg = Twist()
                   

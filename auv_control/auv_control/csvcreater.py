@@ -2,9 +2,8 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Imu
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Vector3Stamped  # YENİ EKLENDİ
-import message_filters
-from pymavlink import mavutil
+from geometry_msgs.msg import Vector3Stamped
+from std_msgs.msg import Float64MultiArray
 import csv
 import os
 
@@ -13,18 +12,17 @@ class UltimateDataCollector(Node):
         super().__init__('ultimate_data_collector')
         
         # ==========================================
-        # 1. TEK CSV DOSYASI AYARLARI
+        # 1. DOSYA AYARLARI (Tam yol vermeyi unutma!)
         # ==========================================
-        self.csv_file = 'tum_sensor_ve_pwm_verileri.csv'
+        self.csv_file = '/home/murat/nautronics_auv/src/auv_control/auv_control/tum_sensor_ve_pwm_verileri.csv'
         file_exists = os.path.isfile(self.csv_file)
         
         self.file = open(self.csv_file, mode='a', newline='')
         self.writer = csv.writer(self.file)
         
-        # Dosya ilk defa oluşturuluyorsa başlıkları yaz
         if not file_exists:
             header = [
-                'timestamp_sec', 'timestamp_nanosec',
+                'sys_time_sec', 'sys_time_nanosec',
                 # IMU Verileri
                 'imu_ori_x', 'imu_ori_y', 'imu_ori_z', 'imu_ori_w',
                 'imu_ang_vel_x', 'imu_ang_vel_y', 'imu_ang_vel_z',
@@ -34,113 +32,103 @@ class UltimateDataCollector(Node):
                 'odom_ori_x', 'odom_ori_y', 'odom_ori_z', 'odom_ori_w',
                 'odom_lin_vel_x', 'odom_lin_vel_y', 'odom_lin_vel_z',
                 'odom_ang_vel_x', 'odom_ang_vel_y', 'odom_ang_vel_z',
-                # OPTİK AKIŞ HIZ VERİLERİ (YENİ EKLENDİ)
-                'opt_vel_x', 'opt_vel_y', 'opt_vel_z',
-                # PWM (Servo) Verileri
+                # OPTİK AKIŞ (Kamera)
+                'opt_vel_x', 'opt_vel_y', 'opt_vel_z', 'opt_flow_valid',
+                # PWM Verileri
                 'servo1', 'servo2', 'servo3', 'servo4', 
                 'servo5', 'servo6', 'servo7', 'servo8'
             ]
             self.writer.writerow(header)
             self.file.flush()
 
-        # En güncel PWM verilerini tutacağımız liste
-        self.latest_pwm = None 
-
         # ==========================================
-        # 2. MAVLINK BAĞLANTISI VE TIMER (PWM İÇİN)
+        # 2. EN GÜNCEL VERİLERİ TUTACAK DEĞİŞKENLER
         # ==========================================
-        self.connect_mavlink()
-        self.pwm_timer = self.create_timer(0.02, self.pwm_timer_callback)
-
-        # ==========================================
-        # 3. ZAMAN SENKRONİZASYONLU ROS ABONELİKLERİ
-        # ==========================================
-        self.imu_sub = message_filters.Subscriber(self, Imu, '/imu0')
-        self.odom_sub = message_filters.Subscriber(self, Odometry, '/odom')
-        # YENİ SENSÖRÜMÜZÜ EKLİYORUZ
-        self.opt_vel_sub = message_filters.Subscriber(self, Vector3Stamped, '/optical_flow/velocity')
+        self.latest_imu = None
+        self.latest_odom = None
+        self.latest_pwm = None
         
-        # Synchronizer artık 3 farklı topic'i aynı zaman damgasında yakalayacak
-        self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.imu_sub, self.odom_sub, self.opt_vel_sub], 
-            queue_size=20, 
-            slop=0.1
-        )
-        self.ts.registerCallback(self.sync_callback)
+        # Kamera verisinin kopma ihtimaline karşı zaman tutucu
+        self.latest_opt_vel = None
+        self.last_opt_time = 0.0 
 
-        self.get_logger().info(f"Tüm veriler (IMU, Odom, Optik Hız, PWM) '{self.csv_file}' dosyasına yazılıyor...")
-        self.get_logger().info("Durdurmak için CTRL+C yapabilirsiniz.")
+        # ==========================================
+        # 3. BAĞIMSIZ ROS ABONELİKLERİ (Synchronizer İptal!)
+        # ==========================================
+        self.create_subscription(Imu, '/imu0', self.imu_cb, 10)
+        self.create_subscription(Odometry, '/odom', self.odom_cb, 10)
+        self.create_subscription(Float64MultiArray, '/auv/pwm_data', self.pwm_cb, 10)
+        self.create_subscription(Vector3Stamped, '/optical_flow/velocity', self.opt_vel_cb, 10)
 
-    def connect_mavlink(self):
-        try:
-            self.connection = mavutil.mavlink_connection('tcp:127.0.0.1:5762')
-            self.connection.wait_heartbeat(timeout=5)
-            self.get_logger().info('MAVLink bağlantısı başarılı.')
-            
-            frequency_hz = 50
-            self.connection.mav.command_long_send(
-                self.connection.target_system,
-                self.connection.target_component,
-                mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
-                0,
-                36, # SERVO_OUTPUT_RAW mesaj ID'si
-                1e6 / frequency_hz,
-                0, 0, 0, 0, 0
-            )
-        except Exception as e:
-            self.get_logger().error(f"MAVLink bağlantı hatası: {e}")
+        # ==========================================
+        # 4. KAYIT TIMER'I (FPS Belirleyici - 30 Hz)
+        # ==========================================
+        # 1.0 / 30.0 = 0.033 saniyede bir çalışır
+        self.record_timer = self.create_timer(0.033, self.record_state_to_csv)
 
-    def pwm_timer_callback(self):
-        # MAVLink Buffer (Tampon) Şişmesini Engelleyen Kritik Fix
-        latest_msg = None
-        while True:
-            msg = self.connection.recv_match(type='SERVO_OUTPUT_RAW', blocking=False)
-            if not msg:
-                break
-            latest_msg = msg
-            
-        if latest_msg:
-            self.latest_pwm = [
-                float(latest_msg.servo1_raw), float(latest_msg.servo2_raw),
-                float(latest_msg.servo3_raw), float(latest_msg.servo4_raw),
-                float(latest_msg.servo5_raw), float(latest_msg.servo6_raw),
-                float(latest_msg.servo7_raw), float(latest_msg.servo8_raw)
-            ]
+        self.get_logger().info("YENİ MİMARİ: Veri toplayıcı başlatıldı. 30 FPS hızında kaydedilecek...")
 
-    # CALLBACK ARTIK 3 DEĞİŞKEN ALIYOR (IMU, ODOM, OPT_VEL)
-    def sync_callback(self, imu_msg, odom_msg, opt_vel_msg):
-        # Eğer henüz hiç PWM verisi gelmediyse bekle
-        self.get_logger().info("BAŞARILI: IMU, Odom ve Kamera zamanları eşleşti!")
-        if self.latest_pwm is None:
-            self.get_logger().warn("HATA: Sensörler eşleşti ama PWM (Motor) verisi yok! CSV'ye yazılamıyor.")
+    # --- CALLBACK FONKSİYONLARI (Sadece değişkenleri günceller) ---
+    def imu_cb(self, msg):
+        self.latest_imu = msg
+
+    def odom_cb(self, msg):
+        self.latest_odom = msg
+
+    def pwm_cb(self, msg):
+        # rc_data_reader'dan gelen Float64MultiArray verisi
+        self.latest_pwm = msg.data
+
+    def opt_vel_cb(self, msg):
+        self.latest_opt_vel = msg
+        self.last_opt_time = self.get_clock().now().nanoseconds / 1e9
+
+    # --- ANA KAYIT FONKSİYONU ---
+    def record_state_to_csv(self):
+        # Temel veriler (IMU, Odom, PWM) henüz hiç gelmediyse kayda başlama
+        if not (self.latest_imu and self.latest_odom and self.latest_pwm):
             return
-        self.get_logger().info("HARİKA: Tüm veriler tamam, CSV'ye 1 satır yazılıyor!")
-        # Bütün veriler eşleşti! Hepsini tek satıra diziyoruz:
+
+        now = self.get_clock().now()
+        current_time_sec = now.nanoseconds / 1e9
+
+        # OPTICAL FLOW KONTROLÜ (Veri koptuysa Model Eğitimi için 0 yaz)
+        opt_x, opt_y, opt_z = 0.0, 0.0, 0.0
+        opt_valid = 0
+
+        # Eğer son 0.5 saniyedir kamera verisi gelmediyse sıfırla (kör nokta)
+        if self.latest_opt_vel and (current_time_sec - self.last_opt_time) < 0.5:
+            opt_x = self.latest_opt_vel.vector.x
+            opt_y = self.latest_opt_vel.vector.y
+            opt_z = self.latest_opt_vel.vector.z
+            opt_valid = 1
+
+        # CSV Satırını Oluştur
         row = [
-            imu_msg.header.stamp.sec,
-            imu_msg.header.stamp.nanosec,
+            now.seconds_nanoseconds()[0],
+            now.seconds_nanoseconds()[1],
             
-            # IMU Sütunları
-            imu_msg.orientation.x, imu_msg.orientation.y, imu_msg.orientation.z, imu_msg.orientation.w,
-            imu_msg.angular_velocity.x, imu_msg.angular_velocity.y, imu_msg.angular_velocity.z,
-            imu_msg.linear_acceleration.x, imu_msg.linear_acceleration.y, imu_msg.linear_acceleration.z,
+            # IMU
+            self.latest_imu.orientation.x, self.latest_imu.orientation.y, self.latest_imu.orientation.z, self.latest_imu.orientation.w,
+            self.latest_imu.angular_velocity.x, self.latest_imu.angular_velocity.y, self.latest_imu.angular_velocity.z,
+            self.latest_imu.linear_acceleration.x, self.latest_imu.linear_acceleration.y, self.latest_imu.linear_acceleration.z,
             
-            # ODOM Sütunları
-            odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y, odom_msg.pose.pose.position.z,
-            odom_msg.pose.pose.orientation.x, odom_msg.pose.pose.orientation.y, odom_msg.pose.pose.orientation.z, odom_msg.pose.pose.orientation.w,
-            odom_msg.twist.twist.linear.x, odom_msg.twist.twist.linear.y, odom_msg.twist.twist.linear.z,
-            odom_msg.twist.twist.angular.x, odom_msg.twist.twist.angular.y, odom_msg.twist.twist.angular.z,
+            # ODOM
+            self.latest_odom.pose.pose.position.x, self.latest_odom.pose.pose.position.y, self.latest_odom.pose.pose.position.z,
+            self.latest_odom.pose.pose.orientation.x, self.latest_odom.pose.pose.orientation.y, self.latest_odom.pose.pose.orientation.z, self.latest_odom.pose.pose.orientation.w,
+            self.latest_odom.twist.twist.linear.x, self.latest_odom.twist.twist.linear.y, self.latest_odom.twist.twist.linear.z,
+            self.latest_odom.twist.twist.angular.x, self.latest_odom.twist.twist.angular.y, self.latest_odom.twist.twist.angular.z,
             
-            # OPTİK AKIŞ HIZ SÜTUNLARI (YENİ EKLENDİ)
-            opt_vel_msg.vector.x, opt_vel_msg.vector.y, opt_vel_msg.vector.z,
+            # OPTICAL FLOW
+            opt_x, opt_y, opt_z, opt_valid,
             
-            # PWM Sütunları
+            # PWM
             *self.latest_pwm
         ]
         
         self.writer.writerow(row)
+        self.file.flush() # ANINDA DİSKE YAZ!
 
-        
     def destroy_node(self):
         if hasattr(self, 'file') and not self.file.closed:
             self.file.close()
@@ -150,7 +138,6 @@ class UltimateDataCollector(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = UltimateDataCollector()
-    
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

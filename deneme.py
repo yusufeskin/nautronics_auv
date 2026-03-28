@@ -8,7 +8,7 @@ from geometry_msgs.msg import Point
 from auv_interfaces.msg import DetectionArray, DetectedObject
 from std_msgs.msg import Float32
 
-TARGET_SIZE = 150 
+TARGET_SIZE = 150
 
 class StationKeepingTracker(Node):
     def __init__(self):
@@ -22,7 +22,7 @@ class StationKeepingTracker(Node):
         self.is_active = False
         self.tracker = None
 
-        self.get_logger().info('waiting')
+        self.get_logger().info('waitinggmmmq')
 
     def toggle_callback(self, request, response):
         self.is_active = request.data   #T or F
@@ -70,10 +70,15 @@ class StationKeepingTracker(Node):
         if success:
             x, y, w, h = [int(v) for v in bbox]
 
-            p1 = Point(x=float(x), y=float(y))           # Sol ust
-            p2 = Point(x=float(x + w), y=float(y))       # Sag ust
-            p3 = Point(x=float(x + w), y=float(y + h))   # Sag alt
-            p4 = Point(x=float(x), y=float(y + h))       # Sol alt
+            cx, cy = 320.0, 240.0
+            
+            f_len = 640.0 # Koordinatlari normalize etmek icin kameranin genisligi
+            
+            # Pikselleri oranlayarak (-0.5 ile 0.5 arasi) gonderiyoruz ki matris cildirmasin!
+            p1 = Point(x=float((x - cx) / f_len),     y=float((y - cy) / f_len),     z=0.0)           
+            p2 = Point(x=float((x + w - cx) / f_len), y=float((y - cy) / f_len),     z=0.0)       
+            p3 = Point(x=float((x + w - cx) / f_len), y=float((y + h - cy) / f_len), z=0.0)   
+            p4 = Point(x=float((x - cx) / f_len),     y=float((y + h - cy) / f_len), z=0.0)
 
             det = DetectedObject()
             det.class_name = "station_target" # Action Server bu hedefi arayacak

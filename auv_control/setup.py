@@ -32,7 +32,10 @@ setup(
             'visual_servoing_action = auv_control.visual_servoing_action:main',
             'yawer=auv_control.yawer:main',
             'blind_push_action = auv_control.blind_push_action:main',
-            'solution = auv_control.solution:main'
+            'solution = auv_control.solution:main',
+            'metrekayma = auv_control.metrekayma:main',
+            'csvcreater = auv_control.csvcreater:main',
+            'pwm_publisher = auv_control.pwm_publisher:main'
         ],
     },
 )

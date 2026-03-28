@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Vector3Stamped
+from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
@@ -20,6 +21,7 @@ class OpticalFlowVelocityEstimator(Node):
             10)
         
         self.vel_pub = self.create_publisher(Vector3Stamped, '/optical_flow/velocity', 10)
+        self.odomm_Sub = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
         
         self.bridge = CvBridge()
         self.lk_params = dict(winSize=(21, 21),
@@ -36,9 +38,12 @@ class OpticalFlowVelocityEstimator(Node):
         self.t_prev = None
 
         ##################################################
-        self.camera_distance_fr_floor = 2.0 
-        self.fx = 300.0  
-        self.fy = 300.0  
+        self.camera_distance_fr_floor = None
+        self.fx = 556
+        self.fy = 556  
+    
+    def odom_callback(self, msg):
+        self.camera_distance_fr_floor = msg.pose.pose.position.z
 
     def image_callback(self, msg):
         t_sec = msg.header.stamp.sec

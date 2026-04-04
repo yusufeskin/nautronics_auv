@@ -7,6 +7,7 @@ from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
+import time
 
 class OpticalFlowVelocityEstimator(Node):
     def __init__(self):

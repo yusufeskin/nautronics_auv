@@ -27,7 +27,8 @@ setup(
             'gate_behaviour_tree = gate.gate_behaviour_tree:main',
             'dropper_behaviour_tree = dropper.dropper_behaviour_tree:main',
             'torpedo_behaviour_tree = torpedo.torpedo_behaviour_tree:main',
-            'slalom_behaviour_tree = slalom.slalom_behaviour_tree:main',    
+            'slalom_behaviour_tree = slalom.slalom_behaviour_tree:main',  
+            'pool_behaviour_tree = pool.pool_behaviour_tree:main',  
         ],
     },
 )

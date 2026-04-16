@@ -18,7 +18,7 @@ class PipeDetector(Node):
         self.pipe_publisher = self.create_publisher(DetectedPipe, '/pipe_detections', 10)
         
         pkg_share_dir = get_package_share_directory('auv_vision')
-        model_path = os.path.join(pkg_share_dir, 'model', 'pipe.pt')
+        model_path = os.path.join(pkg_share_dir, 'model', 'last.pt')
         self.model = YOLO(model_path)
         self.class_names = {0: "red_pipe", 1: "white_pipe"}
         
@@ -52,8 +52,8 @@ class PipeDetector(Node):
             det_pipe.class_id = cls_id
             det_pipe.class_name = self.class_names.get(cls_id, "unknown")
             det_pipe.confidence = float(box.conf[0])
-
-            for index in range(min(len(kpts), 2)):
+            det_pipe.keypoints = [Point(), Point(), Point(), Point()]
+            for index in range(min(len(kpts), 4)):
                 det_pipe.keypoints[index].x = float(kpts[index][0])
                 det_pipe.keypoints[index].y = float(kpts[index][1])
                 det_pipe.keypoints[index].z = 0.0

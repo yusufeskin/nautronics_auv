@@ -20,8 +20,8 @@ class PnPDebugger(Node):
         for i in range(7): ws_root = os.path.dirname(ws_root)
         self.model_path = os.path.join(ws_root, f"src/auv_vision/model/{MODEL_NAME}.pt")
         
-        W_HALF = 0.6
-        H_HALF = 0.6
+        W_HALF = 0.1
+        H_HALF = 0.1
 
 # Order: 0=Top Left, 1=Top Right, 2=Bottom Right, 3=Bottom Left
         self.object_points = np.array([

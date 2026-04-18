@@ -36,7 +36,8 @@ setup(
             'solution = auv_control.solution:main',
             'metrekayma = auv_control.metrekayma:main',
             'csvcreater = auv_control.csvcreater:main',
-            'pwm_publisher = auv_control.pwm_publisher:main'
+            'pwm_publisher = auv_control.pwm_publisher:main',
+            'expandingsearch = auv_control.expandingsearch:main'
         ],
     },
 )

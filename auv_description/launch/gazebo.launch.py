@@ -20,6 +20,7 @@ def generate_launch_description():
     torpedo_xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'macros', 'torpedo.xacro')
     torpedo_desc_1 = Command(['xacro ', torpedo_xacro_file, ' torp_id:=1'])
     torpedo_desc_2 = Command(['xacro ', torpedo_xacro_file, ' torp_id:=2'])
+    marker_sdf_file = os.path.join(pkg_share, 'models', 'robosub_marker', 'model.sdf')
     # 2. Robot Tanımı (Xacro -> URDF)
     robot_desc_content = Command(['xacro ', xacro_file])
 
@@ -101,6 +102,17 @@ def generate_launch_description():
         output='screen'
     )
 
+    spawn_marker = Node(
+        package='ros_gz_sim',
+        executable='create',
+        arguments=[
+            '-file', marker_sdf_file, 
+            '-name', 'robosub_marker', # Bu isim xacro'daki <child_model> ile BİREBİR aynı olmalı
+            '-z', '-1.15', '-x', '-9.0', '-y', '5.0'
+        ],
+        output='screen'
+    )
+
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -119,6 +131,7 @@ def generate_launch_description():
         spawn_entity,
         spawn_torpedo1,
         spawn_torpedo2,
+        spawn_marker,
         SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1'),
         SetEnvironmentVariable('__GLX_VENDOR_LIBRARY_NAME', 'nvidia'),
         SetEnvironmentVariable('GZ_SIM_RENDER_ENGINE', 'ogre2')

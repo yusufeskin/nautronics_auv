@@ -18,7 +18,7 @@ import behaviours.depth
 import behaviours.state 
 
 # AUV Interface'leri
-from auv_interfaces.action import VisualServoing, BlindPush, YawAndScan, Roll  
+from auv_interfaces.action import BlindPush, YawAndScan
 from auv_interfaces.srv import SetVehicleMode
 
 
@@ -62,8 +62,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     arrange_depth_node = behaviours.arrange_depth_action.ArrangeDepthAction(
         name="Arrange Depth Action",
-        topic_odom="/odom", #BUNU DÜZELT!!!!!!!!!!!!1
-        topic_cmd="/cmd_vel",  
+        topic="/baro_data",
+        topic_cmd="/cmd_vel",
         target_depth=-1.2,
         tolerance=0.1,   
         speed=0.15             

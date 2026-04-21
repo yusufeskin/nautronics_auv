@@ -29,7 +29,9 @@ class PixhawkBridge(Node):
 
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
-            'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
+            #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
+            'GLOBAL_POSITION_INT':   [self.baro_module.handle_message]
+
         }
 
         self.mode_change_service = self.create_service(

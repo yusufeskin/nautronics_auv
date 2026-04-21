@@ -9,6 +9,7 @@ from .baro_handler import BaroHandler
 from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.msg import VehicleStatus
 from std_msgs.msg import Float64, UInt16MultiArray
+from .set_depth_handler import SetDepthHandler
 
 class PixhawkBridge(Node):
     def __init__(self):
@@ -24,10 +25,11 @@ class PixhawkBridge(Node):
         self.mode_module      = ModeHandler(self.master, self.get_logger())
         self.telemetry_module = TelemetryHandler(self, self.status_publisher)
         self.baro_module      = BaroHandler(self, self.baro_publisher)
+        self.set_depth_module = SetDepthHandler(self.master, self.get_logger())
 
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
-            'VFR_HUD':   [self.baro_module.handle_message],
+            'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
         }
 
         self.mode_change_service = self.create_service(
@@ -35,6 +37,10 @@ class PixhawkBridge(Node):
         )
         self.pwm_subscription = self.create_subscription(
             UInt16MultiArray, 'pwm_router', self.pwm_callback, 10
+        )
+
+        self.set_depth_subscription = self.create_subscription(
+            Float64, 'target_depth', self.set_depth_callback, 10
         )
 
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
@@ -51,6 +57,9 @@ class PixhawkBridge(Node):
 
     def pwm_callback(self, msg):
         self.pwm_module.send_pwm(msg.data)
+
+    def set_depth_callback(self, msg):
+        self.set_depth_module.set_target_depth(msg.data)
 
 def main(args=None):
     rclpy.init(args=args)

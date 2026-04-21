@@ -1,60 +1,37 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import py_trees
 import rclpy
 from std_msgs.msg import Float64
-from rclpy.qos import qos_profile_sensor_data
 from py_trees.common import Status
+from rclpy.qos import qos_profile_sensor_data
 
-class ToBlackboard(py_trees.behaviour.Behaviour):
-   
-    def __init__(self, name, topic_name="/baro_data", qos_profile=qos_profile_sensor_data):
-        super(ToBlackboard, self).__init__(name=name)
-        self.topic_name = topic_name
-        self.qos_profile = qos_profile
-        
-        self.blackboard = py_trees.blackboard.Client(name=name, namespace=None)
-        self.blackboard.register_key(key="depth", access=py_trees.common.Access.WRITE)
+class DepthCheckerCondition(py_trees.behaviour.Behaviour):
+    def __init__(self, name="Check Depth Reached", topic="/baro_data", target_depth=-1.5, tolerance=0.2):
+        super(DepthCheckerCondition, self).__init__(name)
+        self.topic = topic
+        self.target_depth = target_depth
+        self.tolerance = tolerance
         
         self.node = None
         self.sub = None
+        self.current_z = None
 
     def setup(self, **kwargs):
-        try:
-            self.node = kwargs['node']
-        except KeyError:
-            self.node = rclpy.create_node('depth_to_bb_temp')
-
+        self.node = kwargs.get('node')
         self.sub = self.node.create_subscription(
-            Float64,
-            self.topic_name,
-            self.callback,
-            qos_profile=self.qos_profile
+            Float64, self.topic, self.callback, qos_profile=qos_profile_sensor_data
         )
 
     def callback(self, msg):
-        current_depth = msg.data
-        self.blackboard.depth = current_depth
-        
-        self.feedback_message = f"Depth: {current_depth:.3f}m"
+        self.current_z = msg.data
 
     def update(self):
-        if not hasattr(self.blackboard, "depth") or self.blackboard.depth is None:
-            self.feedback_message = "Waiting for data..."
+        if self.current_z is None:
             return Status.RUNNING
-        
-        return Status.SUCCESS
-    
 
-# import py_trees_ros
-# from std_msgs.msg import Float64
+        lower_limit = self.target_depth - self.tolerance
+        upper_limit = self.target_depth + self.tolerance
 
-#
-# baro_to_bb = py_trees_ros.subscribers.ToBlackboard(
-#     name="Baro_To_Blackboard",
-#     topic_name="/baro_data",
-#     topic_type=Float64,
-#     qos_profile=py_trees_ros.utilities.qos_profile_sensor_data(),
-#     blackboard_variables={"depth": "data"}
-# )
+        if lower_limit <= self.current_z <= upper_limit:
+            return Status.SUCCESS
+        else:
+            return Status.RUNNING

@@ -11,6 +11,7 @@ from auv_interfaces.msg import VehicleStatus
 from std_msgs.msg import Float64, UInt16MultiArray
 from .set_depth_handler import SetDepthHandler
 from .set_attitude_handler import SetAttitudeHandler
+from .attitude_handler import AttitudeHandler
 from geometry_msgs.msg import Vector3
 
 class PixhawkBridge(Node):
@@ -20,20 +21,23 @@ class PixhawkBridge(Node):
         self.master.wait_heartbeat()
         self.get_logger().info("Pixhawk'a bağlanıldı!")
 
-        self.status_publisher = self.create_publisher(VehicleStatus, 'vehicle/state', 10)
-        self.baro_publisher   = self.create_publisher(Float64, 'baro_data', 10)
+        self.status_publisher   = self.create_publisher(VehicleStatus, 'vehicle/state', 10)
+        self.baro_publisher     = self.create_publisher(Float64, 'baro_data', 10)
+        self.attitude_publisher = self.create_publisher(Vector3, 'current_attitude', 10)
 
-        self.pwm_module       = PwmHandler(self.master, self.get_logger())
-        self.mode_module      = ModeHandler(self.master, self.get_logger())
-        self.telemetry_module = TelemetryHandler(self, self.status_publisher)
-        self.baro_module      = BaroHandler(self, self.baro_publisher)
-        self.set_depth_module = SetDepthHandler(self.master, self.get_logger())
+        self.pwm_module            = PwmHandler(self.master, self.get_logger())
+        self.mode_module           = ModeHandler(self.master, self.get_logger())
+        self.telemetry_module      = TelemetryHandler(self, self.status_publisher)
+        self.baro_module           = BaroHandler(self, self.baro_publisher)
+        self.set_depth_module      = SetDepthHandler(self.master, self.get_logger())
         self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
+        self.attitude_module       = AttitudeHandler(self, self.attitude_publisher)
 
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
             #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
-            'GLOBAL_POSITION_INT':   [self.baro_module.handle_message]
+            'GLOBAL_POSITION_INT':   [self.baro_module.handle_message],
+            'ATTITUDE': [self.attitude_module.handle_message]
 
         }
 

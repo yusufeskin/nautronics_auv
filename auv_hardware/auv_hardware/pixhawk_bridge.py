@@ -10,6 +10,8 @@ from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.msg import VehicleStatus
 from std_msgs.msg import Float64, UInt16MultiArray
 from .set_depth_handler import SetDepthHandler
+from .set_attitude_handler import SetAttitudeHandler
+from geometry_msgs.msg import Vector3
 
 class PixhawkBridge(Node):
     def __init__(self):
@@ -26,6 +28,7 @@ class PixhawkBridge(Node):
         self.telemetry_module = TelemetryHandler(self, self.status_publisher)
         self.baro_module      = BaroHandler(self, self.baro_publisher)
         self.set_depth_module = SetDepthHandler(self.master, self.get_logger())
+        self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
 
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
@@ -45,6 +48,10 @@ class PixhawkBridge(Node):
             Float64, 'target_depth', self.set_depth_callback, 10
         )
 
+        self.set_attitude_subscription = self.create_subscription(
+            Vector3, 'target_attitude', self.set_attitude_callback, 10
+        )
+
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
 
     def dispatch_mavlink(self):
@@ -62,6 +69,12 @@ class PixhawkBridge(Node):
 
     def set_depth_callback(self, msg):
         self.set_depth_module.set_target_depth(msg.data)
+
+    def set_attitude_callback(self, msg):
+        roll = msg.x
+        pitch = msg.y
+        yaw = msg.z
+        self.set_attitude_module.set_target_attitude(roll, pitch, yaw)
 
 def main(args=None):
     rclpy.init(args=args)

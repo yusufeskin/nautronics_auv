@@ -1,8 +1,14 @@
 *.pth
 *.pkl
 *.csv
+*.hdf5
 *.db3
 gate_dataset/
 __pycache__/
 *.pycadditional_drivers/
 .vscode/
+auv_virtual_dvl/auv_virtual_dvl/velocity_estimator
+**/lib/python*/
+**/site-packages/
+*.so
+*.so.*

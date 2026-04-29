@@ -10,30 +10,29 @@ import py_trees
 import py_trees_ros.trees
 import py_trees.console as console
 import py_trees_ros.service_clients
+from std_msgs.msg import Float64
 
-# Kendi yazdığın behaviour'lar
-import behaviours.arrange_depth_action
-import behaviours.set_attitude_action # YENİ: Yaw action ve checker'larının olduğu dosya
+import behaviours.set_depth_action
+import behaviours.set_attitude_action
 import behaviours.depth
 import behaviours.state 
 
-# AUV Interface'leri
+
 from auv_interfaces.srv import SetVehicleMode
 
 
 def create_root() -> py_trees.behaviour.Behaviour:
 
-    # ==========================================
-    # 1. PUBLISHERS BRANCH
-    # ==========================================
     publishers_parallel = py_trees.composites.Parallel(
         name="Publishers",
         policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False)
     )
 
-    depth2bb = behaviours.depth.ToBlackboard(
+    depth2bb = py_trees_ros.subscribers.ToBlackboard(
         name="Depth2BB",
-        topic_name="/baro_data",
+        topic_name="/baro_data2",
+        topic_type=Float64,
+        blackboard_variables={'depth': 'data'},
         qos_profile=qos_profile_sensor_data
     )
 
@@ -45,10 +44,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     publishers_parallel.add_children([depth2bb, mode2bb])
 
-    # ==========================================
-    # 2. ARRANGE DEPTH (Derinlik Blokları)
-    # ==========================================
-    arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth Sequence", memory=True)   
+    set_depth_sequence = py_trees.composites.Sequence("Set Depth Sequence", memory=True)   
 
     mode_request_althold = SetVehicleMode.Request()
     mode_request_althold.mode_name = "ALT_HOLD"
@@ -64,25 +60,21 @@ def create_root() -> py_trees.behaviour.Behaviour:
         policy=py_trees.common.ParallelPolicy.SuccessOnOne() 
     )
 
-    depth_action = behaviours.arrange_depth_action.SendDepthTarget(
+    depth_action = behaviours.set_depth_action.SetDepthAction(
         name="Send Depth Target",
         target_depth=-1.5
     )
 
-    depth_checker = behaviours.arrange_depth_action.DepthCheckerCondition(
+    depth_checker = behaviours.depth.DepthCheckerCondition(
         name="Depth Checker",
-        topic="/baro_data",
+        topic="/baro_data2",
         target_depth=-1.5,
         tolerance=0.15 
     )
 
     depth_parallel.add_children([depth_action, depth_checker])
-    arrange_depth_sequence.add_children([switch_mode_althold, depth_parallel])
+    set_depth_sequence.add_children([switch_mode_althold, depth_parallel])
 
-    # ==========================================
-    # 3. YAW CONTROL (Dönüş Blokları) YENİ EKLENEN
-    # ==========================================
-    # Biri komut basarken diğeri açıyı denetleyecek
     turn_yaw_parallel = py_trees.composites.Parallel(
         name="Yaw Control Parallel",
         policy=py_trees.common.ParallelPolicy.SuccessOnOne()
@@ -105,27 +97,18 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     turn_yaw_parallel.add_children([yaw_action, yaw_checker])
 
-    # ==========================================
-    # 4. MAIN MISSION SEQUENCE (Ana Görev Akışı)
-    # ==========================================
-    # Tüm görevleri sıraya diziyoruz (Önce in, sonra dön)
-    # memory=True çok önemli: Derinliğe indikten sonra geri dönüp tekrar derinliği sorgulamaz, direkt dönüşe geçer.
     main_mission_sequence = py_trees.composites.Sequence("Main Mission Sequence", memory=True)
     main_mission_sequence.add_children([
-        arrange_depth_sequence, 
+        set_depth_sequence, 
         turn_yaw_parallel
     ])
 
-    # Tüm görevin sadece 1 kez çalışması için OneShot içine alıyoruz
     one_shot_main_mission = py_trees.decorators.OneShot(
         name="Mission OneShot",
         child=main_mission_sequence,
         policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION
     )
 
-    # ==========================================
-    # 5. TREE ASSEMBLY
-    # ==========================================
     root = py_trees.composites.Parallel(
         name="Main Parallel Root",
         policy=py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=False)

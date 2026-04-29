@@ -55,6 +55,17 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_althold
     )
 
+
+    mode_request_manual = SetVehicleMode.Request()
+    mode_request_manual.mode_name = "MANUAL"
+    switch_mode_manual = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToManual",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_manual
+    )
+
+
     depth_parallel = py_trees.composites.Parallel(
         name="Depth Control Parallel",
         policy=py_trees.common.ParallelPolicy.SuccessOnOne() 
@@ -76,7 +87,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     set_depth_sequence.add_children([
         switch_mode_althold, 
-        depth_parallel
+        depth_parallel,
+        #switch_mode_manual
     ])
 
 

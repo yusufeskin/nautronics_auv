@@ -19,8 +19,9 @@ class SetDepthAction(py_trees.behaviour.Behaviour):
 
     def setup(self, **kwargs):
         self.node = kwargs.get('node')
-        if not self.node:
-            self.node = rclpy.create_node('set_depth_action')
+        # i guess no need to these, just trust to BT
+        # if not self.node:
+        #     self.node = rclpy.create_node('set_depth_action')
 
         self.pub = self.node.create_publisher(Float64, self.topic, 10)
 

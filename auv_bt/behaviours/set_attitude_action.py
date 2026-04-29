@@ -20,8 +20,9 @@ class SetAttitudeAction(py_trees.behaviour.Behaviour):
 
     def setup(self, **kwargs):
         self.node = kwargs.get('node')
-        if not self.node:
-            self.node = rclpy.create_node('set_attitude_actions')
+        # i guess no need to these, just trust to BT
+        # if not self.node:
+        #     self.node = rclpy.create_node('set_attitude_actions')
         self.pub = self.node.create_publisher(Vector3, self.topic, 10)
 
     def update(self):

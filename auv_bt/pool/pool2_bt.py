@@ -16,6 +16,7 @@ import behaviours.set_depth_action
 import behaviours.set_attitude_action
 import behaviours.depth
 import behaviours.state 
+import behaviours.attitude
 
 
 from auv_interfaces.srv import SetVehicleMode
@@ -88,7 +89,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         target_pitch=0.0
     )
 
-    yaw_checker = behaviours.set_attitude_action.AttitudeCheckerCondition(
+    yaw_checker = behaviours.attitude.AttitudeCheckerCondition(
         name="Check 90 Degrees",
         topic="/current_attitude",
         target_yaw=90.0,

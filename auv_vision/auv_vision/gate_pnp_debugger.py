@@ -9,7 +9,7 @@ import os
 import math
 from rclpy.qos import qos_profile_sensor_data
 
-MODEL_NAME = "multimodel"
+MODEL_NAME = "pool"
 
 class PnPDebugger(Node):
     def __init__(self):
@@ -18,12 +18,12 @@ class PnPDebugger(Node):
         # --- 1. Model Path Configuration ---
         ws_root = os.path.abspath(__file__)
         for i in range(7): ws_root = os.path.dirname(ws_root)
-        self.model_path = os.path.join(ws_root, f"src/auv_vision/model/{MODEL_NAME}.pt")
+        self.model_path = os.path.join(ws_root, f"src/auv_vision/model/{MODEL_NAME}.onnx")
         
         W_HALF = 0.1
         H_HALF = 0.1
 
-# Order: 0=Top Left, 1=Top Right, 2=Bottom Right, 3=Bottom Left
+        # Order: 0=Top Left, 1=Top Right, 2=Bottom Right, 3=Bottom Left
         self.object_points = np.array([
             [-W_HALF, -H_HALF, 0.0],  # 0: Top Left (sol üst)
             [ W_HALF, -H_HALF, 0.0],  # 1: Top Right (sağ üst)
@@ -31,16 +31,29 @@ class PnPDebugger(Node):
             [-W_HALF,  H_HALF, 0.0],  # 3: Bottom Left (sol alt)
         ], dtype=np.float32)
 
-        # Vision Tools
         self.bridge = CvBridge()
-        self.model = YOLO(self.model_path)
+        self.model = YOLO(self.model_path, task="pose")
         self.camera_matrix = None
         self.dist_coeffs = None
         
-        # ROS Communications
-        self.create_subscription(CameraInfo, "/camera/camera_info", self.camera_info_callback, qos_profile_sensor_data)
-        self.create_subscription(Image, "/camera/front", self.image_callback, qos_profile_sensor_data)
+        
+        self.create_subscription(
+            CameraInfo, 
+            "/camera_info", 
+            self.camera_info_callback, 
+            qos_profile_sensor_data
+        )
+        
+        self.create_subscription(
+            Image, 
+            "/image_raw", 
+            self.image_callback, 
+            qos_profile_sensor_data
+        )
+        
         self.debug_pub = self.create_publisher(Image, "/auv_vision/pnp_debug", 10)
+        
+        self.get_logger().info("PnP Debugger Started (Standard solvePnP Active).")
         
         self.get_logger().info("PnP Debugger Started (Standard solvePnP Active).")
 
@@ -56,9 +69,9 @@ class PnPDebugger(Node):
             frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
             
             # 1. YOLO Inference
-            results = self.model(frame, verbose=False, conf=0.5)
+            results = self.model(frame, verbose=False, conf=0.5, imgsz=640, device='cpu', half=True)
             
-            if len(results) > 0 and len(results[0].keypoints) > 0:
+            if len(results) > 0 and results[0].keypoints is not None and len(results[0].keypoints) > 0:
                 kp_xy = results[0].keypoints.xy.cpu().numpy()[0]
                 kp_conf = results[0].keypoints.conf.cpu().numpy()[0]
                 
@@ -117,7 +130,9 @@ class PnPDebugger(Node):
             else:
                 cv2.putText(frame, "NO GATE DETECTED", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-            self.debug_pub.publish(self.bridge.cv2_to_imgmsg(frame, encoding="bgr8"))
+            debug_frame = cv2.resize(frame, (640, 480))
+            self.debug_pub.publish(self.bridge.cv2_to_imgmsg(debug_frame, encoding="bgr8"))
+            self.get_logger().error(f"Error:")
 
         except Exception as e:
             self.get_logger().error(f"Error: {e}")

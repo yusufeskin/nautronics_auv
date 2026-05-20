@@ -1,8 +1,19 @@
+# Model files
 *.pth
 *.pkl
+*.pt
+*.onnx
+*.engine
+# data files
 *.csv
 *.db3
+*.npz
+# data folders
 gate_dataset/
+scripts/calibrator/calib_images/
+# Python
 __pycache__/
-*.pycadditional_drivers/
+*.pyc
+# dev env
+additional_drivers/
 .vscode/

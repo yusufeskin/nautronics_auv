@@ -1,0 +1,37 @@
+# docker image create for jetson env
+
+#i will upload this image to dockerhub
+FROM nautronics_core_base2:r36.4.tegra-aarch64-cu126-22.04
+
+WORKDIR /workspace
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+#https://github.com/dusty-nv/jetson-containers/issues/1576
+RUN pip install --no-cache-dir \
+  /usr/local/lib/python3.10/dist-packages/tensorrt-10.3.0-cp310-none-linux_aarch64.whl \
+  /usr/local/lib/python3.10/dist-packages/tensorrt_dispatch-10.3.0-cp310-none-linux_aarch64.whl \
+  /usr/local/lib/python3.10/dist-packages/tensorrt_lean-10.3.0-cp310-none-linux_aarch64.whl
+
+#i dont remember the name of needed packages, i wll get them asap
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-humble-v4l2-camera \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    nano \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY docker_requirements.txt /workspace/docker_requirements.txt
+
+RUN pip install --no-cache-dir -r docker_requirements.txt
+
+RUN pip install --no-cache-dir --no-deps ultralytics
+
+RUN echo "source /opt/ros/humble/install/setup.bash" >> ~/.bashrc && \
+    echo "if [ -f /workspace/install/setup.bash ]; then source /workspace/install/setup.bash; fi" >> ~/.bashrc
+
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bash"]

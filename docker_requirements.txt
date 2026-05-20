@@ -1,0 +1,10 @@
+matplotlib
+scipy
+polars
+ultralytics-thop
+netifaces
+lap 
+seaborn 
+pandas
+
+# Required dependencies to prevent missing module errors during container runtime

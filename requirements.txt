@@ -1,5 +1,1 @@
-matplotlib
-scipy
-polars
-ultralytics-thop
-netifaces
+ bluerobotics-ping

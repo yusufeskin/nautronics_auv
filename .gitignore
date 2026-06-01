@@ -17,3 +17,5 @@ __pycache__/
 # dev env
 additional_drivers/
 .vscode/
+#video files
+*.mp4

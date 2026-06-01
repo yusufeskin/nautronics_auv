@@ -1,4 +1,4 @@
-> This README was written by Claude.
+> This README was written by Claude (and now by Antigravity as well).
 
 # Camera Calibration — ChArUco Board
 
@@ -11,9 +11,11 @@ Produces `fx`, `fy`, `cx`, `cy`, and distortion coefficients (`k1`–`k6`, `p1`,
 
 ```
 scripts/calibrator/
-├── generate_board.py       # Step 1 — generate the printable board (run once)
-├── calibrator.py           # Step 2 — run calibration from collected images
-├── calib_images/           # Place calibration photos here (git-ignored)
+├── generate_board.py           # Step 1 — generate the printable board (run once)
+├── video_to_calib_images.py    # Option B — extract high-quality frames from a calibration video
+├── calibrator.py               # Step 2 — run calibration from collected images
+├── calib_images/               # Directory containing calibration photos (git-ignored)
+├── charuco_board.png           # Generated calibration board image
 └── README.md
 ```
 
@@ -25,7 +27,7 @@ scripts/calibrator/
 
 ```bash
 python generate_board.py
-```
+```u
 
 This outputs `charuco_board.png` (A4, 300 DPI).
 
@@ -54,6 +56,12 @@ board = aruco.CharucoBoard((5, 7), 0.0392, 0.0196, aruco_dict)  # example
 
 ### Step 2 — Collect Images
 
+You can collect calibration images in two ways:
+- **Option A: Manual Photos** — Take 20-30 separate photos and place them in `calib_images/`.
+- **Option B: Video Extraction (Recommended for Underwater)** — Record a short video of the board and automatically extract high-quality, diverse frames using `video_to_calib_images.py`.
+u
+#### Option A — Manual Photos
+
 Shoot **20–30 photos** and drop them into `calib_images/`.
 
 **Checklist for good coverage:**
@@ -67,6 +75,49 @@ Shoot **20–30 photos** and drop them into `calib_images/`.
 
 > For underwater shots: ambient light shifts toward blue-green and contrast drops.  
 > Increase the board's lighting or use a torch to improve marker detection.
+
+---
+
+#### Option B — Video Extraction (Recommended)
+
+Instead of taking individual photos, record a short **1–2 minute MP4 video** of the ChArUco board. Slowly move the camera (or the board) to:
+- Cover all four corners and the center of the frame.
+- Tilt the board at various angles (pitch, yaw, roll).
+- Vary distances (close, medium, far).
+
+Then, run `video_to_calib_images.py` to automatically extract high-quality, diverse, and sharp frames:
+
+```bash
+python video_to_calib_images.py --video your_video.mp4
+```
+
+The script utilizes three intelligent filters to filter out poor frames:
+1. **Blur Filter (Laplacian Variance):** Skips blurry frames caused by fast movement.
+2. **Similarity Filter:** Compares the frame's pixel difference to the last saved frame. Skips near-identical frames to ensure variety.
+3. **ChArUco Pre-check:** Verifies the board is visible by ensuring at least 4 ArUco markers are detected.
+
+##### Advanced Settings & CLI Arguments
+
+To fine-tune extraction parameters:
+
+```bash
+python video_to_calib_images.py --video video.mp4 --target 150 --blur 50.0 --diff 10.0 --skip 3
+```
+
+| Argument | Default | Description |
+|---|---|---|
+| `--video` | *(Required)* | Path to the input video file (e.g. `.mp4`). |
+| `--output` | `calib_images` | Destination folder for extracted frames. |
+| `--target` | `150` | Maximum number of images to extract and save. |
+| `--blur` | `60.0` | Minimum sharpness threshold (Laplacian variance). Lower = allow blurrier frames. |
+| `--diff` | `10.0` | Minimum frame difference threshold. Lower = allow more similar frames. |
+| `--skip` | `3` | Frame step rate (e.g. `--skip 3` processes every 3rd frame, reducing CPU load). |
+| `--no-marker-check` | `False` | Disable the ArUco marker pre-check (runs faster, but might save empty frames). |
+
+##### Tuning for Underwater Videos:
+- **Sharpness (`--blur`):** Underwater conditions often make images softer. If too many frames are skipped, lower `--blur` to `30.0` – `50.0`.
+- **Motion Speed (`--diff`):** If the camera moves very slowly or is mounted on a tripod, lower `--diff` to `5.0` – `8.0` to avoid skipping valid frames.
+- **Skip Rate (`--skip`):** Adjust based on the video's frame rate. For a 30 FPS video, `--skip 3` evaluates 10 frames per second, which is ideal.
 
 ---
 

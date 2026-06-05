@@ -24,6 +24,11 @@ print(f"Total {len(images)} images found.")
 
 all_corners = []
 all_ids     = []
+
+# YENİ: Standart cv2.calibrateCamera'nın ihtiyaç duyduğu 3D ve 2D nokta listeleri
+all_object_points = []
+all_image_points  = []
+
 image_size  = None
 basarili    = 0
 basarisiz   = 0
@@ -73,6 +78,13 @@ for fname in images:
         charuco_ids    is not None and
         len(charuco_corners) >= MIN_CORNERS):
 
+        # YENİ ADIM: 3D fiziksel tahta noktaları (obj_points) ile 
+        # 2D piksel noktalarını (img_points) matematiksel olarak eşleştiriyoruz.
+        obj_points, img_points = board.matchImagePoints(charuco_corners, charuco_ids)
+
+        all_object_points.append(obj_points)
+        all_image_points.append(img_points)
+
         all_corners.append(charuco_corners)
         all_ids.append(charuco_ids)
         basarili += 1
@@ -94,23 +106,20 @@ if basarili < 10:
 # ─── 4. CALIBRATION ─────────────────────────────────────────────────────────
 print("\nPerforming mathematical optimization...")
 
-# For underwater / wide-angle lenses, RATIONAL_MODEL is recommended (k1–k6 + p1, p2)
 flags = (
-    cv2.CALIB_RATIONAL_MODEL   # 6 radial coefficients (k1-k6) — for fisheye/wide-angle lenses
-    # | cv2.CALIB_FIX_K3      # Uncomment if using standard lens
-    # | cv2.CALIB_ZERO_TANGENT_DIST  # Ignore tangential distortion
+    cv2.CALIB_RATIONAL_MODEL
 )
 
-ret, camera_matrix, dist_coeffs, rvecs, tvecs = aruco.calibrateCameraCharuco(
-    charucoCorners = all_corners,
-    charucoIds     = all_ids,
-    board          = board,
-    imageSize      = image_size,
-    cameraMatrix   = None,
-    distCoeffs     = None,
-    flags          = flags
+# YENİ ADIM: Kaldırılan 'aruco.calibrateCameraCharuco' yerine, 
+# yeni mimariye uygun olarak standart kalibrasyon fonksiyonunu çağırıyoruz.
+ret, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
+    objectPoints = all_object_points,
+    imagePoints  = all_image_points,
+    imageSize    = image_size,
+    cameraMatrix = None,
+    distCoeffs   = None,
+    flags        = flags
 )
-
 # ─── 5. RESULTS EVALUATION ───────────────────────────────────────────────────
 print("\n" + "="*50)
 print(f"  Calibration RMS Error : {ret:.4f} pixels")

@@ -3,7 +3,7 @@ from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
-
+from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from auv_interfaces.msg import DetectionArray
@@ -18,10 +18,12 @@ class VisualServoingActionServer(Node):
     def __init__(self):
         super().__init__('visual_servoing_action_server')
 
-        self.cu = 320
-        self.cv = 240
-        self.fx = 556
-        self.fy = 556
+        self.camera_matrix = None
+        self.dist_coeffs = None
+        self.fx = None
+        self.fy = None
+        self.cu = None
+        self.cv = None
         self.pid_controller = pid_controller.PID(0.24, 0, 0.3)
         self.pid_controller2 = pid_controller.PID(0.24, 0, 0.3)
 
@@ -29,7 +31,7 @@ class VisualServoingActionServer(Node):
 
         self.latest_msg = None 
         self.msg_received = False
-
+        self.camera_info_subsc = self.create_subscription(CameraInfo, '/front_camera/camera_info', self.camera_info_callback, 10)
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         #will be changed
         self.subscriber = self.create_subscription(
@@ -49,6 +51,20 @@ class VisualServoingActionServer(Node):
             cancel_callback=self.cancel_callback,
             callback_group=self.callback_group
         )
+
+    def camera_info_callback(self, msg):
+        if self.camera_matrix is not None:
+            return
+            
+        self.camera_matrix = np.array(msg.k, dtype=np.float64).reshape((3, 3))
+        self.dist_coeffs = np.array(msg.d, dtype=np.float64)
+        self.fx = self.camera_matrix[0, 0]
+        self.fy = self.camera_matrix[1, 1]
+        self.cu = self.camera_matrix[0, 2]
+        self.cv = self.camera_matrix[1, 2]
+        
+        self.get_logger().info('CameraInfo geldi ve parametreler ayrıştırıldı.') 
+
 
     def goal_callback(self, goal_request):
         if len(goal_request.target_points) != 4:
@@ -81,6 +97,7 @@ class VisualServoingActionServer(Node):
         loop_rate = self.create_rate(10)
 
         while rclpy.ok():
+
             if goal_handle.is_cancel_requested:
                 goal_handle.canceled()
                 self.stop_robot()
@@ -88,8 +105,8 @@ class VisualServoingActionServer(Node):
                 result.success = False
                 return result
 
-            if not self.msg_received or self.latest_msg is None:
-                self.get_logger().warn("Veri bekleniyor...", throttle_duration_sec=1)
+            if not self.msg_received or self.latest_msg is None or self.camera_matrix is None:
+                self.get_logger().warn("Veriler veya Kamera Matrisi bekleniyor...", throttle_duration_sec=1)
                 loop_rate.sleep()
                 continue
             target_obj = next(

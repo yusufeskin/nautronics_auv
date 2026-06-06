@@ -5,7 +5,7 @@ import numpy as np
 
 # ─── 1. PARAMETERS ──────────────────────────────────────────────────────────
 aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
-board = aruco.CharucoBoard((5, 7), 0.04, 0.02, aruco_dict)
+board = aruco.CharucoBoard((5, 7), 0.04, 0.02, aruco_dict) # Gerçek fiziksel boyutlar farklıysa burayı değiştir.
 
 OPENCV_MAJOR = int(cv2.__version__.split('.')[0])
 OPENCV_MINOR = int(cv2.__version__.split('.')[1])
@@ -28,15 +28,11 @@ image_size  = None
 basarili    = 0
 basarisiz   = 0
 
-# Parametre tanımlamaları döngü dışında bir kez yapılır (Performans artışı)
+# DÜZELTME 1: Dedektör döngü dışında BİR KEZ tanımlanır (Performans için).
+# DÜZELTME 2: Sistemi bozan "detector_params" tamamen kaldırıldı. 
+# Artık OpenCV'nin fotoğraflarında daha iyi çalışan varsayılan ayarları devrede.
 if USE_NEW_API:
-    detector_params = aruco.DetectorParameters()
-    detector_params.adaptiveThreshWinSizeMin  = 5
-    detector_params.adaptiveThreshWinSizeMax  = 25
-    detector_params.adaptiveThreshWinSizeStep = 4
-    
     charuco_detector = aruco.CharucoDetector(board)
-    charuco_detector.setDetectorParameters(detector_params)
 
 for fname in images:
     img = cv2.imread(fname)
@@ -52,10 +48,12 @@ for fname in images:
 
     # ── Marker Detection ────────────────────────────────────────────────────
     if USE_NEW_API:
-        # Tek seferde hem marker hem tahta tespiti yapılır
+        # Tek seferde hem marker hem tahta tespiti yapılır (Yeni API)
         charuco_corners, charuco_ids, marker_corners, marker_ids = charuco_detector.detectBoard(gray)
+        if marker_ids is None or len(marker_ids) < 4:
+            charuco_corners, charuco_ids = None, None
     else:
-        # Eski API mantığı aynen korunur
+        # Eski API mantığı (OpenCV 4.6 ve altı için)
         corners, ids, _ = aruco.detectMarkers(gray, aruco_dict)
         if ids is not None and len(ids) >= 4:
             _, charuco_corners, charuco_ids = aruco.interpolateCornersCharuco(corners, ids, gray, board)
@@ -66,6 +64,7 @@ for fname in images:
     MIN_CORNERS = 6  
     if (charuco_corners is not None and charuco_ids is not None and len(charuco_corners) >= MIN_CORNERS):
 
+        # 3D fiziksel tahta noktaları ile 2D piksel noktalarını eşleştiriyoruz
         obj_points, img_points = board.matchImagePoints(charuco_corners, charuco_ids)
 
         all_object_points.append(obj_points)
@@ -121,16 +120,16 @@ print(f"  cx = {camera_matrix[0,2]:.2f}  cy = {camera_matrix[1,2]:.2f}")
 print(f"\nDistortion Coefficients:\n  {dist_coeffs.ravel()}")
 
 # ─── 6. SAVE RESULTS ─────────────────────────────────────────────────────────
-# .npz Kaydı
+# .npz Kaydı (Numpy için kolay yükleme formatı)
 np.savez("camera_parameters.npz",
          cam_matrix  = camera_matrix,
          dist_coeffs = dist_coeffs,
          rms_error   = ret,
          image_size  = image_size)
 
-
+# .yaml Kaydı — ROS2 camera_info formatı 
 P = np.zeros((3, 4))
-P[:3, :3] = camera_matrix  
+P[:3, :3] = camera_matrix  # Projection matrisi rektifikasyon olmadan hazırlanır
 
 yaml_content = f"""image_width: {image_size[0]}
 image_height: {image_size[1]}

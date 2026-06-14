@@ -75,7 +75,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         # t=0s: 
-        LogInfo(msg='[system_real] KATMAN 1: Donanim baslatiliyor...'),
+        LogInfo(msg='[system_real]1'),
         realsense_launch,
         pixhawk_bridge,
         bno055,
@@ -84,7 +84,7 @@ def generate_launch_description():
         TimerAction(
             period=6.0,
             actions=[
-                LogInfo(msg='[system_real] KATMAN 2: Kontrol ve vizyon baslatiliyor...'),
+                LogInfo(msg='[system_real]2'),
                 thruster_mixer,
                 visual_servoing,
                 keypoint_detector,
@@ -94,6 +94,6 @@ def generate_launch_description():
 
         TimerAction(
             period=10.0,
-            actions=[LogInfo(msg='[system_real] ===== SISTEM HAZIR (GERCEK DONANIM) =====')]
+            actions=[LogInfo(msg='[system_real]3 ')]
         ),
     ])

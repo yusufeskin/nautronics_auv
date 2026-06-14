@@ -51,16 +51,25 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
     )
 
+    pixhawk_bridge = Node(
+        package='auv_hardware',
+        executable='pixhawk_bridge',
+        name='pixhawk_bridge_node',
+        output='screen',
+        parameters=[{'use_sim_time': True}],
+    )
+
     return LaunchDescription([
         # t=0s: Gazebo
-        LogInfo(msg='[system_sim] KATMAN 1: Gazebo simulasyonu baslatiliyor...'),
+        LogInfo(msg='[system_sim]1 '),
         gazebo_launch,
+        pixhawk_bridge,
 
         # t=8s:
         TimerAction(
             period=8.0,
             actions=[
-                LogInfo(msg='[system_sim] KATMAN 2: Kontrol ve vizyon baslatiliyor...'),
+                LogInfo(msg='[system_sim]2'),
                 thruster_mixer,
                 visual_servoing,
                 keypoint_detector,
@@ -70,6 +79,6 @@ def generate_launch_description():
 
         TimerAction(
             period=12.0,
-            actions=[LogInfo(msg='[system_sim] ===== SISTEM HAZIR (SIMULASYON) =====')]
+            actions=[LogInfo(msg='[system_sim]3 ')]
         ),
     ])

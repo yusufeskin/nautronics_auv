@@ -34,23 +34,9 @@ def generate_launch_description():
 
     pwm_router_node = Node(
         package='auv_hardware',
-        executable='pwm_router_node',
-        name='pwm_router_node',
+        executable='pixhawk_bridge',
+        name='pixhawk_bridge_node',
         output='screen',
-    )
-
-    change_mode_service = Node(
-        package='auv_hardware',
-        executable='change_mode_service',
-        name='change_mode_service',
-        output='screen'
-    )
-
-    state_publisher = Node(
-        package='auv_hardware',
-        executable='state_publisher',
-        name='state_publisher',
-        output='screen'
     )
 
     object_keypoint_detector = Node(
@@ -63,38 +49,30 @@ def generate_launch_description():
     return LaunchDescription([
         TimerAction(
             period=0.0,
-            actions=[thruster_mixer]
-        ),
-        TimerAction(
-            period=2.0,
-            actions=[blind_push_action]
-        ),
-        TimerAction(
-            period=4.0,
-            actions=[visual_servoing_action]
-        ),
-        TimerAction(
-            period=6.0,
-            actions=[yawer]
-        ),
-        TimerAction(
-            period=8.0,
             actions=[pwm_router_node]
         ),
         TimerAction(
+            period=2.0,
+            actions=[thruster_mixer]
+        ),
+        TimerAction(
+            period=4.0,
+            actions=[blind_push_action]
+        ),
+        TimerAction(
+            period=6.0,
+            actions=[visual_servoing_action]
+        ),
+        TimerAction(
+            period=8.0,
+            actions=[yawer]
+        ),
+        TimerAction(
             period=10.0,
-            actions=[change_mode_service]
-        ),
-        TimerAction(
-            period=12.0,
-            actions=[state_publisher]
-        ),
-        TimerAction(
-            period=14.0,
             actions=[object_keypoint_detector]
         ),
         TimerAction(
-            period=17.0,
+            period=13.0,
             actions=[LogInfo(msg="===================================\nALL NODES HAVE STARTED SUCCESSFULLY\n===================================")]
         )
     ])

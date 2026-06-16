@@ -12,17 +12,17 @@ from geometry_msgs.msg import Point
 from .object_config import OBJECT_REGISTRY 
 from scipy.spatial.transform import Rotation as R
 
-
 class MultiObjectPnPNode(Node):
     def __init__(self):
         super().__init__('multi_object_pnp_node')
         self.get_logger().info('object_keypoint_detector başladı.')    
         pkg_share_dir = get_package_share_directory('auv_vision')
-        model_path = os.path.join(pkg_share_dir, 'model', 'best.pt')
+        
+        model_path = os.path.join(pkg_share_dir, 'model', 'best.engine')
         self.model = YOLO(model_path)
+        
         self.camera_matrix = None
         self.dist_coeffs = None
-
 
         self.object_library = {}
         self.load_object_config()
@@ -31,6 +31,11 @@ class MultiObjectPnPNode(Node):
         self.create_subscription(Image, '/front_camera/image_raw', self.image_callback, 10)
         self.target_publisher = self.create_publisher(DetectionArray, '/yolo_detections', 10)
         self.bridge = CvBridge()
+
+        self.get_logger().info('tensorrt empty framee')
+        dummy_image = np.zeros((640, 640, 3), dtype=np.uint8)
+        self.model(dummy_image, verbose=False, conf=0.5)
+        self.get_logger().info('model ready.')
 
     def camera_info_callback(self, msg):
         if self.camera_matrix is not None:
@@ -54,13 +59,16 @@ class MultiObjectPnPNode(Node):
         if self.camera_matrix is None or self.dist_coeffs is None:
             self.get_logger().warn('CameraInfo bekleniyor, goruntu atlandi...')
             return
-        # self.get_logger().warn('goruntu aldım...')  # for debugging
+        
+        self.get_logger().warn('goruntu aldım...')
         frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         results = self.model(frame, verbose=False, conf=0.5)
         r = results[0] 
+        
         det_array = DetectionArray()
         det_array.header = msg.header
         det_array.detections = []
+        
         boxes = r.boxes
         kpts_batch = r.keypoints.xy.cpu().numpy() 
 
@@ -83,6 +91,7 @@ class MultiObjectPnPNode(Node):
 
             object_3d_points = self.object_library[cls_id]['points']
             image_2d_points = np.array(keypoints_2d, dtype=np.float32)
+            
             if len(image_2d_points) != len(object_3d_points) or len(image_2d_points) < 4:
                 continue
 

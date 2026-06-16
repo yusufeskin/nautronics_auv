@@ -60,4 +60,4 @@ jobs:
         shell: bash
         run: |
           source /opt/ros/humble/setup.bash
-          colcon build --symlink-install
+          colcon build --packages-skip gscam2 --symlink-install

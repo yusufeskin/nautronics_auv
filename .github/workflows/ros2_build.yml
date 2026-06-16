@@ -52,7 +52,7 @@ jobs:
           fi
 
           rosdep update
-          rosdep install --from-paths src --ignore-src -r -y --skip-keys "python3-ultralytics-pip libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev"
+          rosdep install --from-paths src --ignore-src -r -y --skip-keys "python3-ultralytics-pip"
 
       # 5. Derle
       - name: Build Workspace

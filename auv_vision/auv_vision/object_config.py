@@ -3,6 +3,16 @@
 
 OBJECT_REGISTRY = {
     0: {
+        'name': 'torpedo',
+        'points_3d': [
+            [0.00, 0.00, 0.0],
+            [0.25, 0.00, 0.0],
+            [0.25, 0.49, 0.0],
+            [0.00, 0.49, 0.0]
+        ]
+    },
+
+    1: {
         'name': 'gate',
         'points_3d': [
             [0.0, 0.0, 0.0],
@@ -11,8 +21,9 @@ OBJECT_REGISTRY = {
             [0.050, 0.400, 0.0]
         ]
     },
-    1: {
-        'name': 'torpedo',
+
+    2: {
+        'name': 'torpedo2',
         'points_3d': [
             [0.0, 0.0, 0.0],
             [0.6, 0.0, 0.0],
@@ -22,7 +33,7 @@ OBJECT_REGISTRY = {
 
 
     },
-    2: {
+    3: {
         'name': 'buoy',
         'points_3d': [
             [0.0, 0.0, 0.0],
@@ -32,7 +43,7 @@ OBJECT_REGISTRY = {
         ]
 
     },
-    3: {
+    4: {
         'name': 'bin',
         'points_3d': [
             [0.0, 0.0, 0.0],

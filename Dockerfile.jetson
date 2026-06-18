@@ -1,7 +1,7 @@
 # docker image create for jetson env
 
 #i will upload this image to dockerhub
-FROM nautronics_core_base2:r36.4.tegra-aarch64-cu126-22.04
+FROM yusufeskin/nautronics_core_base2:r36.4.tegra-aarch64-cu126-22.04
 
 WORKDIR /workspace
 

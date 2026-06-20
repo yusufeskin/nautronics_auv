@@ -1,0 +1,21 @@
+#should be experimental
+visual_servoing_action:
+  ros__parameters:
+
+
+    surge_kp: 0.3
+    surge_ki: 0.0
+    surge_kd: 0.05
+    surge_deadband: 30.0    # piksel
+
+
+    sway_kp: 0.3
+    sway_ki: 0.0
+    sway_kd: 0.05
+    sway_deadband: 30.0     # piksel
+
+
+    yaw_kp: 0.4
+    yaw_ki: 0.0
+    yaw_kd: 0.02
+    yaw_deadband: 5.0       # derece

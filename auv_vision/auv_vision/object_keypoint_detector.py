@@ -30,6 +30,7 @@ class MultiObjectPnPNode(Node):
         self.create_subscription(CameraInfo, '/front_camera/camera_info', self.camera_info_callback, 10)
         self.create_subscription(Image, '/front_camera/image_raw', self.image_callback, 10)
         self.target_publisher = self.create_publisher(DetectionArray, '/yolo_detections', 10)
+        self.debug_publisher = self.create_publisher(Image, '/yolo_debug_image', 10)
         self.bridge = CvBridge()
 
         self.get_logger().info('tensorrt empty framee')
@@ -122,6 +123,12 @@ class MultiObjectPnPNode(Node):
             det_array.detections.append(obj_msg)
 
         self.target_publisher.publish(det_array)
+        
+        #ros2 run rqt_image_view rqt_image_view to see what our model is recognizing
+        debug_frame = r.plot()
+        debug_msg = self.bridge.cv2_to_imgmsg(debug_frame, "bgr8")
+        debug_msg.header = msg.header
+        self.debug_publisher.publish(debug_msg)
             
 
 def main(args=None):

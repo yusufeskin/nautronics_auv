@@ -1,0 +1,9 @@
+#not connected w nodes, not real coefficients
+
+fx: 607.0
+fy: 607.0
+cx: 320.0
+cy: 240.0
+image_width: 640
+image_height: 480
+distortion_coeffs: [0.0, 0.0, 0.0, 0.0, 0.0]

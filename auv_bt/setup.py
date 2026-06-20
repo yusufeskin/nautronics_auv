@@ -25,9 +25,9 @@ setup(
     entry_points={
         'console_scripts': [
             'gate_behaviour_tree = gate.gate_behaviour_tree:main',
-            'pool_behaviour_tree = pool.pool_behaviour_tree:main', 
+            'yaw_turn = pool.yaw_turn:main', 
             'pool2_bt = pool.pool2_bt:main',
-            'pool_detection = pool.pool_detection:main',
+            'visual_servo = pool.visual_servo:main',
         ],
     },
 )

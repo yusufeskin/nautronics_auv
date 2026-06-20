@@ -6,5 +6,6 @@ netifaces
 lap 
 seaborn 
 pandas
-
+rosbags
+pymavlink
 # Required dependencies to prevent missing module errors during container runtime

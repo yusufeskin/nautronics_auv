@@ -13,6 +13,7 @@ from .set_depth_handler import SetDepthHandler
 from .set_attitude_handler import SetAttitudeHandler
 from .attitude_handler import AttitudeHandler
 from .baro_handler2 import BaroHandler2
+from .motor_output_handler import MotorOutputHandler
 from geometry_msgs.msg import Vector3
 
 class PixhawkBridge(Node):
@@ -26,6 +27,7 @@ class PixhawkBridge(Node):
         self.baro_publisher     = self.create_publisher(Float64, 'baro_data', 10)
         self.baro_publisher2    = self.create_publisher(Float64, 'baro_data2', 10)
         self.attitude_publisher = self.create_publisher(Vector3, 'current_attitude', 10)
+        self.motor_pwm_feedback_publisher = self.create_publisher(UInt16MultiArray, 'motor_pwm_feedback', 10)
 
         self.pwm_module            = PwmHandler(self.master, self.get_logger())
         self.mode_module           = ModeHandler(self.master, self.get_logger())
@@ -35,6 +37,7 @@ class PixhawkBridge(Node):
         self.set_depth_module      = SetDepthHandler(self.master, self.get_logger())
         self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
         self.attitude_module       = AttitudeHandler(self, self.attitude_publisher)
+        self.motor_output_module   = MotorOutputHandler(self, self.motor_pwm_feedback_publisher)
         
 
         self.msg_handlers = {
@@ -42,7 +45,8 @@ class PixhawkBridge(Node):
             #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
             'GLOBAL_POSITION_INT':   [self.baro_module.handle_message],
             'ATTITUDE': [self.attitude_module.handle_message],
-            'SCALED_PRESSURE2': [self.baro_module2.handle_message] # i did this because there is problem related ardusub after checking version i will handle it: https://discuss.bluerobotics.com/t/altitude-data-from-vfr-hud-messages/21529
+            'SCALED_PRESSURE2': [self.baro_module2.handle_message], # i did this because there is problem related ardusub after checking version i will handle it: https://discuss.bluerobotics.com/t/altitude-data-from-vfr-hud-messages/21529
+            'SERVO_OUTPUT_RAW': [self.motor_output_module.handle_message]
 
         }
 

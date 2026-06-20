@@ -9,8 +9,23 @@ from launch_ros.actions import Node
 def generate_launch_description():
     realsense_dir   = get_package_share_directory('realsense2_camera')
     auv_hardware_dir = get_package_share_directory('auv_hardware')
+    auv_bringup_dir = get_package_share_directory('auv_bringup')
 
     bno055_config = os.path.join(auv_hardware_dir, 'config', 'bno055_params_i2c.yaml')
+    gscam_config = os.path.join(auv_bringup_dir, 'config', 'front_camera_params.yaml')
+
+
+
+    gscam_node = Node(
+        package='gscam2',
+        executable='gscam_main',
+        name='front_camera_node',
+        namespace='front_camera',
+        output='screen',
+        parameters=[gscam_config]
+    )
+
+
 
     #wxternal
     realsense_launch = IncludeLaunchDescription(
@@ -76,9 +91,10 @@ def generate_launch_description():
     return LaunchDescription([
         # t=0s: 
         LogInfo(msg='[system_real]1'),
-        realsense_launch,
+        #realsense_launch,
+        gscam_node,
         pixhawk_bridge,
-        bno055,
+        #bno055,
 
         # t=6s:
         TimerAction(

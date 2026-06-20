@@ -1,23 +1,24 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction, LogInfo
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import TimerAction, LogInfo
 from launch_ros.actions import Node
 
-
 def generate_launch_description():
-    realsense_dir = get_package_share_directory('realsense2_camera')
-    realsense_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(realsense_dir, 'launch', 'rs_launch.py')
-        ),
-        launch_arguments={
-            'depth_module.profile': '640x480x15',   # derinlik: 640x480, 15fps
-            'rgb_camera.profile':   '640x480x15',   # renkli: 640x480, 15fps
-            'enable_pointcloud':    'false',         # nokta bulutu kapalı
-            'align_depth.enable':   'true',          # derinliği renkli kamerayla hizala
-        }.items()
+    
+    config_dir = os.path.join(
+        get_package_share_directory('auv_bringup'),
+        'config',
+        'front_camera_params.yaml'
+    )
+
+    gscam_node = Node(
+        package='gscam2',
+        executable='gscam_main',
+        name='front_camera_node',
+        namespace='front_camera',
+        output='screen',
+        parameters=[config_dir]
     )
 
     keypoint_detector = Node(
@@ -28,13 +29,13 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        LogInfo(msg='[vision_pipeline]1'),
-        realsense_launch,
+        LogInfo(msg='[vision_pipeline] 1. Kamera baslatiliyor (YAML Config ile)...'),
+        gscam_node,
 
         TimerAction(
             period=3.0,
             actions=[
-                LogInfo(msg='[vision_pipeline]2'),
+                LogInfo(msg='[vision_pipeline] 2. Keypoint dedektoru baslatiliyor...'),
                 keypoint_detector,
             ]
         ),

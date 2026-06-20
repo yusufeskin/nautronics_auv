@@ -1,0 +1,9 @@
+/front_camera/front_camera_node:
+  ros__parameters:
+    camera_name: 'front_camera'
+    frame_id: 'front_camera_frame'
+    sync_sink: false
+    #preroll: true
+    #use_gst_timestamps: false
+    camera_info_url: 'file:///workspace/src/nautronics_auv/scripts/calibrator/camera_parameters.yaml' #????????????????????????????
+    gscam_config: 'v4l2src device=/dev/video2 io-mode=2 do-timestamp=true extra-controls="c,auto_exposure=1,exposure_dynamic_framerate=0,exposure_time_absolute=156" ! queue max-size-buffers=1 leaky=downstream ! video/x-h264,width=1280,height=720,framerate=30/1 ! h264parse ! nvv4l2decoder enable-max-performance=1 ! nvvidconv ! video/x-raw,format=RGBA ! videoconvert ! video/x-raw,format=RGB'

@@ -8,11 +8,8 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from auv_interfaces.msg import DetectionArray
 from auv_interfaces.action import VisualServoing
-
 import numpy as np
 import time
-
-from submodules import pid_controller
 
 class VisualServoingActionServer(Node):
     def __init__(self):
@@ -24,8 +21,10 @@ class VisualServoingActionServer(Node):
         self.fy = None
         self.cu = None
         self.cv = None
-        self.pid_controller = pid_controller.PID(0.24, 0, 0.3)
-        self.pid_controller2 = pid_controller.PID(0.24, 0, 0.3)
+        self.lambda_surge = 0.3
+        self.lambda_sway = 0.25
+        self.lambda_heave = 0.4
+        self.lambda_yaw = 0.2
 
         self.callback_group = ReentrantCallbackGroup()
 
@@ -129,7 +128,7 @@ class VisualServoingActionServer(Node):
 
             yaw_error = target_obj.yaw_angle
             # w_yaw_val = -0.2 * yaw_error
-            w_yaw_val = -self.pid_controller.calculate_power(yaw_error)
+            w_yaw_val = -self.lambda_yaw * yaw_error
 
             L_stacked = []
             error_stacked = []
@@ -176,13 +175,12 @@ class VisualServoingActionServer(Node):
                 # hybrid visual servoing (https://inria.hal.science/inria-00350638v1/document)
                 # v = -lambda * L_v_inv * (error - L_w * w_yaw)
                 compensated_error = e_total - (L_w * w_yaw_val)
-                v_linear_raw = -self.pid_controller2.calculate_power(np.dot(L_v_inv, compensated_error))
-                # v_linear_raw = -0.2 * np.dot(L_v_inv, compensated_error)
-                v_linear = v_linear_raw.flatten() 
+                v_target_raw = np.dot(L_v_inv, compensated_error).flatten()
 
-                v_surge = np.clip(v_linear[2], -0.5, 0.5)
-                v_sway  = np.clip(v_linear[0], -0.5, 0.5)
-                v_heave = np.clip(v_linear[1], -0.5, 0.5)
+
+                v_sway  = np.clip(-self.lambda_sway  * v_target_raw[0], -0.5, 0.5)
+                v_heave = np.clip(-self.lambda_heave * v_target_raw[1], -0.5, 0.5)
+                v_surge = np.clip(-self.lambda_surge * v_target_raw[2], -0.5, 0.5)
                 v_yaw   = np.clip(w_yaw_val, -0.3, 0.3)
                 
                 # self.get_logger().info(f"""

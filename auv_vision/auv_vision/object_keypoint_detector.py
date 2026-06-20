@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
@@ -16,30 +16,30 @@ from scipy.spatial.transform import Rotation as R
 class MultiObjectPnPNode(Node):
     def __init__(self):
         super().__init__('multi_object_pnp_node')
-        
+        self.get_logger().info('object_keypoint_detector başladı.')    
         pkg_share_dir = get_package_share_directory('auv_vision')
         model_path = os.path.join(pkg_share_dir, 'model', 'best.pt')
         self.model = YOLO(model_path)
+        self.camera_matrix = None
+        self.dist_coeffs = None
 
-        self.cu = 320.0
-        self.cv = 240.0
-        self.fx = 556.0
-        self.fy = 556.0
-        
-        self.camera_matrix = np.array([
-            [self.fx, 0, self.cu],
-            [0, self.fy, self.cv],
-            [0, 0, 1]
-        ], dtype=np.float32)
-        
-        self.dist_coeffs = np.zeros((4,1))
+
         self.object_library = {}
         self.load_object_config()
 
-        self.create_subscription(Image, '/camera/front', self.image_callback, 10) 
+        self.create_subscription(CameraInfo, '/front_camera/camera_info', self.camera_info_callback, 10)
+        self.create_subscription(Image, '/front_camera/image_raw', self.image_callback, 10)
         self.target_publisher = self.create_publisher(DetectionArray, '/yolo_detections', 10)
         self.debug_publisher = self.create_publisher(Image, '/yolo_debug_image', 10)
         self.bridge = CvBridge()
+
+    def camera_info_callback(self, msg):
+        if self.camera_matrix is not None:
+            return
+            
+        self.camera_matrix = np.array(msg.k, dtype=np.float64).reshape((3, 3))
+        self.dist_coeffs = np.array(msg.d, dtype=np.float64)
+        self.get_logger().info('camerainfo geldi.')    
 
     def load_object_config(self):
         for cls_id, props in OBJECT_REGISTRY.items():
@@ -52,6 +52,10 @@ class MultiObjectPnPNode(Node):
             }
 
     def image_callback(self, msg):
+        if self.camera_matrix is None or self.dist_coeffs is None:
+            self.get_logger().warn('CameraInfo bekleniyor, goruntu atlandi...')
+            return
+        # self.get_logger().warn('goruntu aldım...')  # for debugging
         frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         results = self.model(frame, verbose=False, conf=0.5)
         r = results[0] 

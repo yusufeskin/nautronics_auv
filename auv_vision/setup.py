@@ -11,7 +11,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'model'), glob('model/*.pt')),
+        (os.path.join('share', package_name, 'model'), glob('model/*')),
 
     ],
     install_requires=['setuptools'],
@@ -29,7 +29,7 @@ setup(
     'console_scripts': [
         'image_collector = auv_vision.image_collector:main',
         'model_debugger = auv_vision.model_debugger:main',
-        'gate_pnp_debugger = auv_vision.gate_pnp_debugger:main',
+        'pnp_debugger = auv_vision.pnp_debugger:main',
         'object_keypoint_detector = auv_vision.object_keypoint_detector:main',
         'torpedo_pnp_solver = auv_vision.torpedo_pnp_solver:main',
     ],

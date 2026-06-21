@@ -20,6 +20,12 @@ struct ObjectProps {
   std::vector<cv::Point3f> points_3d;
 };
 
+struct InferenceResult {
+  int class_id;
+  float confidence;
+  std::vector<cv::Point2f> keypoints; 
+};
+
 class MultiObjectTrtNode : public rclcpp::Node
 {
 public:
@@ -29,7 +35,6 @@ public:
 private:
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
-  
   rclcpp::Publisher<auv_interfaces::msg::DetectionArray>::SharedPtr target_pub_;
   
   cv::Mat camera_matrix_;
@@ -39,8 +44,10 @@ private:
 
   void image_callback(const sensor_msgs::msg::Image::ConstSharedPtr & msg);
   void camera_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
+
+  std::vector<InferenceResult> run_tensorrt_inference(const cv::Mat& frame);
 };
 
 }  
 
-#endif 
+#endif  

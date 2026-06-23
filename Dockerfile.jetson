@@ -37,6 +37,7 @@ RUN pip install --no-cache-dir --no-deps ultralytics
 RUN echo "source /opt/ros/humble/install/setup.bash" >> ~/.bashrc && \
     echo "if [ -f /workspace/install/setup.bash ]; then source /workspace/install/setup.bash; fi" >> ~/.bashrc
 
+    ENV PYTHONPATH="/opt/ros/humble/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:${PYTHONPATH}"
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

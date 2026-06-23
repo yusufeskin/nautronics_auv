@@ -9,5 +9,4 @@ pandas
 rosbags
 pymavlink
 py_trees
-py_trees_ros
 # Required dependencies to prevent missing module errors during container runtime

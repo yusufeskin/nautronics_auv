@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e # stop if face an error
-export PYTHONPATH="/opt/ros/humble/lib/python3.10/site-packages:/usr/lib/python3/dist-packages:${PYTHONPATH}"
 
 # source
 source /opt/ros/humble/install/setup.bash

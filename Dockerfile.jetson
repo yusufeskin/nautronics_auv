@@ -16,8 +16,6 @@ RUN pip install --no-cache-dir \
 #i dont remember the name of needed packages, i wll get them asap
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-v4l2-camera \
-    ros-humble-py-trees \
-    ros-humble-py-trees-ros \
     python3-colcon-common-extensions \
     python3-rosdep \
     nano \
@@ -28,6 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gstreamer1.0-x \
     && rm -rf /var/lib/apt/lists/*
 
+
 COPY docker_requirements.txt /workspace/docker_requirements.txt
 
 RUN pip install --no-cache-dir -r docker_requirements.txt
@@ -37,7 +36,7 @@ RUN pip install --no-cache-dir --no-deps ultralytics
 RUN echo "source /opt/ros/humble/install/setup.bash" >> ~/.bashrc && \
     echo "if [ -f /workspace/install/setup.bash ]; then source /workspace/install/setup.bash; fi" >> ~/.bashrc
 
-    ENV PYTHONPATH="/opt/ros/humble/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:${PYTHONPATH}"
+
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

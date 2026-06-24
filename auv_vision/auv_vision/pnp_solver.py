@@ -1,0 +1,93 @@
+import rclpy
+from rclpy.node import Node
+import cv2
+import numpy as np
+from sensor_msgs.msg import CameraInfo
+from auv_interfaces.msg import DetectionArray
+from scipy.spatial.transform import Rotation as R
+from .object_config import OBJECT_REGISTRY 
+
+class PnPSolverNode(Node):
+    def __init__(self):
+        super().__init__('pnp_solver_node')
+        self.get_logger().info('PnP Solver Node ready.')
+
+        self.camera_matrix = None
+        self.dist_coeffs = None
+
+        self.object_library = {}
+        self.load_object_config()
+        self.create_subscription(CameraInfo, '/front_camera/camera_info', self.camera_info_cb, 10)
+        self.create_subscription(DetectionArray, '/yolo_detections', self.yolo_cb, 10)
+        
+        self.pose_publisher = self.create_publisher(DetectionArray, '/object_3d_poses', 10)
+
+    def load_object_config(self):
+        for cls_id, props in OBJECT_REGISTRY.items():
+            self.object_library[cls_id] = np.array(props['points_3d'], dtype=np.float32)
+
+    def camera_info_cb(self, msg):
+        if self.camera_matrix is None:
+            self.camera_matrix = np.array(msg.k, dtype=np.float64).reshape((3, 3))
+            self.dist_coeffs = np.array(msg.d, dtype=np.float64)
+            self.get_logger().info('Kamera matrisi alındı.')
+
+    def yolo_cb(self, msg: DetectionArray):
+        if self.camera_matrix is None or self.dist_coeffs is None:
+            self.get_logger().warn('Kamera Info bekleniyor, PnP atlandı.', throttle_duration_sec=2.0)
+            return
+
+        for det in msg.detections:
+            cls_id = det.class_id
+            
+            if not det.class_name:
+                det.class_name = OBJECT_REGISTRY.get(cls_id, {}).get('name', 'unknown')
+
+            keypoints_2d = [[kp.x, kp.y] for kp in det.keypoints[:4]]
+            image_2d_points = np.array(keypoints_2d, dtype=np.float32)
+            
+            object_3d_points = self.object_library.get(cls_id)
+
+            if object_3d_points is not None and len(image_2d_points) == 4 and len(image_2d_points) == len(object_3d_points):
+                try:
+                    success, rvec, tvec = cv2.solvePnP(
+                        object_3d_points,
+                        image_2d_points,
+                        self.camera_matrix, 
+                        self.dist_coeffs, 
+                        flags=cv2.SOLVEPNP_ITERATIVE
+                    )
+                    
+                    if success: 
+                        det.distance = float(tvec[2][0])
+                        
+                        rmat, _ = cv2.Rodrigues(rvec)
+                        yaw = float(R.from_matrix(rmat).as_euler('xyz', degrees=False)[2])
+                        det.yaw_angle = yaw
+                    else: 
+                        det.distance = -1.0
+                        det.yaw_angle = 0.0
+                        
+                except Exception as e:
+                    self.get_logger().error(f"PnP Hatası (Class {cls_id}): {e}", throttle_duration_sec=1.0)
+                    det.distance = -1.0
+                    det.yaw_angle = 0.0
+            else:
+                det.distance = -1.0
+                det.yaw_angle = 0.0
+
+        self.pose_publisher.publish(msg)
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = PnPSolverNode()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
+
+if __name__ == '__main__':
+    main()

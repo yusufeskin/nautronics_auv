@@ -32,6 +32,8 @@ setup(
         'pnp_debugger = auv_vision.pnp_debugger:main',
         'object_keypoint_detector = auv_vision.object_keypoint_detector:main',
         'torpedo_pnp_solver = auv_vision.torpedo_pnp_solver:main',
+        'yolo_keypoint_lifecycle = auv_vision.lifecycle_yolo_node:main',
+        'pnp_solver = auv_vision.pnp_solver:main'
     ],
 	},
 )

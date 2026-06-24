@@ -10,8 +10,8 @@ from cv_bridge import CvBridge
 from ultralytics import YOLO
 from ament_index_python.packages import get_package_share_directory 
 from auv_interfaces.msg import DetectionArray 
-from auv_vision.debug_helper import draw_debug, build_compressed_msg
-from auv_vision.yolo_helper import get_detections
+from utils.debug_helper import draw_debug, build_compressed_msg
+from utils.yolo_helper import get_detections
 
 class UniversalYoloLifecycleNode(LifecycleNode):
     def __init__(self):

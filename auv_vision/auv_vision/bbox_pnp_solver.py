@@ -7,20 +7,21 @@ from auv_interfaces.msg import DetectionArray
 from scipy.spatial.transform import Rotation as R
 from .object_config import OBJECT_REGISTRY 
 
-class PnPSolverNode(Node):
+class BBoxPnPSolverNode(Node):
     def __init__(self):
-        super().__init__('pnp_solver_node')
-        self.get_logger().info('PnP Solver Node ready.')
+        super().__init__('bbox_pnp_solver_node')
+        self.get_logger().info('BBox PnP Solver Node başlatıldı.')
 
         self.camera_matrix = None
         self.dist_coeffs = None
 
         self.object_library = {}
         self.load_object_config()
+        
         self.create_subscription(CameraInfo, '/front_camera/camera_info', self.camera_info_cb, 10)
         self.create_subscription(DetectionArray, '/yolo_detections', self.yolo_cb, 10)
         
-        self.pose_publisher = self.create_publisher(DetectionArray, '/object_3d_poses', 10)
+        self.pose_publisher = self.create_publisher(DetectionArray, '/object_3d_poses_from_bbox', 10)
 
     def load_object_config(self):
         for cls_id, props in OBJECT_REGISTRY.items():
@@ -39,33 +40,37 @@ class PnPSolverNode(Node):
             self.camera_matrix[0, 2] *= scale_x  # cx
             self.camera_matrix[1, 2] *= scale_y  # cy
 
-            self.get_logger().info(
-                f'Kamera matrisi alındı ve scale edildi: '
-                f'{msg.width}x{msg.height} -> 640x640'
-            )
-    def camera_info_cb(self, msg):
-        if self.camera_matrix is None:
-            self.camera_matrix = np.array(msg.k, dtype=np.float64).reshape((3, 3))
-            self.dist_coeffs = np.array(msg.d, dtype=np.float64)
-            self.get_logger().info('Kamera matrisi alındı.')
+            self.get_logger().info(f'Kamera matrisi ayarlandı ve 640x640 için ölçeklendi.')
 
     def yolo_cb(self, msg: DetectionArray):
         if self.camera_matrix is None or self.dist_coeffs is None:
-            self.get_logger().warn('Kamera Info bekleniyor, PnP atlandı.', throttle_duration_sec=2.0)
+            self.get_logger().warn('Kamera Info bekleniyor, BBox PnP atlandı.', throttle_duration_sec=2.0)
             return
 
         for det in msg.detections:
             cls_id = det.class_id
             
+            if det.bbox_width <= 0.0 or det.bbox_height <= 0.0:
+                continue
+
             if not det.class_name:
                 det.class_name = OBJECT_REGISTRY.get(cls_id, {}).get('name', 'unknown')
 
-            keypoints_2d = [[kp.x, kp.y] for kp in det.keypoints[:4]]
-            image_2d_points = np.array(keypoints_2d, dtype=np.float32)
+            cx = det.bbox_center_x
+            cy = det.bbox_center_y
+            w = det.bbox_width
+            h = det.bbox_height
+
+            image_2d_points = np.array([
+                [cx - w / 2.0, cy - h / 2.0],
+                [cx + w / 2.0, cy - h / 2.0],
+                [cx + w / 2.0, cy + h / 2.0],
+                [cx - w / 2.0, cy + h / 2.0]
+            ], dtype=np.float32)
             
             object_3d_points = self.object_library.get(cls_id)
 
-            if object_3d_points is not None and len(image_2d_points) == 4 and len(image_2d_points) == len(object_3d_points):
+            if object_3d_points is not None and len(object_3d_points) == 4:
                 try:
                     success, rvec, tvec = cv2.solvePnP(
                         object_3d_points,
@@ -77,7 +82,6 @@ class PnPSolverNode(Node):
                     
                     if success: 
                         det.distance = float(tvec[2][0])
-                        
                         rmat, _ = cv2.Rodrigues(rvec)
                         yaw = float(R.from_matrix(rmat).as_euler('xyz', degrees=False)[2])
                         det.yaw_angle = yaw
@@ -86,7 +90,7 @@ class PnPSolverNode(Node):
                         det.yaw_angle = 0.0
                         
                 except Exception as e:
-                    self.get_logger().error(f"PnP Hatası (Class {cls_id}): {e}", throttle_duration_sec=1.0)
+                    self.get_logger().error(f"BBox PnP Hatası (Class {cls_id}): {e}", throttle_duration_sec=1.0)
                     det.distance = -1.0
                     det.yaw_angle = 0.0
             else:
@@ -97,7 +101,7 @@ class PnPSolverNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = PnPSolverNode()
+    node = BBoxPnPSolverNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

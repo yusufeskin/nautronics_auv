@@ -1,5 +1,3 @@
-# yolo_helper.py
-
 import numpy as np
 from auv_interfaces.msg import DetectedObject, DetectionArray
 

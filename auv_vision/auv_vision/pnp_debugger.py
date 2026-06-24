@@ -111,7 +111,8 @@ class MultiObjectPnPNode(Node):
             # Box koordinatları zaten 640x640 frame'e göre
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
-            cv2.putText(frame, obj_msg.class_name, (x1, y1 - 10),
+            label = f"{obj_msg.class_name} ({obj_msg.confidence:.2f})"
+            cv2.putText(frame, label, (x1, y1 - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
             keypoints_2d = []

@@ -1,0 +1,12 @@
+# REQUEST
+float64 pixhawk_angle_deg
+float64 pnp_angle_deg
+float64 pnp_distance_m
+float64 offset_x
+float64 offset_y
+float64 offset_z
+---
+# RESPONSE
+bool success
+float64 target_yaw_deg
+float64 net_surge_m

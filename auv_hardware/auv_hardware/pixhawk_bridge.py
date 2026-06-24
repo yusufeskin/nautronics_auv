@@ -18,7 +18,7 @@ from geometry_msgs.msg import Vector3
 class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')
-        self.master = mavutil.mavlink_connection('udpin:0.0.0.0:14550', baud=57600)
+        self.master = mavutil.mavlink_connection('udpin:0.0.0.0:14551', baud=57600)
         self.master.wait_heartbeat()
         self.get_logger().info("Pixhawk'a bağlanıldı!")
 

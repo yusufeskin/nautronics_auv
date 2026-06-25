@@ -91,8 +91,6 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     yaw_checker = behaviours.attitude.AttitudeCheckerCondition(
         name="Check 90 Degrees",
-        topic="/current_attitude",
-        target_yaw=90.0,
         tolerance=5.0
     )
 

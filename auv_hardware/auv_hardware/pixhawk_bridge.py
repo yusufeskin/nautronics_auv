@@ -18,7 +18,9 @@ from geometry_msgs.msg import Vector3
 class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')
-        self.master = mavutil.mavlink_connection('udpin:0.0.0.0:14550', baud=57600)
+        
+        # UDP yerine doğrudan USB Seri portuna (115200 baud) ayarlandı
+        self.master = mavutil.mavlink_connection('/dev/ttyACM0', baud=115200)
         self.master.wait_heartbeat()
         self.get_logger().info("Pixhawk'a bağlanıldı!")
 
@@ -36,14 +38,12 @@ class PixhawkBridge(Node):
         self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
         self.attitude_module       = AttitudeHandler(self, self.attitude_publisher)
         
-
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
             #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
             'GLOBAL_POSITION_INT':   [self.baro_module.handle_message],
             'ATTITUDE': [self.attitude_module.handle_message],
-            'SCALED_PRESSURE2': [self.baro_module2.handle_message] # i did this because there is problem related ardusub after checking version i will handle it: https://discuss.bluerobotics.com/t/altitude-data-from-vfr-hud-messages/21529
-
+            'SCALED_PRESSURE2': [self.baro_module2.handle_message] 
         }
 
         self.mode_change_service = self.create_service(

@@ -19,7 +19,7 @@ class MultiObjectPnPNode(Node):
         self.get_logger().info('object_keypoint_detector başladı.')
         pkg_share_dir = get_package_share_directory('auv_vision')
 
-        model_path = os.path.join(pkg_share_dir, 'model', 'murat.engine')
+        model_path = os.path.join(pkg_share_dir, 'model', 'baris.engine')
         self.model = YOLO(model_path, task='pose')
 
         self.camera_matrix = None

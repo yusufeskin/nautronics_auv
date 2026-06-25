@@ -21,7 +21,7 @@ class PixhawkBridge(Node):
         super().__init__('pixhawk_bridge_node')
         
         # UDP yerine doğrudan USB Seri portuna (115200 baud) ayarlandı
-        self.master = mavutil.mavlink_connection('/dev/ttyACM0', baud=115200)
+        self.master = mavutil.mavlink_connection('udpin:0.0.0.0:14550', baud=57600)
         self.master.wait_heartbeat()
         self.get_logger().info("Pixhawk'a bağlanıldı!")
 

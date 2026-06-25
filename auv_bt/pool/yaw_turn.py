@@ -10,6 +10,9 @@ import py_trees
 import py_trees_ros.trees
 import py_trees.console as console
 
+import py_trees_ros.service_clients
+from auv_interfaces.srv import SetVehicleMode
+
 import behaviours.set_attitude_action
 import behaviours.attitude
 
@@ -31,7 +34,6 @@ def create_yaw_step(increment: float, step_name: str) -> py_trees.composites.Par
 
     checker = behaviours.attitude.AttitudeCheckerCondition(
         name=f"Check +{increment}°",
-        topic="/current_attitude",
         tolerance=2.0
     )
 
@@ -49,11 +51,22 @@ def create_root() -> py_trees.behaviour.Behaviour:
         qos_profile=qos_profile_sensor_data
     )
 
+    # ── Misyona başlamadan önce ALT_HOLD moduna geç ──
+    mode_request = SetVehicleMode.Request()
+    mode_request.mode_name = "ALT_HOLD"
+    switch_to_althold = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAltHold",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request
+    )
+
     mission = py_trees.composites.Sequence(
         name="Yaw Mission Sequence",
         memory=True
     )
 
+    mission.add_child(switch_to_althold)
     mission.add_child(create_yaw_step(90.0, "Step 1: +90°"))
     mission.add_child(create_yaw_step(90.0, "Step 2: +90°"))
     mission.add_child(create_yaw_step(90.0, "Step 3: +90°"))

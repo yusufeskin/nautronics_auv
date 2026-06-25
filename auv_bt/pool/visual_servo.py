@@ -110,7 +110,6 @@ def create_search_and_align_sequence() -> py_trees.behaviour.Behaviour:
 
     yaw_checker = behaviours.attitude.AttitudeCheckerCondition(
         name="Check 15 Degrees",
-        topic="/current_attitude",
         tolerance=2.0
     )
 

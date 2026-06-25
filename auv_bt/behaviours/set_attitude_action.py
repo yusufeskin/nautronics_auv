@@ -27,26 +27,27 @@ class SetAttitudeAction(py_trees.behaviour.Behaviour):
         self.target_calculated = False
         self.msg = None
 
-        try:
-            current_yaw = self.blackboard.current_yaw
-        except KeyError:
-            return 
-        raw_target = current_yaw + self.yaw_increment
-        normalized_yaw = (raw_target + 180.0) % 360.0 - 180.0
-
-        self.blackboard.target_yaw_dynamic = normalized_yaw
-
-        self.msg = Vector3()
-        self.msg.x = self.target_roll
-        self.msg.y = self.target_pitch
-        self.msg.z = normalized_yaw
-
-        self.target_calculated = True 
-
     def update(self):
+        # İlk tick'te target'ı hesapla (current_yaw gelene kadar bekle)
         if not self.target_calculated:
-            return Status.RUNNING
+            try:
+                current_yaw = self.blackboard.current_yaw
+            except KeyError:
+                return Status.RUNNING
 
+            raw_target = current_yaw + self.yaw_increment
+            normalized_yaw = (raw_target + 180.0) % 360.0 - 180.0
+
+            self.blackboard.target_yaw_dynamic = normalized_yaw
+
+            self.msg = Vector3()
+            self.msg.x = self.target_roll
+            self.msg.y = self.target_pitch
+            self.msg.z = normalized_yaw
+
+            self.target_calculated = True
+
+        # Target hesaplandıysa her tick'te publish et
         if self.pub and self.msg:
             self.pub.publish(self.msg)
 

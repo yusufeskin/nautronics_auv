@@ -22,6 +22,8 @@ import behaviours.attitude
 
 from auv_interfaces.action import BlindPush
 from auv_interfaces.srv import SetVehicleMode
+from auv_interfaces.action import YawAndScan
+
 
 
 def create_root() -> py_trees.behaviour.Behaviour:
@@ -71,13 +73,13 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
 
 
-    mode_request_althold_1 = SetVehicleMode.Request()
-    mode_request_althold_1.mode_name = "ALT_HOLD"
-    switch_mode_althold_1 = py_trees_ros.service_clients.FromConstant(
+    mode_request_althold = SetVehicleMode.Request()
+    mode_request_althold.mode_name = "ALT_HOLD"
+    switch_mode_althold = py_trees_ros.service_clients.FromConstant(
         name="SwitchToAltHold",
         service_type=SetVehicleMode,
         service_name="/change_mode",
-        service_request=mode_request_althold_1
+        service_request=mode_request_althold
     )
 
 
@@ -86,25 +88,15 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
 
 
+    goal_msg_90 = YawAndScan.Goal()
+    goal_msg_90.target_angle_deg = 90.0
+    goal_msg_90.angular_speed = 0.3
 
-    yaw_turn_node1 = behaviours.set_attitude_action.SetAttitudeAction(
+    yaw_turn_node1 = py_trees_ros.action_clients.FromConstant(
         name="Yaw Turn +90",
-        topic="/target_attitude",
-        yaw_increment=90.0,
-    )
-
-    check_attitude_node1 = behaviours.attitude.AttitudeCheckerCondition(
-        name="Check Yaw Reached",
-        tolerance=2.0
-    )
-
-    mode_request_althold_2 = SetVehicleMode.Request()
-    mode_request_althold_2.mode_name = "ALT_HOLD"
-    switch_mode_althold_2 = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToAltHold",
-        service_type=SetVehicleMode,
-        service_name="/change_mode",
-        service_request=mode_request_althold_2
+        action_type=YawAndScan,
+        action_name="/yaw_and_scan", 
+        action_goal=goal_msg_90
     )
 
     blind_push = py_trees_ros.action_clients.FromConstant(
@@ -117,35 +109,18 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    yaw_turn_node2 = behaviours.set_attitude_action.SetAttitudeAction(
+    yaw_turn_node2 = py_trees_ros.action_clients.FromConstant(
         name="Yaw Turn +90",
-        topic="/target_attitude",
-        yaw_increment=90.0,
-    )
-
-    check_attitude_node2 = behaviours.attitude.AttitudeCheckerCondition(
-        name="Check Yaw Reached",
-        tolerance=2.0
-    )
-
-    mode_request_althold_3 = SetVehicleMode.Request()
-    mode_request_althold_3.mode_name = "ALT_HOLD"
-    switch_mode_althold_3 = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToAltHold",
-        service_type=SetVehicleMode,
-        service_name="/change_mode",
-        service_request=mode_request_althold_3
+        action_type=YawAndScan,
+        action_name="/yaw_and_scan", 
+        action_goal=goal_msg_90
     )
 
     main_mission_sequence.add_children([
-        switch_mode_althold_1,
+        switch_mode_althold,
         yaw_turn_node1,
-        check_attitude_node1,
-        switch_mode_althold_2,
         blind_push,
         yaw_turn_node2,
-        check_attitude_node2,
-        switch_mode_althold_3
     ])  
     
     root.add_child(publishers_parallel)

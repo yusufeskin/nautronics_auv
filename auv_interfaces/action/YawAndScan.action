@@ -1,6 +1,6 @@
 # Goal
 float32 target_angle_deg
-float32 angular_speed
+float32 max_angular_speed
 ---
 # Result
 bool success

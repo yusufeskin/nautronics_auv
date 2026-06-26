@@ -43,11 +43,6 @@ class PnPSolverNode(Node):
                 f'Kamera matrisi alındı ve scale edildi: '
                 f'{msg.width}x{msg.height} -> 640x640'
             )
-    def camera_info_cb(self, msg):
-        if self.camera_matrix is None:
-            self.camera_matrix = np.array(msg.k, dtype=np.float64).reshape((3, 3))
-            self.dist_coeffs = np.array(msg.d, dtype=np.float64)
-            self.get_logger().info('Kamera matrisi alındı.')
 
     def yolo_cb(self, msg: DetectionArray):
         if self.camera_matrix is None or self.dist_coeffs is None:

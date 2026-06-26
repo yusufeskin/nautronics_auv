@@ -49,5 +49,5 @@ class SetAttitudeAction(py_trees.behaviour.Behaviour):
 
         if self.pub and self.msg:
             self.pub.publish(self.msg)
-
-        return Status.RUNNING
+            
+        return Status.SUCCESS

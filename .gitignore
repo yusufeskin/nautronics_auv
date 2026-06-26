@@ -19,3 +19,15 @@ additional_drivers/
 .vscode/
 #video files
 *.mp4
+# ROS 2 derleme klasörleri
+build/
+install/
+log/
+
+# Python önbellek dosyaları
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE yapılandırmaları
+.vscode/

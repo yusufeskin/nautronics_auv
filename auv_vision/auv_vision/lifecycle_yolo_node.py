@@ -19,9 +19,14 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.get_logger().info('YOLO Lifecycle node başlatıldı.')    
         self.declare_parameter('model_name', 'best.engine')
         self.declare_parameter('model_type', 'bbox')
+        #parameters
+        self.declare_parameter('ema_alpha', 0.60)
+        self.declare_parameter('distance_gate_threshold', 35.0)
+        self.declare_parameter('miss_frames_limit', 10)
         self.model = None
         self.bridge = CvBridge()
         self.class_names = {}
+        self.keypoint_history: dict = {}
         
         self.image_sub = None
         self.target_publisher = None
@@ -65,6 +70,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.get_logger().info('Deaktive ediliyor (Deactivating)...')
         self.destroy_subscription(self.image_sub)
         self.image_sub = None
+        self.keypoint_history.clear()
         
         del self.model
         del self.class_names
@@ -81,6 +87,57 @@ class UniversalYoloLifecycleNode(LifecycleNode):
     def on_shutdown(self, state: LifecycleState) -> TransitionCallbackReturn:
         return TransitionCallbackReturn.SUCCESS
 
+    def apply_ema_filter(self, detections_msg):
+        if self.model_type != 'keypoint':
+            return
+
+        alpha      = self.get_parameter('ema_alpha').get_parameter_value().double_value
+        gate_px    = self.get_parameter('distance_gate_threshold').get_parameter_value().double_value
+        miss_limit = self.get_parameter('miss_frames_limit').get_parameter_value().integer_value
+
+        seen_ids = set()
+
+        for det in detections_msg.detections:
+            cls_id = det.class_id
+            seen_ids.add(cls_id)
+
+            raw_pts = np.array(
+                [[det.keypoints[i].x, det.keypoints[i].y] for i in range(4)],
+                dtype=np.float32
+            )
+
+            if cls_id in self.keypoint_history:
+                prev_pts = self.keypoint_history[cls_id]['pts']
+
+                max_dist = np.max(np.linalg.norm(raw_pts - prev_pts, axis=1))
+                if max_dist > gate_px:
+                    self.keypoint_history[cls_id]['miss'] += 1
+                    smoothed = prev_pts
+                    self.get_logger().debug(
+                        f'[EMA] cls={cls_id} gated (jump={max_dist:.1f}px > {gate_px}px)'
+                    )
+                else:
+                    smoothed = alpha * raw_pts + (1.0 - alpha) * prev_pts
+                    self.keypoint_history[cls_id]['pts']  = smoothed
+                    self.keypoint_history[cls_id]['miss'] = 0
+            else:
+                smoothed = raw_pts
+                self.keypoint_history[cls_id] = {'pts': smoothed.copy(), 'miss': 0}
+
+            for i in range(4):
+                det.keypoints[i].x = float(smoothed[i][0])
+                det.keypoints[i].y = float(smoothed[i][1])
+
+        # Increment miss counter for classes absent this frame
+        for cls_id in list(self.keypoint_history.keys()):
+            if cls_id not in seen_ids:
+                self.keypoint_history[cls_id]['miss'] += 1
+                if self.keypoint_history[cls_id]['miss'] >= miss_limit:
+                    self.get_logger().info(
+                        f'[EMA] cls={cls_id} evicted after {miss_limit} missed frames.'
+                    )
+                    del self.keypoint_history[cls_id]
+
     def image_callback(self, msg):
         if self.model is None:
             return
@@ -89,8 +146,8 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         frame = cv2.resize(frame, (640, 640))
         results = self.model(frame, verbose=False, conf=0.5)
 
-
         detections_msg = get_detections(results[0], msg.header, self.class_names, self.model_type)
+        self.apply_ema_filter(detections_msg)
         self.target_publisher.publish(detections_msg)
 
         debug_frame = draw_debug(frame, results, detections_msg, self.model_type)

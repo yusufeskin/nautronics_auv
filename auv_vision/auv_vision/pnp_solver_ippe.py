@@ -8,10 +8,10 @@ from scipy.spatial.transform import Rotation as R
 from .object_config import OBJECT_REGISTRY
 
 
-class PnPSolverNode(Node):
+class PnPSolverIPPENode(Node):
     def __init__(self):
-        super().__init__('pnp_solver_node')
-        self.get_logger().info('PnP Solver başlatıldı | Algoritma: ITERATIVE')
+        super().__init__('pnp_solver_ippe_node')
+        self.get_logger().info('PnP Solver başlatıldı | Algoritma: IPPE_SQUARE')
 
         self.camera_matrix = None
         self.dist_coeffs = None
@@ -64,15 +64,19 @@ class PnPSolverNode(Node):
                 and len(image_2d_points) == len(object_3d_points)
             ):
                 try:
-                    success, rvec, tvec = cv2.solvePnP(
+                    num_solutions, rvecs, tvecs, reprojErrors = cv2.solvePnPGeneric(
                         object_3d_points,
                         image_2d_points,
                         self.camera_matrix,
                         self.dist_coeffs,
-                        flags=cv2.SOLVEPNP_ITERATIVE
+                        flags=cv2.SOLVEPNP_IPPE_SQUARE
                     )
 
-                    if success:
+                    if num_solutions > 0:
+                        # OpenCV reprojErr'a göre sıralar — index-0 en iyi çözüm
+                        rvec = rvecs[0]
+                        tvec = tvecs[0]
+
                         det.distance = float(tvec[2][0])
                         rmat, _ = cv2.Rodrigues(rvec)
                         yaw = float(R.from_matrix(rmat).as_euler('xyz', degrees=False)[2])
@@ -94,7 +98,7 @@ class PnPSolverNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = PnPSolverNode()
+    node = PnPSolverIPPENode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

@@ -8,10 +8,10 @@ from scipy.spatial.transform import Rotation as R
 from .object_config import OBJECT_REGISTRY
 
 
-class PnPSolverNode(Node):
+class PnPSolverSQPnPNode(Node):
     def __init__(self):
-        super().__init__('pnp_solver_node')
-        self.get_logger().info('PnP Solver başlatıldı | Algoritma: ITERATIVE')
+        super().__init__('pnp_solver_sqpnp_node')
+        self.get_logger().info('PnP Solver başlatıldı | Algoritma: SQPNP')
 
         self.camera_matrix = None
         self.dist_coeffs = None
@@ -69,7 +69,7 @@ class PnPSolverNode(Node):
                         image_2d_points,
                         self.camera_matrix,
                         self.dist_coeffs,
-                        flags=cv2.SOLVEPNP_ITERATIVE
+                        flags=cv2.SOLVEPNP_SQPNP
                     )
 
                     if success:
@@ -94,7 +94,7 @@ class PnPSolverNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = PnPSolverNode()
+    node = PnPSolverSQPnPNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

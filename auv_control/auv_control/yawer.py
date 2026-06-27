@@ -54,7 +54,7 @@ class ScanActionServer(Node):
             self.get_logger().warn("no data from /current_attitude")
             return GoalResponse.REJECT
 
-        if goal_request.max_angular_speed <= 0.0:
+        if goal_request.angular_speed <= 0.0:
             self.get_logger().warn("canceled max angular speed must be positive")
             return GoalResponse.REJECT
 
@@ -67,7 +67,7 @@ class ScanActionServer(Node):
 
     async def execute_callback(self, goal_handle):
         target_deg_relative = goal_handle.request.target_angle_deg
-        max_speed = goal_handle.request.max_angular_speed
+        max_speed = goal_handle.request.angular_speed
         start_yaw = self.current_yaw
         target_yaw_abs = normalize_angle(start_yaw + math.radians(target_deg_relative))
         

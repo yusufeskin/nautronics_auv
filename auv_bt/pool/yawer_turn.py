@@ -23,6 +23,8 @@ import behaviours.attitude
 from auv_interfaces.action import BlindPush
 from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.action import YawAndScan
+from auv_interfaces.action import VisualServoing
+
 
 
 

@@ -112,10 +112,16 @@ class UniversalYoloLifecycleNode(LifecycleNode):
                 max_dist = np.max(np.linalg.norm(raw_pts - prev_pts, axis=1))
                 if max_dist > gate_px:
                     self.keypoint_history[cls_id]['miss'] += 1
-                    smoothed = prev_pts
-                    self.get_logger().debug(
-                        f'[EMA] cls={cls_id} gated (jump={max_dist:.1f}px > {gate_px}px)'
-                    )
+                    
+                    if self.keypoint_history[cls_id]['miss'] >= miss_limit:
+                        self.get_logger().info(f'[EMA] cls={cls_id} uzun sure uzak kaldi. Yeni konuma kilitleniyor.')
+                        smoothed = raw_pts
+                        self.keypoint_history[cls_id] = {'pts': smoothed.copy(), 'miss': 0}
+                    else:
+                        smoothed = prev_pts
+                        self.get_logger().debug(
+                            f'[EMA] cls={cls_id} gated (jump={max_dist:.1f}px > {gate_px}px)'
+                        )
                 else:
                     smoothed = alpha * raw_pts + (1.0 - alpha) * prev_pts
                     self.keypoint_history[cls_id]['pts']  = smoothed

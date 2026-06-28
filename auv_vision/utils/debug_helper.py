@@ -17,11 +17,12 @@ def draw_debug(frame, results, detections_msg: DetectionArray, model_type: str) 
             cv2.putText(debug_frame, label, (x1, y1 - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
-        if model_type == 'keypoint' and r.keypoints is not None:
-            kpts_batch = r.keypoints.xy.cpu().numpy()
-            for kpts in kpts_batch:
-                for idx in range(min(len(kpts), 4)):
-                    cx, cy = int(kpts[idx][0]), int(kpts[idx][1])
+        if model_type == 'keypoint':
+            for det in dets:
+                for idx in range(4):
+                    cx, cy = int(det.keypoints[idx].x), int(det.keypoints[idx].y)
+                    if cx == 0 and cy == 0:
+                        continue  # skip uninitialised / zero keypoints
                     cv2.circle(debug_frame, (cx, cy), 5, (0, 255, 0), -1)
                     cv2.putText(debug_frame, str(idx), (cx + 5, cy - 5),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)

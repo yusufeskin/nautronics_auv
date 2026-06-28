@@ -29,6 +29,8 @@ setup(
     'console_scripts': [
         'yolo_keypoint_lifecycle = auv_vision.lifecycle_yolo_node:main',
         'pnp_solver = auv_vision.pnp_solver:main',
+        'pnp_solver_sqpnp = auv_vision.pnp_solver_sqpnp:main',
+        'pnp_solver_ippe = auv_vision.pnp_solver_ippe:main',
         'bbox_pnp_solver = auv_vision.bbox_pnp_solver:main',
     ],
 	},

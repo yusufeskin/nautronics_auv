@@ -20,10 +20,12 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.get_logger().info('YOLO Lifecycle node başlatıldı.')    
         self.declare_parameter('model_name', 'baris.engine')
         self.declare_parameter('model_type', 'keypoint')
+        self.declare_parameter('image_topic', '/camera/front')
         #parameters
         self.declare_parameter('ema_alpha', 0.60)
         self.declare_parameter('distance_gate_threshold', 35.0)
         self.declare_parameter('miss_frames_limit', 10)
+        
         self.model = None
         self.bridge = CvBridge()
         self.class_names = {}
@@ -49,7 +51,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         model_name = self.get_parameter('model_name').get_parameter_value().string_value
         model_path = os.path.join(pkg_share_dir, 'model', model_name)
         self.model_type = self.get_parameter('model_type').get_parameter_value().string_value
-
+        self.image_topic = self.get_parameter('image_topic').get_parameter_value().string_value
         yolo_task = 'pose' if self.model_type == 'keypoint' else 'detect'
         
         try:
@@ -64,7 +66,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.model(dummy_image, verbose=False, conf=0.5)
 
         self.image_sub = self.create_subscription(
-            Image, '/camera/camera/color/image_raw', self.image_callback, qos_profile_sensor_data)
+            Image, self.image_topic, self.image_callback, qos_profile_sensor_data)
 
         return super().on_activate(state)
 
@@ -155,7 +157,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         results = self.model(frame, verbose=False, conf=0.5)
 
         detections_msg = get_detections(results[0], msg.header, self.class_names, self.model_type)
-        self.apply_ema_filter(detections_msg)
+        # self.apply_ema_filter(detections_msg)
         self.target_publisher.publish(detections_msg)
 
         debug_frame = draw_debug(frame, results, detections_msg, self.model_type)

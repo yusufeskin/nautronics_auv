@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rclpy
 import cv2
 import numpy as np
@@ -62,7 +63,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.model(dummy_image, verbose=False, conf=0.5)
 
         self.image_sub = self.create_subscription(
-            Image, '/front_camera/image_raw', self.image_callback, qos_profile_sensor_data)
+            Image, '/camera/camera/color/image_raw', self.image_callback, qos_profile_sensor_data)
 
         return super().on_activate(state)
 

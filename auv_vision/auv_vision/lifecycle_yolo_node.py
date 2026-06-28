@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rclpy
 import cv2
 import numpy as np
@@ -17,8 +18,8 @@ class UniversalYoloLifecycleNode(LifecycleNode):
     def __init__(self):
         super().__init__('universal_yolo_node')
         self.get_logger().info('YOLO Lifecycle node başlatıldı.')    
-        self.declare_parameter('model_name', 'best.engine')
-        self.declare_parameter('model_type', 'bbox')
+        self.declare_parameter('model_name', 'baris.engine')
+        self.declare_parameter('model_type', 'keypoint')
         #parameters
         self.declare_parameter('ema_alpha', 0.60)
         self.declare_parameter('distance_gate_threshold', 35.0)
@@ -49,9 +50,10 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         model_path = os.path.join(pkg_share_dir, 'model', model_name)
         self.model_type = self.get_parameter('model_type').get_parameter_value().string_value
 
+        yolo_task = 'pose' if self.model_type == 'keypoint' else 'detect'
         
         try:
-            self.model = YOLO(model_path)
+            self.model = YOLO(model_path, task=yolo_task)
             self.class_names = self.model.names
         except Exception as e:
             self.get_logger().error(f"Model yüklenemedi: {e}")
@@ -62,7 +64,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.model(dummy_image, verbose=False, conf=0.5)
 
         self.image_sub = self.create_subscription(
-            Image, '/front_camera/image_raw', self.image_callback, qos_profile_sensor_data)
+            Image, '/camera/camera/color/image_raw', self.image_callback, qos_profile_sensor_data)
 
         return super().on_activate(state)
 

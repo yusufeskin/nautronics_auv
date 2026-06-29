@@ -14,7 +14,8 @@ from .set_attitude_handler import SetAttitudeHandler
 from .attitude_handler import AttitudeHandler
 from .baro_handler2 import BaroHandler2
 from geometry_msgs.msg import Vector3
-
+from std_msgs.msg import UInt16
+from .led_handler import LedHandler
 class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')
@@ -37,6 +38,7 @@ class PixhawkBridge(Node):
         self.set_depth_module      = SetDepthHandler(self.master, self.get_logger())
         self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
         self.attitude_module       = AttitudeHandler(self, self.attitude_publisher)
+        self.led_module            = LedHandler(self.master, self.get_logger())
         
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
@@ -59,6 +61,10 @@ class PixhawkBridge(Node):
 
         self.set_attitude_subscription = self.create_subscription(
             Vector3, 'target_attitude', self.set_attitude_callback, 10
+        )
+
+        self.led_subscription = self.create_subscription(
+            UInt16, 'led_control', self.led_callback, 10
         )
 
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
@@ -84,6 +90,10 @@ class PixhawkBridge(Node):
         pitch = msg.y
         yaw = msg.z
         self.set_attitude_module.set_target_attitude(roll, pitch, yaw)
+
+    def led_callback(self, msg):
+        self.led_module.set_led_pwm(msg.data)
+
 
 def main(args=None):
     rclpy.init(args=args)

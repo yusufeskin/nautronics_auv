@@ -27,13 +27,11 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'pwm_router = auv_hardware.pwm_router:main',
-            'pixhawk_baro_reader = auv_hardware.baro_publisher:main',
             'ping_sonar_node = auv_hardware.ping_sonar:main',
-            'state_publisher = auv_hardware.state_publisher:main',
-            'change_mode_service = auv_hardware.change_mode:main',
             'battery_node = auv_hardware.battery_node:main',
-            'pixhawk_bridge = auv_hardware.pixhawk_bridge:main' 
+            'pixhawk_bridge = auv_hardware.pixhawk_bridge:main',
+            'pixhawk_bridge2 = auv_hardware.pixhawk_bridge2:main',
+             
         ],
     },
 )

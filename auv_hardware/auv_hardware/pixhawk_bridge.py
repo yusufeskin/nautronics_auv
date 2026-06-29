@@ -15,7 +15,8 @@ from .attitude_handler import AttitudeHandler
 from .baro_handler2 import BaroHandler2
 from .motor_output_handler import MotorOutputHandler
 from geometry_msgs.msg import Vector3
-
+from std_msgs.msg import UInt16
+from .led_handler import LedHandler
 class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')
@@ -67,6 +68,10 @@ class PixhawkBridge(Node):
             Vector3, 'target_attitude', self.set_attitude_callback, 10
         )
 
+        self.led_subscription = self.create_subscription(
+            UInt16, 'led_control', self.led_callback, 10
+        )
+
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
 
     def dispatch_mavlink(self):
@@ -90,6 +95,10 @@ class PixhawkBridge(Node):
         pitch = msg.y
         yaw = msg.z
         self.set_attitude_module.set_target_attitude(roll, pitch, yaw)
+
+    def led_callback(self, msg):
+        self.led_module.set_led_pwm(msg.data)
+
 
 def main(args=None):
     rclpy.init(args=args)

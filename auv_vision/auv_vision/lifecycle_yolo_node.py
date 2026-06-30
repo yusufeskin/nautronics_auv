@@ -20,7 +20,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.get_logger().info('YOLO Lifecycle node başlatıldı.')    
         self.declare_parameter('model_name', 'baris.engine')
         self.declare_parameter('model_type', 'keypoint')
-        self.declare_parameter('image_topic', '/camera/front')
+        self.declare_parameter('image_topic', '/camera/camera/color/image_raw')
         #parameters
         self.declare_parameter('ema_alpha', 0.60)
         self.declare_parameter('distance_gate_threshold', 35.0)

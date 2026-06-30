@@ -8,9 +8,9 @@ from auv_interfaces.action import YawAndScan
 import math
 import time
 
-KP = 1.0
-TOLERANCE_RAD = 0.01
-MIN_SPEED = 0.2
+KP = 0.4
+TOLERANCE_RAD = 0.1
+MIN_SPEED = 0.0
 
 def normalize_angle(angle):
     while angle > math.pi: angle -= 2.0 * math.pi
@@ -85,7 +85,8 @@ class ScanActionServer(Node):
                 result.message = "canceled"
                 return result
 
-            error = normalize_angle(self.current_yaw - target_yaw_abs)
+            error = normalize_angle(target_yaw_abs -self.current_yaw)
+            self.get_logger().info(f'error: {error}')
             turned_amount = normalize_angle(self.current_yaw - start_yaw)
             feedback_msg.current_angle_deg = math.degrees(turned_amount)
             goal_handle.publish_feedback(feedback_msg)

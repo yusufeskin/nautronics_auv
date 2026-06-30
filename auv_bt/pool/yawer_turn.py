@@ -91,8 +91,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
 
     goal_msg_90 = YawAndScan.Goal()
-    goal_msg_90.target_angle_deg = 90.0
-    goal_msg_90.angular_speed = 0.3
+    goal_msg_90.target_angle_deg = 270.0
+    goal_msg_90.angular_speed = 0.05
 
     yaw_turn_node1 = py_trees_ros.action_clients.FromConstant(
         name="Yaw Turn +90",

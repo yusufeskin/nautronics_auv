@@ -10,7 +10,7 @@ from auv_interfaces.msg import DetectionArray
 from auv_interfaces.action import VisualServoing
 import numpy as np
 import time
-
+from rclpy.qos import qos_profile_sensor_data
 class VisualServoingActionServer(Node):
     def __init__(self):
         super().__init__('visual_servoing_action_server')
@@ -37,7 +37,7 @@ class VisualServoingActionServer(Node):
             DetectionArray, 
             '/yolo_detections', 
             self.listener_callback, 
-            10,
+            qos_profile=qos_profile_sensor_data,
             callback_group=self.callback_group
         )
 

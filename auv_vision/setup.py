@@ -32,6 +32,7 @@ setup(
         'pnp_solver_sqpnp = auv_vision.pnp_solver_sqpnp:main',
         'pnp_solver_ippe = auv_vision.pnp_solver_ippe:main',
         'bbox_pnp_solver = auv_vision.bbox_pnp_solver:main',
+        'camera_info_publisher = auv_vision.camera_info_publisher:main'
     ],
 	},
 )

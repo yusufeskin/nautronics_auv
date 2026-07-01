@@ -36,7 +36,13 @@ def _make_base_obj(det, class_names) -> DetectedObject:
     except (KeyError, IndexError):
         obj_msg.class_name = "unknown"
     obj_msg.confidence = float(det.conf[0])
+    if det.id is not None:
+        obj_msg.tracking_id = int(det.id[0]) 
+    else:
+        obj_msg.tracking_id = -1
+        
     return obj_msg
+
 
 
 def _parse_bbox(result, det_array, class_names) -> DetectionArray:

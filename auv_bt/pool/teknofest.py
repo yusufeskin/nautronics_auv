@@ -64,7 +64,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_type=SetVehicleMode,
         service_name="/change_mode",
         service_request=mode_request_althold1
-    )
+        )
 
     blind_push1 = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",

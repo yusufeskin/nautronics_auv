@@ -31,7 +31,8 @@ setup(
             'thruster_mixer = auv_control.thruster_mixer:main',
             'visual_servoing_action = auv_control.visual_servoing_action:main',
             'yawer=auv_control.yawer:main',
-            'blind_push_action = auv_control.blind_push_action:main'
+            'blind_push_action = auv_control.blind_push_action:main',
+            'return_loop_action = auv_control.return_loop_action:main'
         ],
     },
 )

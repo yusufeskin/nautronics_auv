@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction, LogInfo
+from launch.actions import IncludeLaunchDescription, TimerAction, LogInfo, ExecuteProcess
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
@@ -11,32 +11,18 @@ def generate_launch_description():
     auv_hardware_dir = get_package_share_directory('auv_hardware')
     auv_bringup_dir = get_package_share_directory('auv_bringup')
 
-    bno055_config = os.path.join(auv_hardware_dir, 'config', 'bno055_params_i2c.yaml')
-    gscam_config = os.path.join(auv_bringup_dir, 'config', 'front_camera_params.yaml')
-
-
-
-    gscam_node = Node(
-        package='gscam2',
-        executable='gscam_main',
-        name='front_camera_node',
-        namespace='front_camera',
-        output='screen',
-        parameters=[gscam_config]
-    )
-
-
-
     #wxternal
     realsense_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(realsense_dir, 'launch', 'rs_launch.py')
         ),
         launch_arguments={
-            'depth_module.profile': '640x480x15',
-            'rgb_camera.profile':   '640x480x15',
-            'enable_pointcloud':    'false',
-            'align_depth.enable':   'true',
+            'rgb_camera.color_profile': '640x480x30',
+            'depth_module.depth_profile': '640x480x30',
+            'rgb_camera.enable_auto_exposure': 'false',
+            'depth_module.enable_auto_exposure': 'false',
+            'enable_pointcloud': 'false',
+            'align_depth.enable': 'true',
         }.items()
     )
 
@@ -47,16 +33,9 @@ def generate_launch_description():
         output='screen',
     )
 
-    # external
-    bno055 = Node(
-        package='bno055',
-        executable='bno055',
-        name='bno055',
-        parameters=[bno055_config],
-        remappings=[
-            ('/bno055/imu',          '/imu/data'),
-            ('/bno055/calib_status', '/imu/calib_status'),
-        ]
+    foxglove_launch = ExecuteProcess(
+        cmd=['ros2', 'launch', 'foxglove_bridge', 'foxglove_bridge_launch.xml', 'port:=8765'],
+        output='screen'
     )
 
     thruster_mixer = Node(
@@ -74,10 +53,17 @@ def generate_launch_description():
         output='screen',
     )
 
-    keypoint_detector = Node(
+    yolo_keypoint_lifecycle = Node(
         package='auv_vision',
-        executable='object_keypoint_detector',
-        name='object_keypoint_detector',
+        executable='yolo_keypoint_lifecycle',
+        name='yolo_keypoint_lifecycle',
+        output='screen',
+    )
+
+    pnp_solver = Node(
+        package='auv_vision',
+        executable='pnp_solver',
+        name='pnp_solver',
         output='screen',
     )
 
@@ -91,10 +77,9 @@ def generate_launch_description():
     return LaunchDescription([
         # t=0s: 
         LogInfo(msg='[system_real]1'),
-        #realsense_launch,
-        gscam_node,
+        realsense_launch,
         pixhawk_bridge,
-        #bno055,
+        foxglove_launch,
 
         # t=6s:
         TimerAction(
@@ -103,13 +88,9 @@ def generate_launch_description():
                 LogInfo(msg='[system_real]2'),
                 thruster_mixer,
                 visual_servoing,
-                keypoint_detector,
+                yolo_keypoint_lifecycle,
+                pnp_solver,
                 yawer,
             ]
-        ),
-
-        TimerAction(
-            period=10.0,
-            actions=[LogInfo(msg='[system_real]3 ')]
-        ),
+        )
     ])

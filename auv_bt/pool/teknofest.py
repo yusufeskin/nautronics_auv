@@ -73,7 +73,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_type=SetVehicleMode,
         service_name="/change_mode",
         service_request=mode_request_althold1
-    )
+        )
 
     arrange_depth = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
         name="Arrange Depth",

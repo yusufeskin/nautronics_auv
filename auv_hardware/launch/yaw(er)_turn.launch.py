@@ -8,8 +8,8 @@ def generate_launch_description():
     # Bu yüzden sadece bir kere başlatıyoruz.
     pixhawk_bridge = Node(
         package='auv_hardware',
-        executable='pixhawk_bridge',
-        name='pixhawk_bridge',
+        executable='pixhawk_bridge2',
+        name='pixhawk_bridge2',
         output='screen'
     )
 
@@ -31,7 +31,9 @@ def generate_launch_description():
         package='auv_control',
         executable='yawer',
         name='yawer',
-        output='screen'
+        output='screen',
+        #emulate_tty=True
+
     )
 
     return LaunchDescription([

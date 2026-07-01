@@ -12,14 +12,15 @@ class BBoxPnPSolverNode(Node):
     def __init__(self):
         super().__init__('bbox_pnp_solver_node')
         self.get_logger().info('BBox PnP Solver Node başlatıldı.')
-
+        
+        self.declare_parameter('info_topic', '/camera/camera_info')
+        self.info_topic = self.get_parameter('info_topic').get_parameter_value().string_value
         self.camera_matrix = None
         self.dist_coeffs = None
-
         self.object_library = {}
         self.load_object_config()
         
-        self.create_subscription(CameraInfo, '/front_camera/camera_info', self.camera_info_cb, 10)
+        self.create_subscription(CameraInfo, self.info_topic, self.camera_info_cb, 10)
         self.create_subscription(DetectionArray, '/yolo_detections', self.yolo_cb, 10)
         
         self.pose_publisher = self.create_publisher(DetectionArray, '/object_3d_poses_from_bbox', 10)

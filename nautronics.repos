@@ -1,8 +1,4 @@
 repositories:
-  additional_drivers/bno055:
-    type: git
-    url: https://github.com/flynneva/bno055.git
-    version: main
   additional_drivers/gscam2:
     type: git
     url: https://github.com/clydemcqueen/gscam2.git

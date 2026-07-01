@@ -13,24 +13,17 @@ import py_trees_ros.trees
 import py_trees.console as console
 import py_trees_ros.service_clients
 import py_trees_ros.action_clients
-
 import common_behaviors.state 
 
-from behaviours.attitude_to_bb import AttitudeToBlackboard
-import behaviours.set_attitude_action
-import behaviours.attitude
-
 from auv_interfaces.action import BlindPush
-from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.action import YawAndScan
-from auv_interfaces.action import VisualServoing
-
-
+from auv_interfaces.srv import SetVehicleMode
+from auv_interfaces.action import ReturnLoop
 
 
 def create_root() -> py_trees.behaviour.Behaviour:
 
-
+# 1. MAIN TREE STRUCTURE
 
     root = py_trees.composites.Parallel(
         name="Main Parallel Root",
@@ -50,11 +43,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         policy=py_trees.common.OneShotPolicy.ON_SUCCESSFUL_COMPLETION
     )
 
-
-
-
-
-
+# 2. PUBLISHERS BRANCH
 
     mode2bb = common_behaviors.state.ToBlackboard(
         name="Mode2BB",
@@ -62,46 +51,22 @@ def create_root() -> py_trees.behaviour.Behaviour:
         qos_profile=qos_profile_sensor_data
     )
 
-    attitude2bb = AttitudeToBlackboard(
-        name="Attitude2BB",
-        topic_name="/current_attitude",
-        qos_profile=qos_profile_sensor_data
-    )
+    publishers_parallel.add_children([mode2bb])
 
-    publishers_parallel.add_children([mode2bb, attitude2bb])
+# 3. ARRANGE DEPTH BRANCH
 
+    arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)   
 
-
-
-
-
-    mode_request_althold = SetVehicleMode.Request()
-    mode_request_althold.mode_name = "ALT_HOLD"
-    switch_mode_althold = py_trees_ros.service_clients.FromConstant(
+    mode_request_althold1 = SetVehicleMode.Request()
+    mode_request_althold1.mode_name = "ALT_HOLD"
+    switch_mode_althold1 = py_trees_ros.service_clients.FromConstant(
         name="SwitchToAltHold",
         service_type=SetVehicleMode,
         service_name="/change_mode",
-        service_request=mode_request_althold
-    )
+        service_request=mode_request_althold1
+        )
 
-
-
-
-
-
-
-    goal_msg_90 = YawAndScan.Goal()
-    goal_msg_90.target_angle_deg = 270.0
-    goal_msg_90.angular_speed = 0.05
-
-    yaw_turn_node1 = py_trees_ros.action_clients.FromConstant(
-        name="Yaw Turn +90",
-        action_type=YawAndScan,
-        action_name="/yaw_and_scan", 
-        action_goal=goal_msg_90
-    )
-
-    blind_push = py_trees_ros.action_clients.FromConstant(
+    blind_push1 = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",
         action_type=BlindPush,
         action_name="/blind_push",
@@ -111,18 +76,91 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    yaw_turn_node2 = py_trees_ros.action_clients.FromConstant(
-        name="Yaw Turn +90",
+    goal_msg = YawAndScan.Goal()
+    goal_msg.target_angle_deg = 90.0
+    goal_msg.angular_speed = 0.3  
+    
+    rotate_90_deg1 = py_trees_ros.action_clients.FromConstant(
+        name="Turn 90 degrees",
         action_type=YawAndScan,
-        action_name="/yaw_and_scan", 
-        action_goal=goal_msg_90
+        action_name="/current_attitude", 
+        action_goal=goal_msg
     )
 
+    blind_push2 = py_trees_ros.action_clients.FromConstant(
+        name="Blind Push Through Gate",
+        action_type=BlindPush,
+        action_name="/blind_push",
+        action_goal=BlindPush.Goal(
+            duration=7.0,
+            speed=0.3
+        )
+    )
+
+    rotate_90_deg2 = py_trees_ros.action_clients.FromConstant(
+        name="Turn 90 degrees",
+        action_type=YawAndScan,
+        action_name="/current_attitude", 
+        action_goal=goal_msg
+    )
+
+    blind_push3 = py_trees_ros.action_clients.FromConstant(
+        name="Blind Push Through Gate",
+        action_type=BlindPush,
+        action_name="/blind_push",
+        action_goal=BlindPush.Goal(
+            duration=7.0,
+            speed=0.3
+        )
+    )
+
+    rotate_90_deg3 = py_trees_ros.action_clients.FromConstant(
+        name="Turn 90 degrees",
+        action_type=YawAndScan,
+        action_name="/current_attitude", 
+        action_goal=goal_msg
+    )
+
+    blind_push4 = py_trees_ros.action_clients.FromConstant(
+        name="Blind Push Through Gate",
+        action_type=BlindPush,
+        action_name="/blind_push",
+        action_goal=BlindPush.Goal(
+            duration=7.0,
+            speed=0.3
+        )
+    )
+
+    return_loop = py_trees_ros.action_clients.FromConstant(
+        name="Return Loop to Start",
+        action_type=ReturnLoop,
+        action_name="/return_loop",
+        action_goal=ReturnLoop.Goal(
+            duration=20.0,
+            radius=3.0
+        )
+    )
+
+
+
+
+
+
+    arrange_depth_sequence.add_children([
+        switch_mode_althold1,
+        blind_push1,
+        rotate_90_deg1,
+        blind_push2,
+        return_loop,
+        rotate_90_deg2,
+        blind_push3,
+        rotate_90_deg3,
+        blind_push4
+    ])
+
+
     main_mission_sequence.add_children([
-        switch_mode_althold,
-        yaw_turn_node1,
-        blind_push,
-        yaw_turn_node2,
+        arrange_depth_sequence,
     ])  
     
     root.add_child(publishers_parallel)

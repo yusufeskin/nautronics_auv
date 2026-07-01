@@ -10,6 +10,7 @@ def generate_launch_description():
     realsense_dir   = get_package_share_directory('realsense2_camera')
     auv_hardware_dir = get_package_share_directory('auv_hardware')
     auv_bringup_dir = get_package_share_directory('auv_bringup')
+    tracker_config_path = os.path.join(auv_bringup_dir, 'config', 'botsort.yaml')
 
     #wxternal
     realsense_launch = IncludeLaunchDescription(
@@ -53,11 +54,23 @@ def generate_launch_description():
         output='screen',
     )
 
-    yolo_keypoint_lifecycle = Node(
-        package='auv_vision',
-        executable='yolo_keypoint_lifecycle',
-        name='yolo_keypoint_lifecycle',
+    yolo_node = Node(
+        package='auv_vision',            
+        executable='yolo_keypoint_lifecycle', 
+        name='universal_yolo_node', 
         output='screen',
+        emulate_tty=True,         
+        parameters=[
+            {
+                'model_name': 'torpedo_last.pt', 
+                'model_type': 'bbox',    
+                'image_topic': '/camera/front',      
+                'ema_alpha': 0.70,                 
+                'distance_gate_threshold': 40.0,   
+                'miss_frames_limit': 15,
+                'tracker_type': tracker_config_path         
+            }
+        ]
     )
 
     pnp_solver = Node(
@@ -88,7 +101,7 @@ def generate_launch_description():
                 LogInfo(msg='[system_real]2'),
                 thruster_mixer,
                 visual_servoing,
-                yolo_keypoint_lifecycle,
+                yolo_node,
                 pnp_solver,
                 yawer,
             ]

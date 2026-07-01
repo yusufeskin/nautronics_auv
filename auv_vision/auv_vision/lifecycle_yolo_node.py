@@ -26,6 +26,8 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.declare_parameter('distance_gate_threshold', 35.0)
         self.declare_parameter('miss_frames_limit', 10)
         
+        self.declare_parameter('tracker_type', 'botsort.yaml')
+        
         self.model = None
         self.bridge = CvBridge()
         self.class_names = {}
@@ -60,7 +62,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         except Exception as e:
             self.get_logger().error(f"Model yüklenemedi: {e}")
             return TransitionCallbackReturn.ERROR
-
+        self.tracker_type = self.get_parameter('tracker_type').get_parameter_value().string_value
         self.get_logger().info('TensorRT motoru ısıtılıyor...')
         dummy_image = np.zeros((640, 640, 3), dtype=np.uint8)
         self.model(dummy_image, verbose=False, conf=0.5)
@@ -154,9 +156,16 @@ class UniversalYoloLifecycleNode(LifecycleNode):
 
         frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         frame = cv2.resize(frame, (640, 640))
-        results = self.model(frame, verbose=False, conf=0.5)
+        results = self.model.track(
+            frame, 
+            persist=True, 
+            tracker=self.tracker_type, 
+            verbose=False, 
+            conf=0.5
+        )
 
         detections_msg = get_detections(results[0], msg.header, self.class_names, self.model_type)
+        
         # self.apply_ema_filter(detections_msg)
         self.target_publisher.publish(detections_msg)
 

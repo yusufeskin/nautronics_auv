@@ -30,7 +30,7 @@ class VisualServoingActionServer(Node):
 
         self.latest_msg = None 
         self.msg_received = False
-        self.camera_info_subsc = self.create_subscription(CameraInfo, '/front_camera/camera_info', self.camera_info_callback, 10)
+        self.camera_info_subsc = self.create_subscription(CameraInfo, '/camera/camera/color/image_raw', self.camera_info_callback, 10)
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         #will be changed
         self.subscriber = self.create_subscription(

@@ -71,14 +71,14 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
+            duration=15.0,
+            speed=0.2
         )
     )
 
     goal_msg = YawAndScan.Goal()
     goal_msg.target_angle_deg = 90.0
-    goal_msg.angular_speed = 0.3
+    goal_msg.angular_speed = 0.05
 
     rotate_90_deg1 = py_trees_ros.action_clients.FromConstant(
         name="Turn 90 degrees",
@@ -92,8 +92,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
+            duration=15.0,
+            speed=0.2
         )
     )
 
@@ -109,8 +109,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
+            duration=15.0,
+            speed=0.2
         )
     )
 
@@ -126,8 +126,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
+            duration=15.0,
+            speed=0.2
         )
     )
 
@@ -136,8 +136,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=ReturnLoop,
         action_name="/return_loop",
         action_goal=ReturnLoop.Goal(
-            duration=20.0,
-            radius=3.0
+            duration=100.0,
+            radius=5.0
         )
     )
 

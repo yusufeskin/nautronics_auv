@@ -178,10 +178,10 @@ class VisualServoingActionServer(Node):
                 v_target_raw = np.dot(L_v_inv, compensated_error).flatten()
 
 
-                v_sway  = np.clip(-self.lambda_sway  * v_target_raw[0], -0.5, 0.5)
-                v_heave = np.clip(-self.lambda_heave * v_target_raw[1], -0.5, 0.5)
-                v_surge = np.clip(-self.lambda_surge * v_target_raw[2], -0.5, 0.5)
-                v_yaw   = np.clip(w_yaw_val, -0.3, 0.3)
+                v_sway  = np.clip(-self.lambda_sway  * v_target_raw[0], -0.1, 0.1)
+                v_heave = np.clip(-self.lambda_heave * v_target_raw[1], -0.1, 0.1)
+                v_surge = np.clip(-self.lambda_surge * v_target_raw[2], -0.1, 0.1)
+                v_yaw   = np.clip(w_yaw_val, -0.05, 0.05)
                 
                 # self.get_logger().info(f"""
                 #     ---------------------------

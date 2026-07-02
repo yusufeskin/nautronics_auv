@@ -20,17 +20,17 @@ def generate_launch_description():
         launch_arguments={
             'rgb_camera.color_profile': '640x480x30',
             'depth_module.depth_profile': '640x480x30',
-            'rgb_camera.enable_auto_exposure': 'false',
-            'depth_module.enable_auto_exposure': 'false',
-            'enable_pointcloud': 'false',
-            'align_depth.enable': 'true',
+            # 'rgb_camera.enable_auto_exposure': 'false',
+            # 'depth_module.enable_auto_exposure': 'false',
+            # 'enable_pointcloud': 'false',
+            # 'align_depth.enable': 'true',
         }.items()
     )
 
     pixhawk_bridge = Node(
         package='auv_hardware',
-        executable='pixhawk_bridge',
-        name='pixhawk_bridge_node',
+        executable='pixhawk_bridge2',
+        name='pixhawk_bridge_node2',
         output='screen',
     )
 
@@ -63,8 +63,8 @@ def generate_launch_description():
         parameters=[
             {
                 'model_name': 'torpedo_last.pt', 
-                'model_type': 'bbox',    
-                'image_topic': '/camera/front',      
+                'model_type': 'keypoint',    
+                'image_topic': '/camera/camera/color/image_raw',      
                 'ema_alpha': 0.70,                 
                 'distance_gate_threshold': 40.0,   
                 'miss_frames_limit': 15,

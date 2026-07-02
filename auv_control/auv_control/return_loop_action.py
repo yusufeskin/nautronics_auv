@@ -3,17 +3,12 @@ from rclpy.node import Node
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
-from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Twist, Vector3  # Odometry silindi, Vector3 eklendi
 from auv_interfaces.action import ReturnLoop
 import time
 import math
 
-def euler_from_quaternion(x, y, z, w):
-    """Quaternion yönelim verisini sadece Yaw (Z ekseni) açısına dönüştürür."""
-    t3 = +2.0 * (w * z + x * y)
-    t4 = +1.0 - 2.0 * (y * y + z * z)
-    return math.atan2(t3, t4)
+# Kuaterniyon dönüşüm fonksiyonuna (euler_from_quaternion) artık ihtiyacımız yok, silindi.
 
 class ReturnLoopActionServer(Node):
     def __init__(self):
@@ -23,10 +18,11 @@ class ReturnLoopActionServer(Node):
 
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         
-        self.odom_sub = self.create_subscription(
-            Odometry, 
-            '/current_attitude', # Kendi topiginizle degistirebilirsiniz
-            self.odom_callback, 
+        # Abonelik tipi Vector3 olarak güncellendi
+        self.attitude_sub = self.create_subscription(
+            Vector3, 
+            '/current_attitude', 
+            self.attitude_callback,  # İsim daha anlamlı olması için attitude_callback yapıldı
             10, 
             callback_group=self.callback_group
         )
@@ -44,11 +40,11 @@ class ReturnLoopActionServer(Node):
         
         self.get_logger().info('Return Loop Server hazır. İnce hizalama aktif.')
 
-    def odom_callback(self, msg):
-        orientation_q = msg.pose.pose.orientation
-        self.current_yaw = euler_from_quaternion(
-            orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w
-        )
+    def attitude_callback(self, msg):
+        # Yayıncı kodu yaw açısını derece olarak 'z' ekseninde gönderiyor.
+        # Action server'ın geri kalanı radyan üzerinden çalıştığı için 
+        # değeri radyana çevirerek sisteme kaydediyoruz.
+        self.current_yaw = math.radians(msg.z)
 
     def goal_callback(self, goal_request):
         if goal_request.duration <= 0:
@@ -104,6 +100,7 @@ class ReturnLoopActionServer(Node):
                 self.stop_robot()
                 self.get_logger().info('Asama 1 Tamamlandi. Ince ayar hizalamasina geciliyor.')
                 break
+            
             cmd = Twist()
             cmd.linear.x = float(v_const)
             cmd.angular.z = float(w_const)

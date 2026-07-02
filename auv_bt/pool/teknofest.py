@@ -3,6 +3,7 @@
 
 import sys
 import operator
+import gate
 import rclpy
 from geometry_msgs.msg import Point
 from rclpy.executors import MultiThreadedExecutor
@@ -14,6 +15,8 @@ import py_trees.console as console
 import py_trees_ros.service_clients
 import py_trees_ros.action_clients
 import common_behaviors.state 
+import gate.behaviours.depth
+import gate.behaviours.arrange_depth_action
 
 from auv_interfaces.action import BlindPush
 from auv_interfaces.action import YawAndScan
@@ -51,7 +54,13 @@ def create_root() -> py_trees.behaviour.Behaviour:
         qos_profile=qos_profile_sensor_data
     )
 
-    publishers_parallel.add_children([mode2bb])
+    depth2bb = gate.behaviours.depth.ToBlackboard(
+        name="Depth2BB",
+        topic_name="/baro/data",
+        qos_profile=qos_profile_sensor_data
+    )
+
+    publishers_parallel.add_children([mode2bb, depth2bb])
 
 # 3. ARRANGE DEPTH BRANCH
 
@@ -66,19 +75,28 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_althold1
     )
 
+    arrange_depth = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
+        name="Arrange Depth",
+        topic_odom="/baro_data",
+        topic_cmd="/cmd_vel",  
+        target_depth=-0.5,
+        tolerance=0.1,   
+        speed=0.2             
+    )
+
     blind_push1 = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
+            duration=17.0,
+            speed=0.2
         )
     )
 
     goal_msg = YawAndScan.Goal()
     goal_msg.target_angle_deg = 90.0
-    goal_msg.angular_speed = 0.3  
+    goal_msg.angular_speed = 0.05 
     
     rotate_90_deg1 = py_trees_ros.action_clients.FromConstant(
         name="Turn 90 degrees",
@@ -92,8 +110,18 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
+            duration=17.0,
+            speed=0.2
+        )
+    )
+
+    return_loop = py_trees_ros.action_clients.FromConstant(
+        name="Return Loop to Start",
+        action_type=ReturnLoop,
+        action_name="/return_loop",
+        action_goal=ReturnLoop.Goal(
+            duration=20.0,
+            radius=3.0
         )
     )
 
@@ -109,8 +137,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
+            duration=17.0,
+            speed=0.2
         )
     )
 
@@ -126,28 +154,15 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
+            duration=17.0,
+            speed=0.2
         )
     )
-
-    return_loop = py_trees_ros.action_clients.FromConstant(
-        name="Return Loop to Start",
-        action_type=ReturnLoop,
-        action_name="/return_loop",
-        action_goal=ReturnLoop.Goal(
-            duration=20.0,
-            radius=3.0
-        )
-    )
-
-
-
-
 
 
     arrange_depth_sequence.add_children([
         switch_mode_althold1,
+        arrange_depth,
         blind_push1,
         rotate_90_deg1,
         blind_push2,

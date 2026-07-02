@@ -51,7 +51,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     depth2bb = gate.behaviours.depth.ToBlackboard(
         name="Depth2BB",
-        topic_name="/odom",
+        topic_name="/baro/data",
         qos_profile=qos_profile_sensor_data
     )
 
@@ -73,37 +73,27 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)   
 
-    mode_request_manual_1 = SetVehicleMode.Request()
-    mode_request_manual_1.mode_name = "MANUAL"
-    switch_mode_manual_first = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToManual",
+    mode_request_althold1 = SetVehicleMode.Request()
+    mode_request_althold1.mode_name = "ALT_HOLD"
+    switch_mode_althold1 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAltHold",
         service_type=SetVehicleMode,
         service_name="/change_mode",
-        service_request=mode_request_manual_1
+        service_request=mode_request_althold1
     )
 
     arrange_depth_node = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
         name="Arrange Depth",
-        topic_odom="/odom",
+        topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
         target_depth=-0.5,
         tolerance=0.2,   
         speed=0.2             
     )
 
-    mode_request_althold_first = SetVehicleMode.Request()
-    mode_request_althold_first.mode_name = "ALT_HOLD"
-    switch_mode_althold_first = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToAltHold",
-        service_type=SetVehicleMode,
-        service_name="/change_mode",
-        service_request=mode_request_althold_first
-    )
-
     arrange_depth_sequence.add_children([
-        switch_mode_manual_first, 
-        arrange_depth_node, 
-        switch_mode_althold_first
+        switch_mode_althold1, 
+        arrange_depth_node,
     ])
 
 # 4. SEARCH GATE (CHECK DETECTED) BRANCH
@@ -127,7 +117,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     rotate_15_deg = py_trees_ros.action_clients.FromConstant(
         name="Turn 15 degrees",
         action_type=YawAndScan,
-        action_name="/yaw_and_scan", 
+        action_name="/current_attitude", 
         action_goal=goal_msg
     )
 
@@ -152,15 +142,6 @@ def create_root() -> py_trees.behaviour.Behaviour:
 # 5. ALIGN TO GATE BRANCH
 
     allign_sequence = py_trees.composites.Sequence("Align to Gate", memory=True)
-
-    mode_request_manual_2 = SetVehicleMode.Request()
-    mode_request_manual_2.mode_name = "MANUAL"
-    switch_mode_manual_second = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToManual",
-        service_type=SetVehicleMode,
-        service_name="/change_mode",
-        service_request=mode_request_manual_2
-    )
 
     target_points = [
         Point(x=254.0, y=23.0, z=0.0),  # Top Left
@@ -189,20 +170,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    mode_request_althold_second = SetVehicleMode.Request()
-    mode_request_althold_second.mode_name = "ALT_HOLD"
-    switch_mode_althold_second = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToAltHold",
-        service_type=SetVehicleMode,
-        service_name="/change_mode",
-        service_request=mode_request_althold_second
-    )
-
     allign_sequence.add_children([
-        switch_mode_manual_second, 
         allign_node, 
-        blind_push_node, 
-        switch_mode_althold_second
+        blind_push_node,
     ])
 
 # 6. ASSEMBLE MAIN MISSION
@@ -223,6 +193,20 @@ def create_root() -> py_trees.behaviour.Behaviour:
 def main():
     rclpy.init(args=None)
     root = create_root()
+    
+    # ---------------------------------------------------------
+    # 1. RESMİ ÇİZ
+    # ---------------------------------------------------------
+    py_trees.display.render_dot_tree(root, name="auv_gorev_agaci")
+    print("Ağaç başarıyla 'auv_gorev_agaci.svg' olarak kaydedildi!")
+    
+    # ---------------------------------------------------------
+    # 2. SİMÜLASYONA BAĞLANMADAN PROGRAMI ZORLA BİTİR
+    # ---------------------------------------------------------
+    sys.exit(0)  # Kod tam burada durur ve aşağıya inmez!
+    
+    
+    # --- AŞAĞIDAKİ KISIMLAR (SİMÜLASYON BAĞLANTISI) ASLA ÇALIŞMAYACAK ---
     tree = py_trees_ros.trees.BehaviourTree(
         root=root,
         unicode_tree_debug=True
@@ -231,6 +215,7 @@ def main():
     try:
         tree.setup(timeout=15)
         print(py_trees.display.unicode_tree(root))
+    # ... (kodunun geri kalanı aynı kalabilir, nasılsa buraya ulaşmayacak)
     except py_trees_ros.exceptions.TimedOutError as e:
         console.logerror(console.red + "Setup Error: Connection failed [{}]".format(str(e)) + console.reset)
         tree.shutdown()

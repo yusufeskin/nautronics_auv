@@ -29,7 +29,7 @@ setup(
         'console_scripts': [
             'ping_sonar_node = auv_hardware.ping_sonar:main',
             'battery_node = auv_hardware.battery_node:main',
-            'pixhawk_bridge = auv_hardware.pixhawk_bridge:main',
+            # 'pixhawk_bridge = auv_hardware.pixhawk_bridge:main',
             'pixhawk_bridge2 = auv_hardware.pixhawk_bridge2:main',
              
         ],

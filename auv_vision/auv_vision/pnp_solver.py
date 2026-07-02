@@ -7,6 +7,7 @@ from sensor_msgs.msg import CameraInfo
 from auv_interfaces.msg import DetectionArray
 from scipy.spatial.transform import Rotation as R
 from .object_config import OBJECT_REGISTRY
+from rclpy.qos import qos_profile_sensor_data
 
 
 class PnPSolverNode(Node):
@@ -20,8 +21,8 @@ class PnPSolverNode(Node):
         self.object_library = {}
         self.load_object_config()
 
-        self.create_subscription(CameraInfo, '/front_camera/camera_info', self.camera_info_cb, 10)
-        self.create_subscription(DetectionArray, '/yolo_detections', self.yolo_cb, 10)
+        self.create_subscription(CameraInfo, '/camera/camera/color/image_raw', self.camera_info_cb, 10)
+        self.create_subscription(DetectionArray, '/yolo_detections', self.yolo_cb, qos_profile=qos_profile_sensor_data)
         self.pose_publisher = self.create_publisher(DetectionArray, '/object_3d_poses', 10)
 
     def load_object_config(self):

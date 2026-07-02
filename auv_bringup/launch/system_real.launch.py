@@ -68,7 +68,7 @@ def generate_launch_description():
                 'ema_alpha': 0.70,                 
                 'distance_gate_threshold': 40.0,   
                 'miss_frames_limit': 15,
-                'tracker_type': tracker_config_path         
+                # 'tracker_type': tracker_config_path         
             }
         ]
     )

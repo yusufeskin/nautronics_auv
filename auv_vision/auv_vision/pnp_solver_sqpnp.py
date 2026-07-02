@@ -33,12 +33,12 @@ class PnPSolverSQPnPNode(Node):
             self.camera_matrix = np.array(msg.k, dtype=np.float64).reshape((3, 3))
             self.dist_coeffs = np.array(msg.d, dtype=np.float64)
 
-            scale_x = 640.0 / msg.width
-            scale_y = 640.0 / msg.height
-            self.camera_matrix[0, 0] *= scale_x  # fx
-            self.camera_matrix[1, 1] *= scale_y  # fy
-            self.camera_matrix[0, 2] *= scale_x  # cx
-            self.camera_matrix[1, 2] *= scale_y  # cy
+            # scale_x = 640.0 / msg.width
+            # scale_y = 640.0 / msg.height
+            # self.camera_matrix[0, 0] *= scale_x  # fx
+            # self.camera_matrix[1, 1] *= scale_y  # fy
+            # self.camera_matrix[0, 2] *= scale_x  # cx
+            # self.camera_matrix[1, 2] *= scale_y  # cy
 
             self.get_logger().info(
                 f'Kamera matrisi alındı ve scale edildi: {msg.width}x{msg.height} -> 640x640'
@@ -76,7 +76,7 @@ class PnPSolverSQPnPNode(Node):
                     if success:
                         det.distance = float(tvec[2][0])
                         rmat, _ = cv2.Rodrigues(rvec)
-                        yaw = float(R.from_matrix(rmat).as_euler('xyz', degrees=False)[2])
+                        yaw = float(R.from_matrix(rmat).as_euler('xyz', degrees=True)[1])
                         det.yaw_angle = yaw
                     else:
                         det.distance = -1.0

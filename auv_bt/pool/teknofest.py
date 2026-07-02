@@ -64,7 +64,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
 # 3. ARRANGE DEPTH BRANCH
 
-    arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)   
+    arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)
 
     mode_request_althold1 = SetVehicleMode.Request()
     mode_request_althold1.mode_name = "ALT_HOLD"
@@ -73,7 +73,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_type=SetVehicleMode,
         service_name="/change_mode",
         service_request=mode_request_althold1
-    )
+        )
 
     arrange_depth = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
         name="Arrange Depth",
@@ -101,7 +101,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     rotate_90_deg1 = py_trees_ros.action_clients.FromConstant(
         name="Turn 90 degrees",
         action_type=YawAndScan,
-        action_name="/current_attitude", 
+        action_name="/yaw_and_scan",
         action_goal=goal_msg
     )
 
@@ -128,7 +128,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     rotate_90_deg2 = py_trees_ros.action_clients.FromConstant(
         name="Turn 90 degrees",
         action_type=YawAndScan,
-        action_name="/current_attitude", 
+        action_name="/yaw_and_scan",
         action_goal=goal_msg
     )
 
@@ -145,7 +145,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     rotate_90_deg3 = py_trees_ros.action_clients.FromConstant(
         name="Turn 90 degrees",
         action_type=YawAndScan,
-        action_name="/current_attitude", 
+        action_name="/yaw_and_scan",
         action_goal=goal_msg
     )
 
@@ -176,11 +176,11 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     main_mission_sequence.add_children([
         arrange_depth_sequence,
-    ])  
-    
+    ])
+
     root.add_child(publishers_parallel)
     root.add_child(one_shot_main_mission)
-    
+
     return root
 
 # ROS 2 MAIN EXECUTION

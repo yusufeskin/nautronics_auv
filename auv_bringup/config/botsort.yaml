@@ -1,0 +1,16 @@
+tracker_type: botsort       # ['botsort', 'bytetrack']
+
+
+track_high_thresh: 0.5      # İlk eşleştirme için minimum güven (confidence) skoru
+track_low_thresh: 0.1       # İkinci (düşük) eşleştirme için minimum güven skoru
+new_track_thresh: 0.6       # Tamamen yeni bir ID (hedef) atamak için gereken minimum skor
+match_thresh: 0.6           # öncekş karedeki bbox ile yeni karedeki bboxın kesişimi yüzde kaç olmalı?
+
+# --- Hafıza ve Kararlılık (En Kritik Kısım) ---
+track_buffer: 60            # Hedef kaybolduğunda ID'yi hafızada tutma süresi (Frame cinsinden)
+
+# --- BoT-SORT Özel Ayarları (Hareket Kompanzasyonu) ---
+gmc_method: sparseOptFlow   # Global Motion Compensation (Kamera hareketini telafi etme yöntemi)
+proximity_thresh: 0.5       # Konum yakınlığı eşiği
+appearance_thresh: 0.25     # Görünüm (renk/doku) eşleşme eşiği
+with_reid: False        

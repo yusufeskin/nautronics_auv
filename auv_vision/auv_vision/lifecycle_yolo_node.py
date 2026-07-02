@@ -26,7 +26,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.declare_parameter('distance_gate_threshold', 35.0)
         self.declare_parameter('miss_frames_limit', 10)
         
-        self.declare_parameter('tracker_type', 'botsort.yaml')
+        self.declare_parameter('tracker_config', 'botsort.yaml')
         
         self.model = None
         self.bridge = CvBridge()
@@ -55,16 +55,20 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.model_type = self.get_parameter('model_type').get_parameter_value().string_value
         self.image_topic = self.get_parameter('image_topic').get_parameter_value().string_value
         yolo_task = 'pose' if self.model_type == 'keypoint' else 'detect'
-        
+        tracker_file = self.get_parameter('tracker_config').get_parameter_value().string_value
+        self.tracker_path = os.path.join(pkg_share_dir, 'config', tracker_file)
+
         try:
             self.model = YOLO(model_path, task=yolo_task)
             self.class_names = self.model.names
         except Exception as e:
             self.get_logger().error(f"Model yüklenemedi: {e}")
             return TransitionCallbackReturn.ERROR
-        self.tracker_type = self.get_parameter('tracker_type').get_parameter_value().string_value
+        self.tracker = self.get_parameter('tracker_config').get_parameter_value().string_value
+        tracker_path = os.path.join(pkg_share_dir, 'config', self.tracker)
+
         self.get_logger().info('TensorRT motoru ısıtılıyor...')
-        dummy_image = np.zeros((640, 640, 3), dtype=np.uint8)
+        dummy_image = np.zeros((480, 640, 3), dtype=np.uint8)
         self.model(dummy_image, verbose=False, conf=0.5)
 
         self.image_sub = self.create_subscription(
@@ -155,11 +159,11 @@ class UniversalYoloLifecycleNode(LifecycleNode):
             return
 
         frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-        frame = cv2.resize(frame, (640, 640))
+        # frame = cv2.resize(frame, (640, 640))
         results = self.model.track(
             frame, 
             persist=True, 
-            tracker=self.tracker_type, 
+            tracker=self.tracker_path, 
             verbose=False, 
             conf=0.5
         )

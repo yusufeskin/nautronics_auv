@@ -1,0 +1,10 @@
+# Goal
+float32 target_angle_deg
+float32 angular_speed
+---
+# Result
+bool success
+string message
+---
+# Feedback
+float32 current_angle_deg

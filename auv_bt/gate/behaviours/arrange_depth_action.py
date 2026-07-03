@@ -3,16 +3,16 @@
 
 import py_trees
 import rclpy
-from nav_msgs.msg import Odometry
+from std_msgs.msg import Float32  # DEĞİŞİKLİK 1: Odometry yerine Float32 eklendi
 from geometry_msgs.msg import Twist
 from py_trees.common import Status
 from rclpy.qos import qos_profile_sensor_data
 
 class ArrangeDepthAction(py_trees.behaviour.Behaviour):
   
-    def __init__(self, name="Smart Depth Adjustment", topic_odom="/odom", topic_cmd="/cmd_vel", target_depth=-1.5, tolerance=0.2, speed=0.2):
+    def __init__(self, name="Smart Depth Adjustment", topic_odom="/baro_data", topic_cmd="/cmd_vel", target_depth=-1.5, tolerance=0.2, speed=0.2):
         super(ArrangeDepthAction, self).__init__(name)
-        self.topic_odom = topic_odom
+        self.topic_odom = topic_odom  # İsim topic_odom kalsa da aslında baro_data dinliyor
         self.topic_cmd = topic_cmd
         self.target_depth = target_depth  
         self.tolerance = tolerance       
@@ -29,16 +29,17 @@ class ArrangeDepthAction(py_trees.behaviour.Behaviour):
             self.node = rclpy.create_node('smart_depth_action')
 
         self.sub = self.node.create_subscription(
-            Odometry,
+            Float32,  # DEĞİŞİKLİK 2: Odometry yerine Float32 mesaj tipini dinliyoruz
             self.topic_odom,
-            self.odom_callback,
+            self.baro_callback, # Metot adını mantığa uyması için baro_callback yaptık
             qos_profile=qos_profile_sensor_data
         )
         
         self.pub = self.node.create_publisher(Twist, self.topic_cmd, 10)
 
-    def odom_callback(self, msg):
-        self.current_z = msg.pose.pose.position.z
+    # DEĞİŞİKLİK 3: Gelen verinin içeriğini okuma mantığı değişti
+    def baro_callback(self, msg):
+        self.current_z = msg.data  # Artık pose.pose.position.z değil, doğrudan 'data'
 
     def update(self):
         if self.current_z is None:

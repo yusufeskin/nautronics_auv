@@ -56,7 +56,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     depth2bb = gate.behaviours.depth.ToBlackboard(
         name="Depth2BB",
-        topic_name="/baro/data",
+        topic_name="/baro_data",
         qos_profile=qos_profile_sensor_data
     )
 
@@ -80,7 +80,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
         target_depth=-0.5,
-        tolerance=0.1,   
+        tolerance=0.2,   
         speed=0.2             
     )
 

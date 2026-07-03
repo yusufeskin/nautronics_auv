@@ -5,7 +5,7 @@ from py_trees.common import Status
 from rclpy.qos import qos_profile_sensor_data
 
 class DepthCheckerCondition(py_trees.behaviour.Behaviour):
-    def __init__(self, name="Check Depth Reached", topic="/baro_data2", target_depth=-1.5, tolerance=0.2):
+    def __init__(self, name="Check Depth Reached", topic="/baro_data", target_depth=-1.5, tolerance=0.2):
         super(DepthCheckerCondition, self).__init__(name)
         self.topic = topic
         self.target_depth = target_depth

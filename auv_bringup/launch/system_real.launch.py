@@ -90,7 +90,7 @@ def generate_launch_description():
     return LaunchDescription([
         # t=0s: 
         LogInfo(msg='[system_real]1'),
-        realsense_launch,
+        # realsense_launch,
         pixhawk_bridge,
         foxglove_launch,
 
@@ -101,8 +101,8 @@ def generate_launch_description():
                 LogInfo(msg='[system_real]2'),
                 thruster_mixer,
                 visual_servoing,
-                yolo_node,
-                pnp_solver,
+                # yolo_node,
+                # pnp_solver,
                 yawer,
             ]
         )

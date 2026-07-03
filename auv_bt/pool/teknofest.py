@@ -54,7 +54,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     depth2bb = gate.behaviours.depth.ToBlackboard(
         name="Depth2BB",
-        topic_name="/baro/data",
+        topic_name="/baro_data",
         qos_profile=qos_profile_sensor_data
     )
 
@@ -64,14 +64,23 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)
 
-    # mode_request_althold1 = SetVehicleMode.Request()
-    # mode_request_althold1.mode_name = "ALT_HOLD"
-    # switch_mode_althold1 = py_trees_ros.service_clients.FromConstant(
-    #     name="SwitchToAltHold",
-    #     service_type=SetVehicleMode,
-    #     service_name="/change_mode",
-    #     service_request=mode_request_althold1
-    #     )
+    mode_request_althold1 = SetVehicleMode.Request()
+    mode_request_althold1.mode_name = "ALT_HOLD"
+    switch_mode_althold1 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAltHold",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_althold1
+        )
+
+    arrange_depth = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
+        name="Arrange Depth",
+        topic_odom="/baro_data",
+        topic_cmd="/cmd_vel",  
+        target_depth=-0.5,
+        tolerance=0.2,   
+        speed=0.2             
+    )
 
     blind_push1 = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",

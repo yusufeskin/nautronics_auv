@@ -31,3 +31,6 @@ __pycache__/
 
 # IDE yapılandırmaları
 .vscode/
+
+# auto annotator script
+scripts/auto_annotator/auto_annotator.py

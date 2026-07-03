@@ -23,6 +23,8 @@ from auv_interfaces.action import YawAndScan
 from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.action import ReturnLoop
 
+from common_behaviors.absolute_yaw_turn import SaveInitialYaw, AbsoluteYawClient
+
 
 def create_root() -> py_trees.behaviour.Behaviour:
 
@@ -58,7 +60,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         name="Depth2BB",
         topic_name="/baro_data",
         qos_profile=qos_profile_sensor_data
-    )
+    )   
 
     publishers_parallel.add_children([mode2bb, depth2bb])
 
@@ -80,9 +82,11 @@ def create_root() -> py_trees.behaviour.Behaviour:
         topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
         target_depth=-0.5,
-        tolerance=0.2,   
+        tolerance=0.1,   
         speed=0.2             
     )
+
+    save_initial_yaw = SaveInitialYaw(name="Save Initial Yaw")
 
     blind_push1 = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",
@@ -94,15 +98,10 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    goal_msg = YawAndScan.Goal()
-    goal_msg.target_angle_deg = 90.0
-    goal_msg.angular_speed = 0.05 
-    
-    rotate_90_deg1 = py_trees_ros.action_clients.FromConstant(
-        name="Turn 90 degrees",
-        action_type=YawAndScan,
-        action_name="/yaw_and_scan",
-        action_goal=goal_msg
+    rotate_90_deg1 = AbsoluteYawClient(
+        name="Turn 90 degrees (1)",
+        angle_increment=90.0,
+        speed=0.05
     )
 
     blind_push2 = py_trees_ros.action_clients.FromConstant(
@@ -125,11 +124,10 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    rotate_90_deg2 = py_trees_ros.action_clients.FromConstant(
-        name="Turn 90 degrees",
-        action_type=YawAndScan,
-        action_name="/yaw_and_scan",
-        action_goal=goal_msg
+    rotate_90_deg2 = AbsoluteYawClient(
+        name="Turn 90 degrees (2)",
+        angle_increment=90.0,
+        speed=0.05
     )
 
     blind_push3 = py_trees_ros.action_clients.FromConstant(
@@ -142,11 +140,10 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
-    rotate_90_deg3 = py_trees_ros.action_clients.FromConstant(
-        name="Turn 90 degrees",
-        action_type=YawAndScan,
-        action_name="/yaw_and_scan",
-        action_goal=goal_msg
+    rotate_90_deg3 = AbsoluteYawClient(
+        name="Turn 90 degrees (3)",
+        angle_increment=90.0,
+        speed=0.05
     )
 
     blind_push4 = py_trees_ros.action_clients.FromConstant(
@@ -163,6 +160,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     arrange_depth_sequence.add_children([
         switch_mode_althold1,
         arrange_depth,
+        save_initial_yaw,
         blind_push1,
         rotate_90_deg1,
         blind_push2,

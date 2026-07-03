@@ -29,7 +29,8 @@ setup(
             'pool2_bt = pool.pool2_bt:main',
             'visual_servo = pool.visual_servo:main',
             'yawer_turn = pool.yawer_turn:main',
-            'teknofest = pool.teknofest:main'
+            'teknofest = pool.teknofest:main',
+            'deneme = pool.deneme:main'
         ],
     },
 )

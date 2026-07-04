@@ -18,7 +18,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
     def __init__(self):
         super().__init__('universal_yolo_node')
         self.get_logger().info('YOLO Lifecycle node başlatıldı.')    
-        self.declare_parameter('model_name', 'torpedo_real.pt')
+        self.declare_parameter('model_name', 'realtorpedo.pt')
         self.declare_parameter('model_type', 'keypoint')
         self.declare_parameter('image_topic', '/camera/camera/color/image_raw')
         #parameters

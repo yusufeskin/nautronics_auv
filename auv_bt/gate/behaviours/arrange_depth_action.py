@@ -3,7 +3,7 @@
 
 import py_trees
 import rclpy
-from std_msgs.msg import Float32  # DEĞİŞİKLİK 1: Odometry yerine Float32 eklendi
+from std_msgs.msg import Float64  # DEĞİŞİKLİK 1: Odometry yerine Float32 eklendi
 from geometry_msgs.msg import Twist
 from py_trees.common import Status
 from rclpy.qos import qos_profile_sensor_data
@@ -29,7 +29,7 @@ class ArrangeDepthAction(py_trees.behaviour.Behaviour):
             self.node = rclpy.create_node('smart_depth_action')
 
         self.sub = self.node.create_subscription(
-            Float32,  # DEĞİŞİKLİK 2: Odometry yerine Float32 mesaj tipini dinliyoruz
+            Float64,  # DEĞİŞİKLİK 2: Odometry yerine Float32 mesaj tipini dinliyoruz
             self.topic_odom,
             self.baro_callback, # Metot adını mantığa uyması için baro_callback yaptık
             qos_profile=qos_profile_sensor_data

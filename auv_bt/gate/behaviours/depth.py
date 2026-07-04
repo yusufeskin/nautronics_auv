@@ -3,7 +3,7 @@
 
 import py_trees
 import rclpy
-from std_msgs.msg import Float32  # DEĞİŞİKLİK 1: Odometry yerine Float32
+from std_msgs.msg import Float64  # DEĞİŞİKLİK 1: Odometry yerine Float32
 from rclpy.qos import qos_profile_sensor_data
 from py_trees.common import Status
 
@@ -27,7 +27,7 @@ class ToBlackboard(py_trees.behaviour.Behaviour):
             self.node = rclpy.create_node('depth_to_bb_temp')
 
         self.sub = self.node.create_subscription(
-            Float32,  # DEĞİŞİKLİK 2: Float32 tipinde dinleme
+            Float64,  # DEĞİŞİKLİK 2: Float32 tipinde dinleme
             self.topic_name,
             self.callback,
             qos_profile=self.qos_profile

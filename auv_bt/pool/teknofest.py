@@ -73,13 +73,22 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_althold1
         )
 
+    mode_request_manual = SetVehicleMode.Request()
+    mode_request_manual.mode_name = "MANUAL"
+    switch_mode_manual = py_trees_ros.service_clients.FromConstant(
+            name="SwitchToManual",
+            service_type=SetVehicleMode,
+            service_name="/change_mode",
+            service_request=mode_request_manual
+        )
+
     arrange_depth = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
         name="Arrange Depth",
         topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
         target_depth=-0.5,
-        tolerance=0.2,   
-        speed=0.2             
+        tolerance=0.1,   
+        speed=0.4             
     )
 
     blind_push1 = py_trees_ros.action_clients.FromConstant(
@@ -118,8 +127,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=ReturnLoop,
         action_name="/return_loop",
         action_goal=ReturnLoop.Goal(
-            duration=30.0,
-            radius=0.75
+            duration=35.0,
+            radius=3.0
         )
     )
 
@@ -177,7 +186,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         rotate_90_deg2,
         blind_push3,
         rotate_90_deg3,
-        blind_push4
+        blind_push4,
+        switch_mode_manual
     ])
 
 

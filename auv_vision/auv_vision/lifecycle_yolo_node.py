@@ -21,17 +21,19 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.declare_parameter('model_name', 'torpedo_real.pt')
         self.declare_parameter('model_type', 'keypoint')
         self.declare_parameter('image_topic', '/camera/camera/color/image_raw')
-        #parameters
+        #ema parameters
         self.declare_parameter('ema_alpha', 0.60)
         self.declare_parameter('distance_gate_threshold', 35.0)
-        self.declare_parameter('miss_frames_limit', 10)
-        
+        #ema and track
+        self.declare_parameter('miss_frames_limit', 5)
+        #track parameters
+        self.declare_parameter('min_hits', 3)
         self.declare_parameter('tracker_config', 'botsort.yaml')
         
         self.model = None
         self.bridge = CvBridge()
         self.class_names = {}
-        self.keypoint_history: dict = {}
+        self.track_history: dict = {}
         
         self.image_sub = None
         self.target_publisher = None
@@ -80,7 +82,7 @@ class UniversalYoloLifecycleNode(LifecycleNode):
         self.get_logger().info('Deaktive ediliyor (Deactivating)...')
         self.destroy_subscription(self.image_sub)
         self.image_sub = None
-        self.keypoint_history.clear()
+        self.track_history.clear()
         
         del self.model
         del self.class_names
@@ -168,12 +170,55 @@ class UniversalYoloLifecycleNode(LifecycleNode):
             conf=0.5
         )
 
-        detections_msg = get_detections(results[0], msg.header, self.class_names, self.model_type)
+        raw_detections_msg = get_detections(results[0], msg.header, self.class_names, self.model_type)
         
-        # self.apply_ema_filter(detections_msg)
-        self.target_publisher.publish(detections_msg)
+        # --- TRACK MANAGER (min_hits & coasting) ---
+        min_hits = self.get_parameter('min_hits').get_parameter_value().integer_value
+        miss_limit = self.get_parameter('miss_frames_limit').get_parameter_value().integer_value
+        
+        current_track_ids = set()
+        import copy
+        
+        for det in raw_detections_msg.detections:
+            tid = det.tracking_id
+            if tid == -1:
+                continue
+            current_track_ids.add(tid)
+            if tid not in self.track_history:
+                self.track_history[tid] = {'hits': 1, 'misses': 0, 'last_det': copy.deepcopy(det), 'is_confirmed': False}
+            else:
+                self.track_history[tid]['hits'] += 1
+                self.track_history[tid]['misses'] = 0
+                self.track_history[tid]['last_det'] = copy.deepcopy(det)
+                
+            if self.track_history[tid]['hits'] >= min_hits:
+                self.track_history[tid]['is_confirmed'] = True
 
-        debug_frame = draw_debug(frame, results, detections_msg, self.model_type)
+        final_detections = []
+        for tid, state in list(self.track_history.items()):
+            if tid not in current_track_ids:
+                state['misses'] += 1
+                
+                if state['misses'] > miss_limit:
+                    del self.track_history[tid]
+                elif state['is_confirmed']:
+                    # Coasting: inject ghost point
+                    ghost_det = copy.deepcopy(state['last_det'])
+                    ghost_det.confidence = -1.0
+                    final_detections.append(ghost_det)
+            else:
+                if state['is_confirmed']:
+                    # Add original confirmed detection
+                    for d in raw_detections_msg.detections:
+                        if d.tracking_id == tid:
+                            final_detections.append(d)
+                            break
+
+        raw_detections_msg.detections = final_detections
+        
+        self.target_publisher.publish(raw_detections_msg)
+
+        debug_frame = draw_debug(frame, results, raw_detections_msg, self.model_type)
         debug_msg = build_compressed_msg(debug_frame, msg.header)
         if debug_msg:
             self.debug_publisher.publish(debug_msg)

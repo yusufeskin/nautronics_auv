@@ -67,6 +67,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)
 
+    wait_60_secs1 = py_trees.timers.Timer(name="Wait 60 Seconds", duration=35.0)
+
     mode_request_althold1 = SetVehicleMode.Request()
     mode_request_althold1.mode_name = "ALT_HOLD"
     switch_mode_althold1 = py_trees_ros.service_clients.FromConstant(
@@ -97,7 +99,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     goal_msg1 = YawAndScan.Goal()
     goal_msg1.target_angle_deg = 180.0
-    goal_msg1.angular_speed = 0.2 
+    goal_msg1.angular_speed = 0.05 
 
     rotate_180_deg = py_trees_ros.action_clients.FromConstant(
         name="Turn 180 degrees",
@@ -111,7 +113,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=5.0,
+            duration=3.0,
             speed=0.2
         )
     )
@@ -125,10 +127,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
             service_request=mode_request_manual1
         )
     
-    
 
 
-    wait_60_secs = py_trees.timers.Timer(name="Wait 60 Seconds", duration=60.0)
+    wait_60_secs2 = py_trees.timers.Timer(name="Wait 60 Seconds", duration=20.0)
 
     mode_request_althold2 = SetVehicleMode.Request()
     mode_request_althold2.mode_name = "ALT_HOLD"
@@ -184,16 +185,21 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=ReturnLoop,
         action_name="/return_loop",
         action_goal=ReturnLoop.Goal(
-            duration=35.0,
-            radius=3.0
+            duration=60.0,
+            radius=5.0
         )
     )
+
+
+    goal_msg3 = YawAndScan.Goal()
+    goal_msg3.target_angle_deg = 95.0
+    goal_msg3.angular_speed = 0.05 
 
     rotate_90_deg2 = py_trees_ros.action_clients.FromConstant(
         name="Turn 90 degrees",
         action_type=YawAndScan,
         action_name="/yaw_and_scan",
-        action_goal=goal_msg2
+        action_goal=goal_msg3
     )
 
     blind_push5 = py_trees_ros.action_clients.FromConstant(
@@ -218,7 +224,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=15.0,
+            duration=18.0,
             speed=0.2
         )
     )
@@ -232,14 +238,36 @@ def create_root() -> py_trees.behaviour.Behaviour:
             service_request=mode_request_manual2
         )
 
+    wait_60_secs3 = py_trees.timers.Timer(name="Wait 60 Seconds", duration=20.0)
+
+    mode_request_althold3 = SetVehicleMode.Request()
+    mode_request_althold3.mode_name = "ALT_HOLD"
+    switch_mode_althold3 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAltHold",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_althold3
+        )
+
+    blind_push7 = py_trees_ros.action_clients.FromConstant(
+        name="Blind Push Through Gate",
+        action_type=BlindPush,
+        action_name="/blind_push",
+        action_goal=BlindPush.Goal(
+            duration=40.0,
+            speed=0.2
+        )
+    )
+
     arrange_depth_sequence.add_children([
+        wait_60_secs1,
         switch_mode_althold1,
         arrange_depth1,
         blind_push1,
         rotate_180_deg,
         blind_push2,
         switch_mode_manual1,
-        wait_60_secs,
+        wait_60_secs2,
         switch_mode_althold2,
         arrange_depth2,
         blind_push3,
@@ -250,7 +278,11 @@ def create_root() -> py_trees.behaviour.Behaviour:
         blind_push5,
         rotate_90_deg3,
         blind_push6,
-        switch_mode_manual2
+        switch_mode_manual2,
+        wait_60_secs3,
+        # switch_mode_althold3,
+        blind_push7,
+
     ])
 
 

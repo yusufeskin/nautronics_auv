@@ -87,12 +87,26 @@ def generate_launch_description():
         output='screen',
     )
 
+    return_loop = Node(
+        package='auv_control',
+        executable='return_loop_action',
+        name='return_loop_action',
+        output='screen',
+    )
+
+    blind_push = Node(
+        package='auv_control',
+        executable='blind_push_action',
+        name='blind_push_action',
+        output='screen',
+    )
+
     return LaunchDescription([
         # t=0s: 
         LogInfo(msg='[system_real]1'),
         # realsense_launch,
         pixhawk_bridge,
-        foxglove_launch,
+        # foxglove_launch,
 
         # t=6s:
         TimerAction(
@@ -100,10 +114,13 @@ def generate_launch_description():
             actions=[
                 LogInfo(msg='[system_real]2'),
                 thruster_mixer,
-                visual_servoing,
+                # visual_servoing,
                 # yolo_node,
                 # pnp_solver,
                 yawer,
+                blind_push,
+                return_loop
+
             ]
         )
     ])

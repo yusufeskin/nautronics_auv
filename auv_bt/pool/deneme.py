@@ -14,6 +14,7 @@ import py_trees_ros.trees
 import py_trees.console as console
 import py_trees_ros.service_clients
 import py_trees_ros.action_clients
+import py_trees.timers
 import common_behaviors.state 
 import gate.behaviours.depth
 import gate.behaviours.arrange_depth_action
@@ -67,6 +68,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
 # 3. ARRANGE DEPTH BRANCH
 
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)
+
+    wait_60_secs = py_trees.timers.Timer(name="Wait 60 Seconds", duration=60.0)
 
     mode_request_althold1 = SetVehicleMode.Request()
     mode_request_althold1.mode_name = "ALT_HOLD"
@@ -177,6 +180,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
 
     arrange_depth_sequence.add_children([
+        wait_60_secs,
         switch_mode_althold1,
         arrange_depth,
         align_to_start_yaw,

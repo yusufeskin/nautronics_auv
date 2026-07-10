@@ -51,7 +51,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     depth2bb = gate.behaviours.depth.ToBlackboard(
         name="Depth2BB",
-        topic_name="/baro/data",
+        topic_name="/baro_data",
         qos_profile=qos_profile_sensor_data
     )
 
@@ -117,7 +117,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     rotate_15_deg = py_trees_ros.action_clients.FromConstant(
         name="Turn 15 degrees",
         action_type=YawAndScan,
-        action_name="/current_attitude", 
+        action_name="/yaw_and_scan", 
         action_goal=goal_msg
     )
 
@@ -194,19 +194,6 @@ def main():
     rclpy.init(args=None)
     root = create_root()
     
-    # ---------------------------------------------------------
-    # 1. RESMİ ÇİZ
-    # ---------------------------------------------------------
-    py_trees.display.render_dot_tree(root, name="auv_gorev_agaci")
-    print("Ağaç başarıyla 'auv_gorev_agaci.svg' olarak kaydedildi!")
-    
-    # ---------------------------------------------------------
-    # 2. SİMÜLASYONA BAĞLANMADAN PROGRAMI ZORLA BİTİR
-    # ---------------------------------------------------------
-    sys.exit(0)  # Kod tam burada durur ve aşağıya inmez!
-    
-    
-    # --- AŞAĞIDAKİ KISIMLAR (SİMÜLASYON BAĞLANTISI) ASLA ÇALIŞMAYACAK ---
     tree = py_trees_ros.trees.BehaviourTree(
         root=root,
         unicode_tree_debug=True
@@ -215,7 +202,6 @@ def main():
     try:
         tree.setup(timeout=15)
         print(py_trees.display.unicode_tree(root))
-    # ... (kodunun geri kalanı aynı kalabilir, nasılsa buraya ulaşmayacak)
     except py_trees_ros.exceptions.TimedOutError as e:
         console.logerror(console.red + "Setup Error: Connection failed [{}]".format(str(e)) + console.reset)
         tree.shutdown()

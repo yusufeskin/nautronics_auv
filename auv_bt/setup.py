@@ -30,7 +30,8 @@ setup(
             'visual_servo = pool.visual_servo:main',
             'yawer_turn = pool.yawer_turn:main',
             'teknofest = pool.teknofest:main',
-            'deneme = pool.deneme:main'
+            'deneme = pool.deneme:main',
+            'main_behaviour_tree = pool.main_behaviour_tree:main'
         ],
     },
 )

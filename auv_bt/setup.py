@@ -31,6 +31,7 @@ setup(
             'yawer_turn = pool.yawer_turn:main',
             'teknofest = pool.teknofest:main',
             'deneme = pool.deneme:main',
+            'manager =  lifecycle_manager.manager:main',
             'main_behaviour_tree = pool.main_behaviour_tree:main'
         ],
     },

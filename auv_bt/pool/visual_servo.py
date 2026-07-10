@@ -33,7 +33,7 @@ def create_publishers_branch() -> py_trees.composites.Parallel:
 
     depth2bb = py_trees_ros.subscribers.ToBlackboard(
         name="Depth2BB",
-        topic_name="/baro_data2",
+        topic_name="/baro_data",
         topic_type=Float64,
         blackboard_variables={'depth': 'data'},
         qos_profile=qos_profile_sensor_data
@@ -75,7 +75,7 @@ def create_depth_sequence() -> py_trees.composites.Sequence:
 
     depth_checker = behaviours.depth.DepthCheckerCondition(
         name="Depth Checker",
-        topic="/baro_data2",
+        topic="/baro_data",
         target_depth=-1.5,
         tolerance=0.15 
     )
@@ -127,7 +127,7 @@ def create_search_and_align_sequence() -> py_trees.behaviour.Behaviour:
         action_type=VisualServoing,
         action_name="visual_servoing", 
         action_goal=VisualServoing.Goal(
-            target_object="gate",
+            target_object="realtorpedo",
             target_points=target_points
         )
     )

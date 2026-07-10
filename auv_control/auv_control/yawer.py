@@ -9,7 +9,7 @@ import math
 import time
 
 KP = 0.4
-TOLERANCE_RAD = 0.1
+TOLERANCE_RAD = 0.05
 MIN_SPEED = 0.0
 
 def normalize_angle(angle):

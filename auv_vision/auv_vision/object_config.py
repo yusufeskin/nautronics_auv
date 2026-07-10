@@ -23,7 +23,7 @@ OBJECT_REGISTRY = {
     },
 
     2: {
-        'name': 'torpedo2',
+        'name': 'realtorpedo',
         'points_3d': [
             [0.0, 0.0, 0.0],
             [0.6, 0.0, 0.0],

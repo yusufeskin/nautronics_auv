@@ -14,6 +14,7 @@ import py_trees_ros.trees
 import py_trees.console as console
 import py_trees_ros.service_clients
 import py_trees_ros.action_clients
+import py_trees.timers
 import common_behaviors.state 
 import gate.behaviours.depth
 import gate.behaviours.arrange_depth_action
@@ -68,6 +69,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)
 
+    wait_60_secs = py_trees.timers.Timer(name="Wait 60 Seconds", duration=60.0)
+
     mode_request_althold1 = SetVehicleMode.Request()
     mode_request_althold1.mode_name = "ALT_HOLD"
     switch_mode_althold1 = py_trees_ros.service_clients.FromConstant(
@@ -84,6 +87,16 @@ def create_root() -> py_trees.behaviour.Behaviour:
         target_depth=-0.5,
         tolerance=0.1,   
         speed=0.2             
+    )
+
+    align_to_start_yaw = py_trees_ros.action_clients.FromConstant(
+        name="Align to Start Yaw",
+        action_type=YawAndScan,
+        action_name="/absolute_yaw",
+        action_goal=YawAndScan.Goal(
+            target_angle_deg=-60.0,  # LUTFEN HIZALANMAK ISTEDIGINIZ ACIYI BURAYA YAZIN
+            angular_speed=0.05
+        )
     )
 
     save_initial_yaw = SaveInitialYaw(name="Save Initial Yaw")
@@ -119,8 +132,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=ReturnLoop,
         action_name="/return_loop",
         action_goal=ReturnLoop.Goal(
-            duration=30.0,
-            radius=0.75
+            duration=35.0,
+            radius=3.0
         )
     )
 
@@ -156,10 +169,21 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
 
+    mode_request_manual = SetVehicleMode.Request()
+    mode_request_manual.mode_name = "MANUAL"
+    switch_mode_manual = py_trees_ros.service_clients.FromConstant(
+            name="SwitchToManual",
+            service_type=SetVehicleMode,
+            service_name="/change_mode",
+            service_request=mode_request_manual
+        )
+
 
     arrange_depth_sequence.add_children([
+        wait_60_secs,
         switch_mode_althold1,
         arrange_depth,
+        align_to_start_yaw,
         save_initial_yaw,
         blind_push1,
         rotate_90_deg1,
@@ -168,7 +192,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         rotate_90_deg2,
         blind_push3,
         rotate_90_deg3,
-        blind_push4
+        blind_push4,
+        switch_mode_manual
     ])
 
 

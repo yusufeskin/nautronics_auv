@@ -61,7 +61,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     object2bb = gate.behaviours.object2bb.ToBlackboard(
         name="Object2BB",
-        topic_name="/yolo_detections",  
+        topic_name="/object_3d_poses",  
         qos_profile=qos_profile_sensor_data
     )
 

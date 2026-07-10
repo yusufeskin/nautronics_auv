@@ -35,7 +35,7 @@ class VisualServoingActionServer(Node):
         #will be changed
         self.subscriber = self.create_subscription(
             DetectionArray, 
-            '/yolo_detections', 
+            '/object_3d_poses', 
             self.listener_callback, 
             qos_profile=qos_profile_sensor_data,
             callback_group=self.callback_group

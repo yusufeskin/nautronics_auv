@@ -1,9 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import TimerAction, LogInfo, RegisterEventHandler, EmitEvent
-from launch.event_handlers import OnProcessExit
-from launch.events import Shutdown
+from launch.actions import TimerAction, LogInfo
 from launch_ros.actions import Node
 
 def generate_launch_description():
@@ -59,23 +57,15 @@ def generate_launch_description():
             }
         ]
     )
-    
-    gate_bt_node = Node(
-        package='auv_bt',
-        executable='gate_behaviour_tree',
-        name='gate_behaviour_tree_node',
-        output='screen',
-        emulate_tty=True
-    )
 
     return LaunchDescription([
-        LogInfo(msg='[gate_bt] Starting blind_push at t=0s'),
+        LogInfo(msg='[system_sequential] Starting blind_push at t=0s'),
         blind_push,
 
         TimerAction(
             period=1.0,
             actions=[
-                LogInfo(msg='[gate_bt] Starting yawer at t=1s'),
+                LogInfo(msg='[system_sequential] Starting yawer at t=1s'),
                 yawer
             ]
         ),
@@ -83,7 +73,7 @@ def generate_launch_description():
         TimerAction(
             period=2.0,
             actions=[
-                LogInfo(msg='[gate_bt] Starting visual_servoing at t=2s'),
+                LogInfo(msg='[system_sequential] Starting visual_servoing at t=2s'),
                 visual_servoing
             ]
         ),
@@ -91,7 +81,7 @@ def generate_launch_description():
         TimerAction(
             period=3.0,
             actions=[
-                LogInfo(msg='[gate_bt] Starting thruster_mixer at t=3s'),
+                LogInfo(msg='[system_sequential] Starting thruster_mixer at t=3s'),
                 thruster_mixer
             ]
         ),
@@ -99,7 +89,7 @@ def generate_launch_description():
         TimerAction(
             period=4.0,
             actions=[
-                LogInfo(msg='[gate_bt] Starting pixhawk_bridge2 at t=4s'),
+                LogInfo(msg='[system_sequential] Starting pixhawk_bridge2 at t=4s'),
                 pixhawk_bridge
             ]
         ),
@@ -107,23 +97,8 @@ def generate_launch_description():
         TimerAction(
             period=5.0,
             actions=[
-                LogInfo(msg='[gate_bt] Starting yolo_keypoint_lifecycle at t=5s'),
+                LogInfo(msg='[system_sequential] Starting yolo_keypoint_lifecycle at t=5s'),
                 yolo_node
             ]
-        ),
-        
-        TimerAction(
-            period=8.0,
-            actions=[
-                LogInfo(msg='[gate_bt] Starting gate_behaviour_tree at t=8s'),
-                gate_bt_node
-            ]
-        ),
-        
-        RegisterEventHandler(
-            event_handler=OnProcessExit(
-                target_action=gate_bt_node,
-                on_exit=[EmitEvent(event=Shutdown())],
-            )
         )
     ])

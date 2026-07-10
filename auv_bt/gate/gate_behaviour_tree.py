@@ -7,7 +7,7 @@ import rclpy
 from geometry_msgs.msg import Point
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import qos_profile_sensor_data
-
+import py_trees.timers
 import py_trees
 import py_trees_ros.trees
 import py_trees.console as console
@@ -20,7 +20,6 @@ import gate.behaviours.depth
 import common_behaviors.state 
 
 from auv_interfaces.action import VisualServoing
-from auv_interfaces.action import BlindPush
 from auv_interfaces.action import YawAndScan
 from auv_interfaces.srv import SetVehicleMode
 
@@ -63,7 +62,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     object2bb = gate.behaviours.object2bb.ToBlackboard(
         name="Object2BB",
-        topic_name="/yolo_detections",  
+        topic_name="/object_3d_poses",  
         qos_profile=qos_profile_sensor_data
     )
 
@@ -87,7 +86,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
         target_depth=-0.5,
-        tolerance=0.2,   
+        tolerance=0.1,   
         speed=0.2             
     )
 
@@ -96,53 +95,52 @@ def create_root() -> py_trees.behaviour.Behaviour:
         arrange_depth_node,
     ])
 
-# 4. SEARCH GATE (CHECK DETECTED) BRANCH
-
-    check_detected_selector = py_trees.composites.Selector("Check if Detected", memory=True)
-
-    check_gate_first = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Gate Detected?",
+# 4. SEARCH AND SERVO (RECOVERY LOOP) BRANCH
+    search_and_servo_loop = py_trees.composites.Sequence("Search and Servo Mission", memory=False)
+    
+    # 4.1 SEARCH SELECTOR
+    find_target_selector = py_trees.composites.Selector("Find Real Torpedo", memory=False)
+    
+    check_torpedo_first = py_trees.behaviours.CheckBlackboardVariableValue(
+        name="Is Real Torpedo Detected?",
         check=py_trees.common.ComparisonExpression(
-            variable="is_gate_found",
+            variable="is_realtorpedo_found",
             value=True,
             operator=operator.eq)
     )
     
-    search_gate_sequence = py_trees.composites.Sequence("Turn and Find Gate", memory=True)
+    search_torpedo_sequence = py_trees.composites.Sequence("Turn and Find Real Torpedo", memory=True)
 
-    goal_msg = YawAndScan.Goal()
-    goal_msg.target_angle_deg = 15.0
-    goal_msg.angular_speed = 0.3  
+    goal_msg_search = YawAndScan.Goal()
+    goal_msg_search.target_angle_deg = 15.0
+    goal_msg_search.angular_speed = 0.05
     
     rotate_15_deg = py_trees_ros.action_clients.FromConstant(
         name="Turn 15 degrees",
         action_type=YawAndScan,
         action_name="/yaw_and_scan", 
-        action_goal=goal_msg
+        action_goal=goal_msg_search
     )
 
-    check_gate_second = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Gate Detected?",
+    check_torpedo_second = py_trees.behaviours.CheckBlackboardVariableValue(
+        name="Is Real Torpedo Detected?",
         check=py_trees.common.ComparisonExpression(
-            variable="is_gate_found",
+            variable="is_realtorpedo_found",
             value=True,
             operator=operator.eq)
     )
 
-    search_gate_sequence.add_children([rotate_15_deg, check_gate_second])
+    search_torpedo_sequence.add_children([rotate_15_deg, check_torpedo_second])
 
-    retry_search_gate = py_trees.decorators.Retry(
-        name="retry (max)x24",
-        child=search_gate_sequence,
+    retry_search_torpedo = py_trees.decorators.Retry(
+        name="Retry Search (max)x24",
+        child=search_torpedo_sequence,
         num_failures=24
     )
-
-    check_detected_selector.add_children([check_gate_first, retry_search_gate])
-
-# 5. ALIGN TO GATE BRANCH
-
-    allign_sequence = py_trees.composites.Sequence("Align to Gate", memory=True)
-
+    
+    find_target_selector.add_children([check_torpedo_first, retry_search_torpedo])
+    
+    # 4.2 VISUAL SERVOING
     target_points = [
         Point(x=254.0, y=23.0, z=0.0),  # Top Left
         Point(x=327.0, y=22.0, z=0.0),  # Top Right
@@ -150,43 +148,63 @@ def create_root() -> py_trees.behaviour.Behaviour:
         Point(x=254.0, y=96.0, z=0.0)   # Bottom Left
     ]
     
-    allign_node = py_trees_ros.action_clients.FromConstant(
-        name="Visual Servoing to Gate",
+    visual_servo_node = py_trees_ros.action_clients.FromConstant(
+        name="Visual Servoing to Real Torpedo",
         action_type=VisualServoing,
         action_name="/visual_servoing",
         action_goal=VisualServoing.Goal(
-            target_object="gate",
+            target_object="realtorpedo",
             target_points=target_points
         )
     )
-
-    blind_push_node = py_trees_ros.action_clients.FromConstant(
-        name="Blind Push Through Gate",
-        action_type=BlindPush,
-        action_name="/blind_push",
-        action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
-        )
+    
+    search_and_servo_loop.add_children([find_target_selector, visual_servo_node])
+    
+    # 4.3 WRAP IN RETRY LOOP 
+    robust_servo_mission = py_trees.decorators.Retry(
+        name="Robust Servo Recovery Loop",
+        child=search_and_servo_loop,
+        num_failures=100
     )
 
-    allign_sequence.add_children([
-        allign_node, 
-        blind_push_node,
-    ])
+# 5. FINISH YAW BRANCH (90x8)
+
+    finish_yaw_sequence = py_trees.composites.Sequence("Finish 90x8 Yaw", memory=True)
+    
+    for i in range(8):
+        goal_msg_90 = YawAndScan.Goal()
+        goal_msg_90.target_angle_deg = 90.0
+        goal_msg_90.angular_speed = 0.1
+        
+        turn_90_node = py_trees_ros.action_clients.FromConstant(
+            name=f"Turn 90 degrees ({i+1}/8)",
+            action_type=YawAndScan,
+            action_name="/yaw_and_scan", 
+            action_goal=goal_msg_90
+        )
+        
+        wait_1s_node = py_trees.timers.Timer(
+            name=f"Wait 1s ({i+1}/8)",
+            duration=1.0
+        )
+
+        
+        finish_yaw_sequence.add_children([turn_90_node, wait_1s_node])
+
 
 # 6. ASSEMBLE MAIN MISSION
 
     main_mission_sequence.add_children([
         arrange_depth_sequence, 
-        check_detected_selector, 
-        allign_sequence
+        robust_servo_mission, 
+        finish_yaw_sequence
     ])  
     
     root.add_child(publishers_parallel)
     root.add_child(one_shot_main_mission)
     
     return root
+
 
 # ROS 2 MAIN EXECUTION
 
@@ -198,6 +216,12 @@ def main():
         root=root,
         unicode_tree_debug=True
     )
+
+    try:
+        py_trees.display.render_dot_tree(root, name="real_torpedo_gorev_agaci")
+        print("Ağaç başarıyla 'real_torpedo_gorev_agaci.svg' olarak kaydedildi!")
+    except Exception as e:
+        print(f"Ağaç çizilirken bir hata oluştu (Önemli değil, göreve devam edilecek): {e}")
 
     try:
         tree.setup(timeout=15)

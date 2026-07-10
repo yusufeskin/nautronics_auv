@@ -21,11 +21,11 @@ class ToBlackboard(subscribers.ToBlackboard):
             access=py_trees.common.Access.WRITE
         )
         self.blackboard.register_key(
-            key="is_torpedo_found",
+            key="is_realtorpedo_found",
             access=py_trees.common.Access.WRITE
         )
         self.blackboard.is_gate_found = False
-        self.blackboard.is_torpedo_found = False
+        self.blackboard.is_realtorpedo_found = False
         self.blackboard.yolo_detections = DetectionArray()
         self.blackboard.yolo_detections.detections = []
         
@@ -36,6 +36,6 @@ class ToBlackboard(subscribers.ToBlackboard):
         if status != py_trees.common.Status.RUNNING: 
             detected_names = [obj.class_name for obj in self.blackboard.yolo_detections.detections]
             self.blackboard.is_gate_found = "gate" in detected_names
-            self.blackboard.is_torpedo_found = "torpedo" in detected_names
+            self.blackboard.is_realtorpedo_found = "realtorpedo" in detected_names
 
         return status

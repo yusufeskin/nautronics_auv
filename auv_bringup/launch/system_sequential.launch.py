@@ -58,6 +58,14 @@ def generate_launch_description():
         ]
     )
 
+    pnp_solver = Node(
+        package='auv_vision',
+        executable='pnp_solver',
+        name='pnp_solver',
+        output='screen',
+    )
+
+
     camera_info_node = Node(
         package='auv_vision',
         executable='camera_info_publisher',
@@ -105,7 +113,7 @@ def generate_launch_description():
             period=5.0,
             actions=[
                 LogInfo(msg='[system_sequential] Starting yolo_keypoint_lifecycle at t=5s'),
-                yolo_node
+                yolo_node,
             ]
         ),
         
@@ -115,5 +123,13 @@ def generate_launch_description():
                 LogInfo(msg='[system_sequential] Starting camera_info_publisher at t=6s'),
                 camera_info_node
             ]
-        )
+        ),
+
+        TimerAction(
+            period=6.0,
+            actions=[
+                LogInfo(msg='[system_sequential] Starting pnp solver at t=6s'),
+                pnp_solver
+            ]
+        ),
     ])

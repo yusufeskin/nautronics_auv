@@ -6,6 +6,7 @@ import rclpy
 from rclpy.executors import MultiThreadedExecutor
 
 import py_trees
+import py_trees.timers
 import py_trees_ros.trees
 import py_trees.console as console
 from lifecycle_msgs.msg import Transition
@@ -40,21 +41,22 @@ def create_root() -> py_trees.behaviour.Behaviour:
     # -------------------------------------------------------------------------
 
     # --- 1. Gate Mission ---
+    gate_mission_seq = py_trees.composites.Sequence("Gate Mission Seq", memory=True)
+
+    timer_after_configure = py_trees.timers.Timer(name="Timer After Configure", duration=5.0)
+    timer_after_activate = py_trees.timers.Timer(name="Timer After Activate", duration=5.0)
+
     gate_root = gate.gate_behaviour_tree.create_root()
     gate_root.name = "Gate Mission Tree"
-    root.add_child(gate_root)
 
-    # --- 2. Change YOLO Model for Torpedo ---
-    # After Gate succeeds, we change the YOLO model dynamically
-    yolo_params_torpedo = {
-        'model_name': 'torpedo.pt'
-    }
-    set_yolo_torpedo = SetYoloParameters(
-        name="Set YOLO Torpedo",
-        node_name="/universal_yolo_node",
-        parameters_dict=yolo_params_torpedo
-    )
-    root.add_child(set_yolo_torpedo)
+    gate_mission_seq.add_children([
+        configure_yolo, 
+        timer_after_configure, 
+        activate_yolo, 
+        timer_after_activate, 
+        gate_root
+    ])
+    root.add_child(gate_mission_seq)
 
     # --- 3. Future Missions (e.g. Torpedo) ---
     # torpedo_root = torpedo.torpedo_behaviour_tree.create_root()

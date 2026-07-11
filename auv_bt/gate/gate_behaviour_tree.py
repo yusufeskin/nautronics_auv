@@ -99,17 +99,17 @@ def create_root() -> py_trees.behaviour.Behaviour:
     search_and_servo_loop = py_trees.composites.Sequence("Search and Servo Mission", memory=False)
     
     # 4.1 SEARCH SELECTOR
-    find_target_selector = py_trees.composites.Selector("Find Real Torpedo", memory=False)
+    find_target_selector = py_trees.composites.Selector("Find Gate", memory=False)
     
-    check_torpedo_first = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Real Torpedo Detected?",
+    check_gate_first = py_trees.behaviours.CheckBlackboardVariableValue(
+        name="Is Gate Detected?",
         check=py_trees.common.ComparisonExpression(
-            variable="is_realtorpedo_found",
+            variable="is_gate_found",
             value=True,
             operator=operator.eq)
     )
     
-    search_torpedo_sequence = py_trees.composites.Sequence("Turn and Find Real Torpedo", memory=True)
+    search_gate_sequence = py_trees.composites.Sequence("Turn and Find Gate", memory=True)
 
     goal_msg_search = YawAndScan.Goal()
     goal_msg_search.target_angle_deg = 15.0
@@ -122,23 +122,23 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_goal=goal_msg_search
     )
 
-    check_torpedo_second = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Real Torpedo Detected?",
+    check_gate_second = py_trees.behaviours.CheckBlackboardVariableValue(
+        name="Is Gate Detected?",
         check=py_trees.common.ComparisonExpression(
-            variable="is_realtorpedo_found",
+            variable="is_gate_found",
             value=True,
             operator=operator.eq)
     )
 
-    search_torpedo_sequence.add_children([rotate_15_deg, check_torpedo_second])
+    search_gate_sequence.add_children([rotate_15_deg, check_gate_second])
 
-    retry_search_torpedo = py_trees.decorators.Retry(
+    retry_search_gate = py_trees.decorators.Retry(
         name="Retry Search (max)x24",
-        child=search_torpedo_sequence,
+        child=search_gate_sequence,
         num_failures=24
     )
     
-    find_target_selector.add_children([check_torpedo_first, retry_search_torpedo])
+    find_target_selector.add_children([check_gate_first, retry_search_gate])
     
     # 4.2 VISUAL SERVOING
     target_points = [
@@ -149,11 +149,11 @@ def create_root() -> py_trees.behaviour.Behaviour:
     ]
     
     visual_servo_node = py_trees_ros.action_clients.FromConstant(
-        name="Visual Servoing to Real Torpedo",
+        name="Visual Servoing to gate",
         action_type=VisualServoing,
         action_name="/visual_servoing",
         action_goal=VisualServoing.Goal(
-            target_object="realtorpedo",
+            target_object="gate",
             target_points=target_points
         )
     )
@@ -218,8 +218,8 @@ def main():
     )
 
     try:
-        py_trees.display.render_dot_tree(root, name="real_torpedo_gorev_agaci")
-        print("Ağaç başarıyla 'real_torpedo_gorev_agaci.svg' olarak kaydedildi!")
+        py_trees.display.render_dot_tree(root, name="real_gate_gorev_agaci")
+        print("Ağaç başarıyla 'real_gate_gorev_agaci.svg' olarak kaydedildi!")
     except Exception as e:
         print(f"Ağaç çizilirken bir hata oluştu (Önemli değil, göreve devam edilecek): {e}")
 

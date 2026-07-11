@@ -8,15 +8,32 @@ from rclpy.executors import MultiThreadedExecutor
 import py_trees
 import py_trees_ros.trees
 import py_trees.console as console
+from lifecycle_msgs.msg import Transition
 
 # Import individual missions
 import gate.gate_behaviour_tree
 from lifecycle_manager.set_parameter import SetYoloParameters
+from lifecycle_manager.change_lifecycle import ChangeLifecycleState
 
 def create_root() -> py_trees.behaviour.Behaviour:
     # 1. MAIN TREE STRUCTURE
     # We use a Sequence to run mission trees one by one
     root = py_trees.composites.Sequence("Main Missions Sequence", memory=True)
+
+    configure_yolo = ChangeLifecycleState(
+        name="Configure YOLO",
+        node_name="/universal_yolo_node",
+        transition_id=Transition.TRANSITION_CONFIGURE
+    )
+
+    
+
+    activate_yolo = ChangeLifecycleState(
+        name="Activate YOLO",
+        node_name="/universal_yolo_node",
+        transition_id=Transition.TRANSITION_ACTIVATE
+    )
+
 
     # -------------------------------------------------------------------------
     # ADD MISSIONS

@@ -6,6 +6,7 @@ from .pwm_handler import PwmHandler
 from .mode_handler import ModeHandler
 from .telemetry_handler import TelemetryHandler
 from .baro_handler import BaroHandler
+from std_srvs.srv import SetBool
 from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.msg import VehicleStatus
 from std_msgs.msg import Float64, UInt16MultiArray
@@ -55,6 +56,9 @@ class PixhawkBridge(Node):
 
         self.mode_change_service = self.create_service(
             SetVehicleMode, '/change_mode', self.mode_module.change_mode_callback
+        )
+        self.arm_service = self.create_service(
+            SetBool, '/arm', self.mode_module.arm_callback
         )
         self.pwm_subscription = self.create_subscription(
             UInt16MultiArray, 'pwm_router', self.pwm_callback, 10

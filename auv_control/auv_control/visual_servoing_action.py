@@ -21,16 +21,16 @@ class VisualServoingActionServer(Node):
         self.fy = None
         self.cu = None
         self.cv = None
-        self.lambda_surge = 0.3
-        self.lambda_sway = 0.25
-        self.lambda_heave = 0.4
-        self.lambda_yaw = 0.2
+        self.lambda_surge = 0.2
+        self.lambda_sway = 0.18
+        self.lambda_heave = 0.3
+        self.lambda_yaw = 0.1
 
         self.callback_group = ReentrantCallbackGroup()
 
         self.latest_msg = None 
         self.msg_received = False
-        self.camera_info_subsc = self.create_subscription(CameraInfo, '/camera/camera/color/image_raw', self.camera_info_callback, 10)
+        self.camera_info_subsc = self.create_subscription(CameraInfo, '/camera/camera/color/camera_info', self.camera_info_callback, 10)
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         #will be changed
         self.subscriber = self.create_subscription(
@@ -178,9 +178,9 @@ class VisualServoingActionServer(Node):
                 v_target_raw = np.dot(L_v_inv, compensated_error).flatten()
 
 
-                v_sway  = np.clip(-self.lambda_sway  * v_target_raw[0], -0.1, 0.1)
-                v_heave = np.clip(-self.lambda_heave * v_target_raw[1], -0.1, 0.1)
-                v_surge = np.clip(-self.lambda_surge * v_target_raw[2], -0.1, 0.1)
+                v_sway  = np.clip(-self.lambda_sway  * v_target_raw[0], -0.05, 0.05)
+                v_heave = np.clip(-self.lambda_heave * v_target_raw[1], -0.05, 0.05)
+                v_surge = np.clip(-self.lambda_surge * v_target_raw[2], -0.05, 0.05)
                 v_yaw   = np.clip(w_yaw_val, -0.05, 0.05)
                 
                 # self.get_logger().info(f"""
@@ -196,7 +196,7 @@ class VisualServoingActionServer(Node):
                 cmd.linear.x = float(v_surge)
                 cmd.linear.y = -float(v_sway)
                 cmd.linear.z = -float(v_heave)
-                cmd.angular.z = float(v_yaw)
+                cmd.angular.z = -float(v_yaw)
 
                 self.publisher.publish(cmd)
                 

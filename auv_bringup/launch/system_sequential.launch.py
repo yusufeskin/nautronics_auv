@@ -48,7 +48,7 @@ def generate_launch_description():
         emulate_tty=True,         
         parameters=[
             {
-                'model_name': 'gate.pt', 
+                'model_name': 'july11_gate.pt', 
                 'model_type': 'keypoint',    
                 'image_topic': '/camera/camera/color/image_raw',      
                 'ema_alpha': 0.70,                 

@@ -58,6 +58,13 @@ def generate_launch_description():
         ]
     )
 
+    camera_info_node = Node(
+        package='auv_vision',
+        executable='camera_info_publisher',
+        name='camera_info_publisher',
+        output='screen',
+    )
+
     return LaunchDescription([
         LogInfo(msg='[system_sequential] Starting blind_push at t=0s'),
         blind_push,
@@ -99,6 +106,14 @@ def generate_launch_description():
             actions=[
                 LogInfo(msg='[system_sequential] Starting yolo_keypoint_lifecycle at t=5s'),
                 yolo_node
+            ]
+        ),
+        
+        TimerAction(
+            period=6.0,
+            actions=[
+                LogInfo(msg='[system_sequential] Starting camera_info_publisher at t=6s'),
+                camera_info_node
             ]
         )
     ])

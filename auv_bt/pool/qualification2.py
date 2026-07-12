@@ -18,6 +18,7 @@ import gate.behaviours.arrange_depth_action
 import gate.behaviours.object2bb
 import gate.behaviours.depth
 import common_behaviors.state 
+import gate.behaviours.align_middle # Eklediğimiz ortalama kodu (CenterTarget)
 
 from auv_interfaces.action import YawAndScan
 from auv_interfaces.srv import SetVehicleMode
@@ -70,7 +71,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
 # 3. ARRANGE DEPTH BRANCH
 
-    wait_40_secs = py_trees.timers.Timer(name="Wait 60 Seconds", duration=40.0)
+    wait_40_secs = py_trees.timers.Timer(name="Wait 40 Seconds", duration=40.0)
 
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)   
 
@@ -98,20 +99,22 @@ def create_root() -> py_trees.behaviour.Behaviour:
     ])
 
 # 4. SEARCH AND PUSH BRANCH
-    search_and_push_sequence = py_trees.composites.Sequence("Search and Push Mission", memory=True)
+    search_and_push_sequence = py_trees.composites.Sequence("Search, Align and Push Mission", memory=True)
     
     # 4.1 SEARCH SELECTOR
-    find_target_selector = py_trees.composites.Selector("Find Gate", memory=False)
+    find_target_selector = py_trees.composites.Selector("Find Target", memory=False)
     
+    # NOT: check_gate_first kısmını aradığın hedefe göre değiştirebilirsin
+    # yolo modelindeki ismine göre is_gate_found değil is_compass_found vs olabilir
     check_gate_first = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Gate Detected?",
+        name="Is Target Detected?",
         check=py_trees.common.ComparisonExpression(
             variable="is_gate_found",
             value=True,
             operator=operator.eq)
     )
     
-    search_gate_sequence = py_trees.composites.Sequence("Turn and Find Gate", memory=True)
+    search_gate_sequence = py_trees.composites.Sequence("Turn and Find Target", memory=True)
 
     goal_msg_search = YawAndScan.Goal()
     goal_msg_search.target_angle_deg = 15.0
@@ -125,7 +128,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     check_gate_second = py_trees.behaviours.CheckBlackboardVariableValue(
-        name="Is Gate Detected?",
+        name="Is Target Detected?",
         check=py_trees.common.ComparisonExpression(
             variable="is_gate_found",
             value=True,
@@ -142,9 +145,18 @@ def create_root() -> py_trees.behaviour.Behaviour:
     
     find_target_selector.add_children([check_gate_first, retry_search_gate])
     
-    # 4.2 BLIND PUSH
+    # 4.2 ALIGN / CENTER TARGET (YENİ EKLENEN KISIM)
+    center_target_node = gate.behaviours.align_middle.CenterTarget(
+        name="Ortala - Gate",
+        target_class="gate", # Hedefin sınıf ismi (YOLO'daki adı)
+        error_tol_x=40.0,
+        error_tol_y=40.0,
+        settle_time=2.0
+    )
+
+    # 4.3 BLIND PUSH
     blind_push_node = py_trees_ros.action_clients.FromConstant(
-        name="Blind Push to Gate",
+        name="Blind Push to Target",
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
@@ -153,7 +165,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         )
     )
     
-    search_and_push_sequence.add_children([find_target_selector, blind_push_node])
+    # Arama -> Ortalama -> Düz Gitme (Kör Sürüş)
+    search_and_push_sequence.add_children([find_target_selector, center_target_node, blind_push_node])
 
 # 5. ASSEMBLE MAIN MISSION
 
@@ -181,8 +194,8 @@ def main():
     )
 
     try:
-        py_trees.display.render_dot_tree(root, name="qualification_tree")
-        print("Ağaç başarıyla 'qualification_tree.svg' olarak kaydedildi!")
+        py_trees.display.render_dot_tree(root, name="qualification2_tree")
+        print("Ağaç başarıyla 'qualification2_tree.svg' olarak kaydedildi!")
     except Exception as e:
         print(f"Ağaç çizilirken bir hata oluştu (Önemli değil, göreve devam edilecek): {e}")
 

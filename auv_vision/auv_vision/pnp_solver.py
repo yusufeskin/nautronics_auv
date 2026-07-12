@@ -3,11 +3,13 @@ import rclpy
 from rclpy.node import Node
 import cv2
 import numpy as np
-from sensor_msgs.msg import CameraInfo
+from sensor_msgs.msg import CameraInfo, Image, CompressedImage
 from auv_interfaces.msg import DetectionArray
 from scipy.spatial.transform import Rotation as R
 from .object_config import OBJECT_REGISTRY
 from rclpy.qos import qos_profile_sensor_data
+from cv_bridge import CvBridge
+from utils.debug_helper import draw_debug_pnp, build_compressed_msg
 
 
 class PnPSolverNode(Node):
@@ -17,13 +19,22 @@ class PnPSolverNode(Node):
 
         self.camera_matrix = None
         self.dist_coeffs = None
+        
+        self.latest_image = None
+        self.bridge = CvBridge()
 
         self.object_library = {}
         self.load_object_config()
 
         self.create_subscription(CameraInfo, '/camera/camera/color/camera_info', self.camera_info_cb, 10)
+        self.create_subscription(Image, '/camera/camera/color/image_raw', self.image_cb, qos_profile=qos_profile_sensor_data)
         self.create_subscription(DetectionArray, '/yolo_detections', self.yolo_cb, qos_profile=qos_profile_sensor_data)
+        
         self.pose_publisher = self.create_publisher(DetectionArray, '/object_3d_poses', 10)
+        self.debug_publisher = self.create_publisher(CompressedImage, '/pnp_debug_image/compressed', qos_profile=qos_profile_sensor_data)
+
+    def image_cb(self, msg):
+        self.latest_image = msg
 
     def load_object_config(self):
         for cls_id, props in OBJECT_REGISTRY.items():
@@ -92,6 +103,16 @@ class PnPSolverNode(Node):
                 det.yaw_angle = 0.0
 
         self.pose_publisher.publish(msg)
+
+        if self.latest_image is not None:
+            try:
+                frame = self.bridge.imgmsg_to_cv2(self.latest_image, "bgr8")
+                debug_frame = draw_debug_pnp(frame, None, msg, 'keypoint')
+                debug_msg = build_compressed_msg(debug_frame, self.latest_image.header)
+                if debug_msg:
+                    self.debug_publisher.publish(debug_msg)
+            except Exception as e:
+                self.get_logger().error(f'Debug image yayınlama hatası: {e}')
 
 
 def main(args=None):

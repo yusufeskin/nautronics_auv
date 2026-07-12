@@ -32,7 +32,8 @@ setup(
             'teknofest = pool.teknofest:main',
             'deneme = pool.deneme:main',
             'main_behaviour_tree = pool.main_behaviour_tree:main',
-            'manager =  lifecycle_manager.manager:main'
+            'manager =  lifecycle_manager.manager:main',
+            'qualification = pool.qualification:main',
         ],
     },
 )

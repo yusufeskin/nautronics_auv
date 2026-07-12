@@ -88,7 +88,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         name="Arrange Depth",
         topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
-        target_depth=-1.0,
+        target_depth=-1.5,
         tolerance=0.1,   
         speed=0.2             
     )
@@ -105,7 +105,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     goal_msg_roll = Roll.Goal()
     goal_msg_roll.target_angle_deg = 360.0
-    goal_msg_roll.angular_speed = 0.9
+    goal_msg_roll.angular_speed = 0.4
 
     roll_360_node = py_trees_ros.action_clients.FromConstant(
         name="Roll 360",

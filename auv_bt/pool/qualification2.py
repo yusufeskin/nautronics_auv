@@ -18,11 +18,11 @@ import gate.behaviours.arrange_depth_action
 import gate.behaviours.object2bb
 import gate.behaviours.depth
 import common_behaviors.state 
-import gate.behaviours.align_middle # Eklediğimiz ortalama kodu (CenterTarget)
 
 from auv_interfaces.action import YawAndScan
 from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.action import BlindPush
+from auv_interfaces.action import CenterTarget
 
 
 def create_root() -> py_trees.behaviour.Behaviour:
@@ -145,13 +145,17 @@ def create_root() -> py_trees.behaviour.Behaviour:
     
     find_target_selector.add_children([check_gate_first, retry_search_gate])
     
-    # 4.2 ALIGN / CENTER TARGET (YENİ EKLENEN KISIM)
-    center_target_node = gate.behaviours.align_middle.CenterTarget(
+    # 4.2 ALIGN / CENTER TARGET (ACTION NODE)
+    goal_msg_center = CenterTarget.Goal()
+    goal_msg_center.target_class = "gate"
+    goal_msg_center.error_tol_x = 40.0
+    goal_msg_center.settle_time = 2.0
+    
+    center_target_node = py_trees_ros.action_clients.FromConstant(
         name="Ortala - Gate",
-        target_class="gate", # Hedefin sınıf ismi (YOLO'daki adı)
-        error_tol_x=40.0,
-        error_tol_y=40.0,
-        settle_time=2.0
+        action_type=CenterTarget,
+        action_name="/center_target",
+        action_goal=goal_msg_center
     )
 
     # 4.3 BLIND PUSH

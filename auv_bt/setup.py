@@ -34,6 +34,8 @@ setup(
             'main_behaviour_tree = pool.main_behaviour_tree:main',
             'manager =  lifecycle_manager.manager:main',
             'qualification = pool.qualification:main',
+            'qualification2 = pool.qualification2:main',
+
         ],
     },
 )

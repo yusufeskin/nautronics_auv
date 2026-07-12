@@ -21,6 +21,9 @@ from std_msgs.msg import UInt16MultiArray
 import py_trees_ros.service_clients
 import py_trees_ros.publishers
 import py_trees_ros.utilities
+import pool.qualification
+import pool.qualification2
+
 def create_root() -> py_trees.behaviour.Behaviour:
     # 1. MAIN TREE STRUCTURE
     # We use a Sequence to run mission trees one by one
@@ -58,12 +61,20 @@ def create_root() -> py_trees.behaviour.Behaviour:
     gate_root = gate.gate_behaviour_tree.create_root()
     gate_root.name = "Gate Mission Tree"
 
+    qual1_root = pool.qualification.create_root()
+    qual1_root.name = "Qualification 1 Mission Tree"
+
+    qual2_root = pool.qualification2.create_root()
+    qual2_root.name = "Qualification 2 Mission Tree"
+
     gate_mission_seq.add_children([
         configure_yolo, 
         timer_after_configure, 
         activate_yolo, 
         timer_after_activate, 
-        gate_root
+        gate_root,
+        # qual1_root, 
+        # qual2_root
     ])
     root.add_child(gate_mission_seq)
 
@@ -71,8 +82,6 @@ def create_root() -> py_trees.behaviour.Behaviour:
     # torpedo_root = torpedo.torpedo_behaviour_tree.create_root()
     # torpedo_root.name = "Torpedo Mission Tree"
     # root.add_child(torpedo_root)
-
-    return root
 
 def main():
     rclpy.init(args=None)

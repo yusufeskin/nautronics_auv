@@ -66,52 +66,53 @@ class RollActionServer(Node):
         return CancelResponse.ACCEPT
 
     async def execute_callback(self, goal_handle):
-        target_deg_relative = goal_handle.request.target_angle_deg
-        max_speed = goal_handle.request.angular_speed
-        start_roll = self.current_roll
-        target_roll_abs = normalize_angle(start_roll + math.radians(target_deg_relative))
-        
-        feedback_msg = Roll.Feedback()
-        result = Roll.Result()
-        cmd = Twist()
+            target_deg_relative = goal_handle.request.target_angle_deg # Buraya 360.0 gelecek
+            target_rad = math.radians(abs(target_deg_relative))
+            max_speed = goal_handle.request.angular_speed
+            
+            direction = 1.0 if target_deg_relative > 0 else -1.0
+            
+            total_turned_rad = 0.0
+            prev_roll = self.current_roll
+            
+            feedback_msg = Roll.Feedback()
+            result = Roll.Result()
+            cmd = Twist()
 
-        rate = self.create_rate(20) 
+            rate = self.create_rate(20)
 
-        while rclpy.ok():
-            if goal_handle.is_cancel_requested:
-                self.stop_robot()
-                goal_handle.canceled()
-                result.success = False
-                result.message = "canceled"
-                return result
+            while rclpy.ok():
+                if goal_handle.is_cancel_requested:
+                    self.stop_robot()
+                    goal_handle.canceled()
+                    result.success = False
+                    return result
 
-            error = normalize_angle(target_roll_abs - self.current_roll)
-            self.get_logger().info(f'error: {error}')
-            turned_amount = normalize_angle(self.current_roll - start_roll)
-            feedback_msg.current_angle_deg = math.degrees(turned_amount)
-            goal_handle.publish_feedback(feedback_msg)
+                delta_roll = normalize_angle(self.current_roll - prev_roll)
+                total_turned_rad += delta_roll
+                prev_roll = self.current_roll
 
-            if abs(error) < TOLERANCE_RAD:
-                self.stop_robot()
-                self.get_logger().info("success, stopping")
-                break
+                feedback_msg.current_angle_deg = math.degrees(abs(total_turned_rad))
+                goal_handle.publish_feedback(feedback_msg)
 
-            calculated_speed = error * KP
+                error_rad = target_rad - abs(total_turned_rad)
+                
+                if error_rad < TOLERANCE_RAD:
+                    self.stop_robot()
+                    self.get_logger().info("360 tamamlandı, durduruluyor.")
+                    break
 
-            if abs(calculated_speed) > max_speed: calculated_speed = math.copysign(max_speed, calculated_speed)
-            if abs(error) > TOLERANCE_RAD * 3 and abs(calculated_speed) < MIN_SPEED:
-                calculated_speed = math.copysign(MIN_SPEED, calculated_speed)
-
-            cmd.angular.x = calculated_speed
-            self.vel_pub.publish(cmd)            
-            rate.sleep()
-        self.stop_robot()
-        goal_handle.succeed()
-        
-        result.success = True
-        result.message = f"{target_deg_relative} rolled that much."
-        self.get_logger().info(f"last error {math.degrees(error):.2f}°")
-        return result
+                cmd.angular.x = max_speed * direction
+                self.vel_pub.publish(cmd)            
+                
+                rate.sleep()
+                
+            self.stop_robot()
+            goal_handle.succeed()
+            
+            result.success = True
+            result.message = f"{target_deg_relative} derece dönüldü."
+            return result
 
     def stop_robot(self):
         cmd = Twist()

@@ -8,9 +8,7 @@ from auv_interfaces.action import Roll
 import math
 import time
 
-KP = 0.4
 TOLERANCE_RAD = 0.1
-MIN_SPEED = 0.0
 
 def normalize_angle(angle):
     while angle > math.pi: angle -= 2.0 * math.pi

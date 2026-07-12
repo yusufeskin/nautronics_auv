@@ -85,7 +85,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         name="Arrange Depth",
         topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
-        target_depth=-0.5,
+        target_depth=-1.0,
         tolerance=0.1,   
         speed=0.2             
     )
@@ -142,11 +142,12 @@ def create_root() -> py_trees.behaviour.Behaviour:
     
     # 4.2 VISUAL SERVOING
     target_points = [
-        Point(x=254.0, y=23.0, z=0.0),  # Top Left
-        Point(x=327.0, y=22.0, z=0.0),  # Top Right
-        Point(x=327.0, y=96.0, z=0.0),  # Bottom Right
-        Point(x=254.0, y=96.0, z=0.0)   # Bottom Left
+        Point(x=106.0, y=107.0, z=0.0),  # Top Left
+        Point(x=360.0, y=107.0, z=0.0),  # Top Right
+        Point(x=367.0, y=390.0, z=0.0),  # Bottom Right
+        Point(x=98.0, y=381.0, z=0.0)   # Bottom Left
     ]
+
     
     visual_servo_node = py_trees_ros.action_clients.FromConstant(
         name="Visual Servoing to gate",

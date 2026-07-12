@@ -34,7 +34,8 @@ setup(
             'blind_push_action = auv_control.blind_push_action:main',
             'return_loop_action = auv_control.return_loop_action:main',
             'roller = auv_control.roller:main',
-            'absolute_yawer = auv_control.absolute_yawer:main'
+            'absolute_yawer = auv_control.absolute_yawer:main',
+            'center_target_action = auv_control.center_target_action:main'
         ],
     },
 )

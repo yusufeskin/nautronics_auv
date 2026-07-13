@@ -3,8 +3,10 @@ import rclpy
 from rclpy.node import Node
 import cv2
 import numpy as np
-from sensor_msgs.msg import CameraInfo
+from sensor_msgs.msg import CameraInfo, Image, CompressedImage
 from auv_interfaces.msg import DetectionArray
+from cv_bridge import CvBridge
+from utils.debug_helper import draw_pnp_debug, build_compressed_msg
 from scipy.spatial.transform import Rotation as R
 from .object_config import OBJECT_REGISTRY
 from rclpy.qos import qos_profile_sensor_data
@@ -21,9 +23,18 @@ class PnPSolverNode(Node):
         self.object_library = {}
         self.load_object_config()
 
+        self.bridge = CvBridge()
+        self.latest_image_msg = None
+
         self.create_subscription(CameraInfo, '/camera/camera/color/camera_info', self.camera_info_cb, 10)
+        self.create_subscription(Image, '/camera/camera/color/image_raw', self.image_cb, qos_profile=qos_profile_sensor_data)
         self.create_subscription(DetectionArray, '/yolo_detections', self.yolo_cb, qos_profile=qos_profile_sensor_data)
+        
         self.pose_publisher = self.create_publisher(DetectionArray, '/object_3d_poses', 10)
+        self.debug_publisher = self.create_publisher(CompressedImage, '/pnp_debug_image/compressed', 10)
+
+    def image_cb(self, msg: Image):
+        self.latest_image_msg = msg
 
     def load_object_config(self):
         for cls_id, props in OBJECT_REGISTRY.items():
@@ -92,6 +103,16 @@ class PnPSolverNode(Node):
                 det.yaw_angle = 0.0
 
         self.pose_publisher.publish(msg)
+
+        if self.latest_image_msg is not None:
+            try:
+                frame = self.bridge.imgmsg_to_cv2(self.latest_image_msg, "bgr8")
+                debug_frame = draw_pnp_debug(frame, msg)
+                debug_msg = build_compressed_msg(debug_frame, self.latest_image_msg.header)
+                if debug_msg:
+                    self.debug_publisher.publish(debug_msg)
+            except Exception as e:
+                self.get_logger().error(f"Debug resmi oluşturulurken hata: {e}", throttle_duration_sec=2.0)
 
 
 def main(args=None):

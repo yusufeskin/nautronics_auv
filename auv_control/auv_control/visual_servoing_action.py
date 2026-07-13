@@ -10,6 +10,7 @@ from auv_interfaces.msg import DetectionArray
 from auv_interfaces.action import VisualServoing
 import numpy as np
 import time
+import math
 from rclpy.qos import qos_profile_sensor_data
 class VisualServoingActionServer(Node):
     def __init__(self):
@@ -126,7 +127,7 @@ class VisualServoingActionServer(Node):
                 (kpts[3].x,  kpts[3].y)
             ]
 
-            yaw_error = target_obj.yaw_angle
+            yaw_error = math.radians(target_obj.yaw_angle)
             # w_yaw_val = -0.2 * yaw_error
             w_yaw_val = -self.lambda_yaw * yaw_error
 

@@ -63,3 +63,34 @@ def build_compressed_msg(frame, header, jpeg_quality=50) -> CompressedImage:
     msg.format = "jpeg"
     msg.data = np.array(encoded).tobytes()
     return msg
+
+
+def draw_pnp_debug(frame, detections_msg: DetectionArray) -> np.ndarray:
+    debug_frame = frame.copy()
+    dets = detections_msg.detections
+
+    for det in dets:
+        # Draw keypoints if available
+        if len(det.keypoints) >= 4:
+            for idx in range(4):
+                cx, cy = int(det.keypoints[idx].x), int(det.keypoints[idx].y)
+                if cx == 0 and cy == 0:
+                    continue
+                cv2.circle(debug_frame, (cx, cy), 5, (0, 255, 0), -1)
+                cv2.putText(debug_frame, str(idx), (cx + 5, cy - 5),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+        
+        # Determine center for text placement (approximate using the first keypoint or average)
+        if len(det.keypoints) > 0:
+            text_x = int(det.keypoints[0].x)
+            text_y = int(det.keypoints[0].y) - 20
+        else:
+            text_x, text_y = 50, 50
+
+        # Draw PnP Data
+        if det.distance != -1.0:
+            label = f"{det.class_name} | Dist: {det.distance:.2f} | Yaw: {det.yaw_angle:.2f}"
+            cv2.putText(debug_frame, label, (text_x, text_y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+            
+    return debug_frame

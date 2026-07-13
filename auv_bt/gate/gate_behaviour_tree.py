@@ -21,6 +21,8 @@ import common_behaviors.state
 
 from auv_interfaces.action import VisualServoing
 from auv_interfaces.action import YawAndScan
+
+from auv_interfaces.action import BlindPush
 from auv_interfaces.srv import SetVehicleMode
 
 
@@ -168,6 +170,19 @@ def create_root() -> py_trees.behaviour.Behaviour:
         num_failures=100
     )
 
+
+        # ------------------------------------------
+    blind_push1 = py_trees_ros.action_clients.FromConstant(
+        name="Blind Push Through Gate",
+        action_type=BlindPush,
+        action_name="/blind_push",
+        action_goal=BlindPush.Goal(
+            duration=10.0,
+            speed=0.2
+        )
+    )
+
+
 # 5. FINISH YAW BRANCH (90x8)
 
     finish_yaw_sequence = py_trees.composites.Sequence("Finish 90x8 Yaw", memory=True)
@@ -198,6 +213,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     main_mission_sequence.add_children([
         arrange_depth_sequence, 
         robust_servo_mission, 
+        blind_push1,
         finish_yaw_sequence
     ])  
     

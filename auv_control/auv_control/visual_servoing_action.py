@@ -161,7 +161,7 @@ class VisualServoingActionServer(Node):
             feedback_msg.current_error = float(error_norm)
             goal_handle.publish_feedback(feedback_msg)
 
-            if error_norm < 0.05:
+            if error_norm < 0.2:
                 self.get_logger().info(f"Hedefe Ulaşıldı! Hata: {error_norm:.4f}")
                 self.stop_robot()
                 goal_handle.succeed()

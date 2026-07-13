@@ -35,6 +35,7 @@ setup(
             'manager =  lifecycle_manager.manager:main',
             'qualification = pool.qualification:main',
             'qualification2 = pool.qualification2:main',
+            'hadi_oglum = pool.hadi_oglum:main',
 
         ],
     },

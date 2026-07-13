@@ -66,10 +66,17 @@ class ScanActionServer(Node):
         return CancelResponse.ACCEPT
 
     async def execute_callback(self, goal_handle):
-        target_deg_relative = goal_handle.request.target_angle_deg
+        target_angle_deg = goal_handle.request.target_angle_deg
         max_speed = goal_handle.request.angular_speed
+        is_absolute = goal_handle.request.is_absolute
         start_yaw = self.current_yaw
-        target_yaw_abs = normalize_angle(start_yaw + math.radians(target_deg_relative))
+        
+        if is_absolute:
+            target_yaw_abs = normalize_angle(math.radians(target_angle_deg))
+            self.get_logger().info(f"Target is ABSOLUTE: {target_angle_deg} deg")
+        else:
+            target_yaw_abs = normalize_angle(start_yaw + math.radians(target_angle_deg))
+            self.get_logger().info(f"Target is RELATIVE: {target_angle_deg} deg")
         
         feedback_msg = YawAndScan.Feedback()
         result = YawAndScan.Result()
@@ -109,7 +116,7 @@ class ScanActionServer(Node):
         goal_handle.succeed()
         
         result.success = True
-        result.message = f"{target_deg_relative} yawed that much."
+        result.message = f"Yawed to target {target_angle_deg} (Absolute: {is_absolute})"
         self.get_logger().info(f"last error {math.degrees(error):.2f}°")
         return result
 

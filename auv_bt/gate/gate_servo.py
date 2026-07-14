@@ -21,9 +21,10 @@ import common_behaviors.state
 
 from auv_interfaces.action import VisualServoing
 from auv_interfaces.action import YawAndScan
-
 from auv_interfaces.action import BlindPush
 from auv_interfaces.srv import SetVehicleMode
+from auv_interfaces.action import Roll
+
 
 
 def create_root() -> py_trees.behaviour.Behaviour:
@@ -72,6 +73,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
 # 3. ARRANGE DEPTH BRANCH
 
+    wait_40_secs = py_trees.timers.Timer(name="Wait 40 Seconds", duration=40.0)
+
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)   
 
     mode_request_althold1 = SetVehicleMode.Request()
@@ -87,7 +90,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         name="Arrange Depth",
         topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
-        target_depth=-1.0,
+        target_depth=-0.7,
         tolerance=0.1,   
         speed=0.2             
     )
@@ -177,44 +180,91 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=10.0,
+            duration=13.0,
             speed=0.2
         )
     )
 
-
 # 5. FINISH YAW BRANCH (90x8)
 
-    finish_yaw_sequence = py_trees.composites.Sequence("Finish 90x8 Yaw", memory=True)
-    
-    for i in range(8):
-        goal_msg_90 = YawAndScan.Goal()
-        goal_msg_90.target_angle_deg = 90.0
-        goal_msg_90.angular_speed = 0.1
-        
-        turn_90_node = py_trees_ros.action_clients.FromConstant(
-            name=f"Turn 90 degrees ({i+1}/8)",
-            action_type=YawAndScan,
-            action_name="/yaw_and_scan", 
-            action_goal=goal_msg_90
-        )
-        
-        wait_1s_node = py_trees.timers.Timer(
-            name=f"Wait 1s ({i+1}/8)",
-            duration=1.0
-        )
+    finish_roll_sequence = py_trees.composites.Sequence("Finish 360x2 Roll", memory=True)
 
-        
-        finish_yaw_sequence.add_children([turn_90_node, wait_1s_node])
+    mode_request_acro = SetVehicleMode.Request()
+    mode_request_acro.mode_name = "ACRO"
+    switch_mode_acro1 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAcro",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_acro
+    )
+
+    goal_msg_roll = Roll.Goal()
+    goal_msg_roll.target_angle_deg = 360.0
+    goal_msg_roll.angular_speed = 0.4
+
+    roll_360_node1 = py_trees_ros.action_clients.FromConstant(
+        name="Roll 360",
+        action_type=Roll,
+        action_name="/roll",
+        action_goal=goal_msg_roll
+    )
+
+    mode_request_althold2 = SetVehicleMode.Request()
+    mode_request_althold2.mode_name = "ALT_HOLD"
+    switch_mode_althold2 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchBackToAltHold",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_althold2
+    )
+
+    wait_2s_node = py_trees.timers.Timer(
+        name=f"Wait 2s",
+        duration=2.0
+    )
+
+    mode_request_acro = SetVehicleMode.Request()
+    mode_request_acro.mode_name = "ACRO"
+    switch_mode_acro2 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAcro",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_acro
+    )
+
+    roll_360_node2 = py_trees_ros.action_clients.FromConstant(
+        name="Roll 360",
+        action_type=Roll,
+        action_name="/roll",
+        action_goal=goal_msg_roll
+    )
+
+    mode_request_althold3 = SetVehicleMode.Request()
+    mode_request_althold3.mode_name = "ALT_HOLD"
+    switch_mode_althold3 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchBackToAltHold",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_althold3
+    )
+   
+    finish_roll_sequence.add_children([switch_mode_acro1, 
+                                       roll_360_node1, 
+                                       switch_mode_althold2, 
+                                       wait_2s_node, 
+                                       switch_mode_acro2, 
+                                       roll_360_node2, 
+                                       switch_mode_althold3])
 
 
 # 6. ASSEMBLE MAIN MISSION
 
     main_mission_sequence.add_children([
+        wait_40_secs,
         arrange_depth_sequence, 
         robust_servo_mission, 
         blind_push1,
-        finish_yaw_sequence
+        finish_roll_sequence
     ])  
     
     root.add_child(publishers_parallel)

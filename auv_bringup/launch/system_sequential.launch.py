@@ -65,6 +65,13 @@ def generate_launch_description():
         output='screen',
     )
 
+    roller = Node(
+        package='auv_control',
+        executable='roller',
+        name='roller',
+        output='screen',
+    )
+
 
     camera_info_node = Node(
         package='auv_vision',
@@ -130,6 +137,14 @@ def generate_launch_description():
             actions=[
                 LogInfo(msg='[system_sequential] Starting pnp solver at t=6s'),
                 pnp_solver
+            ]
+        ),
+
+        TimerAction(
+            period=7.0,
+            actions=[
+                LogInfo(msg='[system_sequential] Starting roller at t=7s'),
+                roller
             ]
         ),
     ])

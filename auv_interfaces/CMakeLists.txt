@@ -21,6 +21,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "action/VisualServoing.action"
   "action/YawAndScan.action"
   "action/BlindPush.action"
+  "action/ReturnLoop.action"
+  "action/Roll.action"
+  "action/CenterTarget.action"
   "msg/DetectedPipe.msg"
 
   DEPENDENCIES std_msgs geometry_msgs

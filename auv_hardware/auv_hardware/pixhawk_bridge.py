@@ -6,6 +6,7 @@ from .pwm_handler import PwmHandler
 from .mode_handler import ModeHandler
 from .telemetry_handler import TelemetryHandler
 from .baro_handler import BaroHandler
+from std_srvs.srv import SetBool
 from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.msg import VehicleStatus
 from std_msgs.msg import Float64, UInt16MultiArray
@@ -15,10 +16,13 @@ from .attitude_handler import AttitudeHandler
 from .baro_handler2 import BaroHandler2
 from .motor_output_handler import MotorOutputHandler
 from geometry_msgs.msg import Vector3
-
+from std_msgs.msg import UInt16
+from .led_handler import LedHandler
 class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')
+        
+        # UDP yerine doğrudan USB Seri portuna (115200 baud) ayarlandı
         self.master = mavutil.mavlink_connection('udpin:0.0.0.0:14550', baud=57600)
         self.master.wait_heartbeat()
         self.get_logger().info("Pixhawk'a bağlanıldı!")
@@ -53,6 +57,9 @@ class PixhawkBridge(Node):
         self.mode_change_service = self.create_service(
             SetVehicleMode, '/change_mode', self.mode_module.change_mode_callback
         )
+        self.arm_service = self.create_service(
+            SetBool, '/arm', self.mode_module.arm_callback
+        )
         self.pwm_subscription = self.create_subscription(
             UInt16MultiArray, 'pwm_router', self.pwm_callback, 10
         )
@@ -63,6 +70,10 @@ class PixhawkBridge(Node):
 
         self.set_attitude_subscription = self.create_subscription(
             Vector3, 'target_attitude', self.set_attitude_callback, 10
+        )
+
+        self.led_subscription = self.create_subscription(
+            UInt16, 'led_control', self.led_callback, 10
         )
 
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
@@ -88,6 +99,10 @@ class PixhawkBridge(Node):
         pitch = msg.y
         yaw = msg.z
         self.set_attitude_module.set_target_attitude(roll, pitch, yaw)
+
+    def led_callback(self, msg):
+        self.led_module.set_led_pwm(msg.data)
+
 
 def main(args=None):
     rclpy.init(args=args)

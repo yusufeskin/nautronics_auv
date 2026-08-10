@@ -24,10 +24,17 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'gate_behaviour_tree = gate.gate_behaviour_tree:main',
-            'pool_behaviour_tree = pool.pool_behaviour_tree:main', 
-            'pool2_bt = pool.pool2_bt:main',
-            'pool_detection = pool.pool_detection:main',
+            'gate_servo = gate.gate_servo:main',
+            'visual_servo = pool.visual_servo:main',
+            'teknofest = pool.teknofest:main',
+            'manager =  lifecycle_manager.manager:main',
+            'gate_gyro = gate.gate_gyro:main',
+            'main_behaviour_tree1 = pool.main_behaviour_tree1:main',
+            'main_behaviour_tree2 = pool.main_behaviour_tree2:main',
+            'slalom_bt = slalom.slalom_bt:main',
+            'mixed_mission = pool.mixed_mission:main',
+            'main_behaviour_tree = pool.main_behaviour_tree:main',
+
         ],
     },
 )

@@ -3,25 +3,19 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
-from geometry_msgs.msg import Twist
-from sensor_msgs.msg import Imu
+from geometry_msgs.msg import Twist, Vector3
 from auv_interfaces.action import YawAndScan
 import math
 import time
 
-KP = 1
-TOLERANCE_RAD = 0.01
-MIN_SPEED = 0.2
+KP = 0.4
+TOLERANCE_RAD = 0.05
+MIN_SPEED = 0.0
 
 def normalize_angle(angle):
     while angle > math.pi: angle -= 2.0 * math.pi
     while angle < -math.pi: angle += 2.0 * math.pi
     return angle
-
-def euler_from_quaternion(x, y, z, w):
-    t3 = +2.0 * (w * z + x * y)
-    t4 = +1.0 - 2.0 * (y * y + z * z)
-    return math.atan2(t3, t4)
 
 class ScanActionServer(Node):
     def __init__(self):
@@ -38,44 +32,51 @@ class ScanActionServer(Node):
             callback_group=self.callback_group
         )
         self.vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
-        self.imu_sub = self.create_subscription(
-            Imu, 
-            "/imu0", 
-            self.imu_callback, 
+        self.attitude_sub = self.create_subscription(
+            Vector3, 
+            "/current_attitude", 
+            self.attitude_callback, 
             10,
             callback_group=self.callback_group
         )
 
         self.current_yaw = 0.0
-        self.is_imu_received = False
-        self.get_logger().info("Scan Action Server Hazır. /imu topici dinleniyor...")
+        self.is_attitude_received = False
+        self.get_logger().info("action ready and listening /current_attitude")
 
-    def imu_callback(self, msg):
-        q = msg.orientation
-        self.current_yaw = euler_from_quaternion(q.x, q.y, q.z, q.w)
-        self.is_imu_received = True
+    def attitude_callback(self, msg):
+        # msg.z = yaw in degrees (from pixhawk_bridge attitude_handler)
+        self.current_yaw = math.radians(msg.z)
+        self.is_attitude_received = True
 
     def goal_callback(self, goal_request):
-        if not self.is_imu_received:
-            self.get_logger().warn("REDDEDİLDİ: /imu topici veri publishlemiyor")
+        if not self.is_attitude_received:
+            self.get_logger().warn("no data from /current_attitude")
             return GoalResponse.REJECT
 
         if goal_request.angular_speed <= 0.0:
-            self.get_logger().warn("REDDEDİLDİ: Dönüş hızı 0 veya negatif olamaz.")
+            self.get_logger().warn("canceled max angular speed must be positive")
             return GoalResponse.REJECT
 
-        self.get_logger().info(f"KABUL EDİLDİ: Hedef {goal_request.target_angle_deg}°")
+        self.get_logger().info(f"accepted: target:{goal_request.target_angle_deg}°")
         return GoalResponse.ACCEPT
 
     def cancel_callback(self, goal_handle):
-        self.get_logger().info("İptal isteği alındı. Robot durduruluyor.")
+        self.get_logger().info("canceled, stopping robot")
         return CancelResponse.ACCEPT
 
     async def execute_callback(self, goal_handle):
-        target_deg_relative = goal_handle.request.target_angle_deg
+        target_angle_deg = goal_handle.request.target_angle_deg
         max_speed = goal_handle.request.angular_speed
+        is_absolute = goal_handle.request.is_absolute
         start_yaw = self.current_yaw
-        target_yaw_abs = normalize_angle(start_yaw + math.radians(target_deg_relative))
+        
+        if is_absolute:
+            target_yaw_abs = normalize_angle(math.radians(target_angle_deg))
+            self.get_logger().info(f"Target is ABSOLUTE: {target_angle_deg} deg")
+        else:
+            target_yaw_abs = normalize_angle(start_yaw + math.radians(target_angle_deg))
+            self.get_logger().info(f"Target is RELATIVE: {target_angle_deg} deg")
         
         feedback_msg = YawAndScan.Feedback()
         result = YawAndScan.Result()
@@ -88,34 +89,35 @@ class ScanActionServer(Node):
                 self.stop_robot()
                 goal_handle.canceled()
                 result.success = False
-                result.message = "Operasyon iptal edildi."
+                result.message = "canceled"
                 return result
 
-            error = normalize_angle(-target_yaw_abs + self.current_yaw)
+            error = normalize_angle(target_yaw_abs -self.current_yaw)
+            self.get_logger().info(f'error: {error}')
             turned_amount = normalize_angle(self.current_yaw - start_yaw)
             feedback_msg.current_angle_deg = math.degrees(turned_amount)
             goal_handle.publish_feedback(feedback_msg)
 
             if abs(error) < TOLERANCE_RAD:
                 self.stop_robot()
-                self.get_logger().info("Hedefe varıldı, duruluyor...")
+                self.get_logger().info("success, stopping")
                 break
 
             calculated_speed = error * KP
 
             if abs(calculated_speed) > max_speed: calculated_speed = math.copysign(max_speed, calculated_speed)
-            if abs(calculated_speed) < MIN_SPEED: calculated_speed = math.copysign(MIN_SPEED, calculated_speed)
+            if abs(error) > TOLERANCE_RAD * 3 and abs(calculated_speed) < MIN_SPEED:
+                calculated_speed = math.copysign(MIN_SPEED, calculated_speed)
 
             cmd.angular.z = calculated_speed
             self.vel_pub.publish(cmd)            
             rate.sleep()
         self.stop_robot()
         goal_handle.succeed()
-        #CLİENTE ANLIK FOTOGRAF GONDERİLİP HEDEF TANINDI MI DİYE BAKILIP ONA GORE YENİ GOAL GONDERİELBİLİR
         
         result.success = True
-        result.message = f"{target_deg_relative} derecelik tarama tamamlandı."
-        self.get_logger().info(f"Tamamlandı. Son Hata Payı: {math.degrees(error):.2f}°")
+        result.message = f"Yawed to target {target_angle_deg} (Absolute: {is_absolute})"
+        self.get_logger().info(f"last error {math.degrees(error):.2f}°")
         return result
 
     def stop_robot(self):

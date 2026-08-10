@@ -12,6 +12,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'model'), glob('model/*')),
+        (os.path.join('share', package_name, 'config'), glob('config/*')),
 
     ],
     install_requires=['setuptools'],
@@ -27,11 +28,12 @@ setup(
     },
     entry_points={
     'console_scripts': [
-        'image_collector = auv_vision.image_collector:main',
-        'model_debugger = auv_vision.model_debugger:main',
-        'pnp_debugger = auv_vision.pnp_debugger:main',
-        'object_keypoint_detector = auv_vision.object_keypoint_detector:main',
-        'torpedo_pnp_solver = auv_vision.torpedo_pnp_solver:main',
+        'yolo_keypoint_lifecycle = auv_vision.lifecycle_yolo_node:main',
+        'pnp_solver = auv_vision.pnp_solver:main',
+        'pnp_solver_sqpnp = auv_vision.pnp_solver_sqpnp:main',
+        'pnp_solver_ippe = auv_vision.pnp_solver_ippe:main',
+        'bbox_pnp_solver = auv_vision.bbox_pnp_solver:main',
+        'camera_info_publisher = auv_vision.camera_info_publisher:main'
     ],
 	},
 )

@@ -5,7 +5,7 @@ import numpy as np
 
 # ─── 1. PARAMETERS ──────────────────────────────────────────────────────────
 aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
-board = aruco.CharucoBoard((5, 7), 0.04, 0.02, aruco_dict) # Gerçek fiziksel boyutlar farklıysa burayı değiştir.
+board = aruco.CharucoBoard((5, 7), 0.0356, 0.018, aruco_dict) # Gerçek fiziksel boyutlar farklıysa burayı değiştir.
 
 OPENCV_MAJOR = int(cv2.__version__.split('.')[0])
 OPENCV_MINOR = int(cv2.__version__.split('.')[1])
@@ -89,7 +89,7 @@ if basarili < 10:
 # ─── 4. CALIBRATION ─────────────────────────────────────────────────────────
 print("\nPerforming mathematical optimization...")
 
-flags = cv2.CALIB_RATIONAL_MODEL
+flags = 0 #cv2.CALIB_RATIONAL_MODEL
 
 ret, camera_matrix, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
     objectPoints = all_object_points,
@@ -138,7 +138,7 @@ camera_matrix:
   rows: 3
   cols: 3
   data: {camera_matrix.flatten().tolist()}
-distortion_model: rational_polynomial
+distortion_model: plumb_bob
 distortion_coefficients:
   rows: 1
   cols: {dist_coeffs.shape[1]}

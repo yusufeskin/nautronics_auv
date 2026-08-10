@@ -21,3 +21,18 @@ class ModeHandler:
             response.success = False
             
         return response
+
+    def arm_callback(self, request, response):
+        arm = 1 if request.data else 0
+        self.master.mav.command_long_send(
+            self.master.target_system,
+            self.master.target_component,
+            mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+            0,
+            arm, 0, 0, 0, 0, 0, 0
+        )
+        action = "Arm" if request.data else "Disarm"
+        self.logger.info(f"Komut gönderildi: {action}")
+        response.success = True
+        response.message = f"{action} komutu iletildi"
+        return response

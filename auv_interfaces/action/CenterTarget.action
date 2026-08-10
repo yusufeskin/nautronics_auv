@@ -1,0 +1,10 @@
+# Goal
+string target_class
+float32 error_tol_x
+float32 settle_time
+---
+# Result
+bool success
+---
+# Feedback
+float32 current_error_x

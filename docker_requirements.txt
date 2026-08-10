@@ -8,4 +8,5 @@ seaborn
 pandas
 rosbags
 pymavlink
+py_trees
 # Required dependencies to prevent missing module errors during container runtime

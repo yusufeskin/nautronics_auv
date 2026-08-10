@@ -7,7 +7,7 @@ import rclpy
 from geometry_msgs.msg import Point
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import qos_profile_sensor_data
-
+import py_trees.timers
 import py_trees
 import py_trees_ros.trees
 import py_trees.console as console
@@ -20,9 +20,11 @@ import gate.behaviours.depth
 import common_behaviors.state 
 
 from auv_interfaces.action import VisualServoing
-from auv_interfaces.action import BlindPush
 from auv_interfaces.action import YawAndScan
+from auv_interfaces.action import BlindPush
 from auv_interfaces.srv import SetVehicleMode
+from auv_interfaces.action import Roll
+
 
 
 def create_root() -> py_trees.behaviour.Behaviour:
@@ -51,7 +53,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     depth2bb = gate.behaviours.depth.ToBlackboard(
         name="Depth2BB",
-        topic_name="/odom",
+        topic_name="/baro_data",
         qos_profile=qos_profile_sensor_data
     )
 
@@ -63,7 +65,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
     object2bb = gate.behaviours.object2bb.ToBlackboard(
         name="Object2BB",
-        topic_name="/yolo_detections",  
+        topic_name="/object_3d_poses",  
         qos_profile=qos_profile_sensor_data
     )
 
@@ -71,45 +73,39 @@ def create_root() -> py_trees.behaviour.Behaviour:
 
 # 3. ARRANGE DEPTH BRANCH
 
+    wait_40_secs = py_trees.timers.Timer(name="Wait 40 Seconds", duration=40.0)
+
     arrange_depth_sequence = py_trees.composites.Sequence("Arrange Depth", memory=True)   
 
-    mode_request_manual_1 = SetVehicleMode.Request()
-    mode_request_manual_1.mode_name = "MANUAL"
-    switch_mode_manual_first = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToManual",
+    mode_request_althold1 = SetVehicleMode.Request()
+    mode_request_althold1.mode_name = "ALT_HOLD"
+    switch_mode_althold1 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAltHold",
         service_type=SetVehicleMode,
         service_name="/change_mode",
-        service_request=mode_request_manual_1
+        service_request=mode_request_althold1
     )
 
     arrange_depth_node = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
         name="Arrange Depth",
-        topic_odom="/odom",
+        topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
-        target_depth=-0.5,
-        tolerance=0.2,   
+        target_depth=-0.7,
+        tolerance=0.1,   
         speed=0.2             
     )
 
-    mode_request_althold_first = SetVehicleMode.Request()
-    mode_request_althold_first.mode_name = "ALT_HOLD"
-    switch_mode_althold_first = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToAltHold",
-        service_type=SetVehicleMode,
-        service_name="/change_mode",
-        service_request=mode_request_althold_first
-    )
-
     arrange_depth_sequence.add_children([
-        switch_mode_manual_first, 
-        arrange_depth_node, 
-        switch_mode_althold_first
+        switch_mode_althold1, 
+        arrange_depth_node,
     ])
 
-# 4. SEARCH GATE (CHECK DETECTED) BRANCH
-
-    check_detected_selector = py_trees.composites.Selector("Check if Detected", memory=True)
-
+# 4. SEARCH AND SERVO (RECOVERY LOOP) BRANCH
+    search_and_servo_loop = py_trees.composites.Sequence("Search and Servo Mission", memory=False)
+    
+    # 4.1 SEARCH SELECTOR
+    find_target_selector = py_trees.composites.Selector("Find Gate", memory=False)
+    
     check_gate_first = py_trees.behaviours.CheckBlackboardVariableValue(
         name="Is Gate Detected?",
         check=py_trees.common.ComparisonExpression(
@@ -120,15 +116,15 @@ def create_root() -> py_trees.behaviour.Behaviour:
     
     search_gate_sequence = py_trees.composites.Sequence("Turn and Find Gate", memory=True)
 
-    goal_msg = YawAndScan.Goal()
-    goal_msg.target_angle_deg = 15.0
-    goal_msg.angular_speed = 0.3  
+    goal_msg_search = YawAndScan.Goal()
+    goal_msg_search.target_angle_deg = 15.0
+    goal_msg_search.angular_speed = 0.05
     
     rotate_15_deg = py_trees_ros.action_clients.FromConstant(
         name="Turn 15 degrees",
         action_type=YawAndScan,
         action_name="/yaw_and_scan", 
-        action_goal=goal_msg
+        action_goal=goal_msg_search
     )
 
     check_gate_second = py_trees.behaviours.CheckBlackboardVariableValue(
@@ -142,35 +138,24 @@ def create_root() -> py_trees.behaviour.Behaviour:
     search_gate_sequence.add_children([rotate_15_deg, check_gate_second])
 
     retry_search_gate = py_trees.decorators.Retry(
-        name="retry (max)x24",
+        name="Retry Search (max)x24",
         child=search_gate_sequence,
         num_failures=24
     )
-
-    check_detected_selector.add_children([check_gate_first, retry_search_gate])
-
-# 5. ALIGN TO GATE BRANCH
-
-    allign_sequence = py_trees.composites.Sequence("Align to Gate", memory=True)
-
-    mode_request_manual_2 = SetVehicleMode.Request()
-    mode_request_manual_2.mode_name = "MANUAL"
-    switch_mode_manual_second = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToManual",
-        service_type=SetVehicleMode,
-        service_name="/change_mode",
-        service_request=mode_request_manual_2
-    )
-
-    target_points = [
-        Point(x=254.0, y=23.0, z=0.0),  # Top Left
-        Point(x=327.0, y=22.0, z=0.0),  # Top Right
-        Point(x=327.0, y=96.0, z=0.0),  # Bottom Right
-        Point(x=254.0, y=96.0, z=0.0)   # Bottom Left
-    ]
     
-    allign_node = py_trees_ros.action_clients.FromConstant(
-        name="Visual Servoing to Gate",
+    find_target_selector.add_children([check_gate_first, retry_search_gate])
+    
+    # 4.2 VISUAL SERVOING
+    target_points = [
+        Point(x=106.0, y=107.0, z=0.0),  # Top Left
+        Point(x=360.0, y=107.0, z=0.0),  # Top Right
+        Point(x=367.0, y=390.0, z=0.0),  # Bottom Right
+        Point(x=98.0, y=381.0, z=0.0)   # Bottom Left
+    ]
+
+    
+    visual_servo_node = py_trees_ros.action_clients.FromConstant(
+        name="Visual Servoing to gate",
         action_type=VisualServoing,
         action_name="/visual_servoing",
         action_goal=VisualServoing.Goal(
@@ -178,39 +163,108 @@ def create_root() -> py_trees.behaviour.Behaviour:
             target_points=target_points
         )
     )
+    
+    search_and_servo_loop.add_children([find_target_selector, visual_servo_node])
+    
+    # 4.3 WRAP IN RETRY LOOP 
+    robust_servo_mission = py_trees.decorators.Retry(
+        name="Robust Servo Recovery Loop",
+        child=search_and_servo_loop,
+        num_failures=100
+    )
 
-    blind_push_node = py_trees_ros.action_clients.FromConstant(
+
+        # ------------------------------------------
+    blind_push1 = py_trees_ros.action_clients.FromConstant(
         name="Blind Push Through Gate",
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=7.0,
-            speed=0.3
+            duration=13.0,
+            speed=0.2
         )
     )
 
-    mode_request_althold_second = SetVehicleMode.Request()
-    mode_request_althold_second.mode_name = "ALT_HOLD"
-    switch_mode_althold_second = py_trees_ros.service_clients.FromConstant(
-        name="SwitchToAltHold",
+# 5. FINISH YAW BRANCH (90x8)
+
+    finish_roll_sequence = py_trees.composites.Sequence("Finish 360x2 Roll", memory=True)
+
+    mode_request_acro = SetVehicleMode.Request()
+    mode_request_acro.mode_name = "ACRO"
+    switch_mode_acro1 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAcro",
         service_type=SetVehicleMode,
         service_name="/change_mode",
-        service_request=mode_request_althold_second
+        service_request=mode_request_acro
     )
 
-    allign_sequence.add_children([
-        switch_mode_manual_second, 
-        allign_node, 
-        blind_push_node, 
-        switch_mode_althold_second
-    ])
+    goal_msg_roll = Roll.Goal()
+    goal_msg_roll.target_angle_deg = 360.0
+    goal_msg_roll.angular_speed = 0.4
+
+    roll_360_node1 = py_trees_ros.action_clients.FromConstant(
+        name="Roll 360",
+        action_type=Roll,
+        action_name="/roll",
+        action_goal=goal_msg_roll
+    )
+
+    mode_request_althold2 = SetVehicleMode.Request()
+    mode_request_althold2.mode_name = "ALT_HOLD"
+    switch_mode_althold2 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchBackToAltHold",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_althold2
+    )
+
+    wait_2s_node = py_trees.timers.Timer(
+        name=f"Wait 2s",
+        duration=2.0
+    )
+
+    mode_request_acro = SetVehicleMode.Request()
+    mode_request_acro.mode_name = "ACRO"
+    switch_mode_acro2 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAcro",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_acro
+    )
+
+    roll_360_node2 = py_trees_ros.action_clients.FromConstant(
+        name="Roll 360",
+        action_type=Roll,
+        action_name="/roll",
+        action_goal=goal_msg_roll
+    )
+
+    mode_request_althold3 = SetVehicleMode.Request()
+    mode_request_althold3.mode_name = "ALT_HOLD"
+    switch_mode_althold3 = py_trees_ros.service_clients.FromConstant(
+        name="SwitchBackToAltHold",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_althold3
+    )
+   
+    finish_roll_sequence.add_children([switch_mode_acro1, 
+                                       roll_360_node1, 
+                                       switch_mode_althold2, 
+                                       wait_2s_node, 
+                                       switch_mode_acro2, 
+                                       roll_360_node2, 
+                                       switch_mode_althold3])
+
 
 # 6. ASSEMBLE MAIN MISSION
 
     main_mission_sequence.add_children([
+        wait_40_secs,
         arrange_depth_sequence, 
-        check_detected_selector, 
-        allign_sequence
+        robust_servo_mission, 
+        blind_push1,
+        finish_roll_sequence
     ])  
     
     root.add_child(publishers_parallel)
@@ -218,15 +272,23 @@ def create_root() -> py_trees.behaviour.Behaviour:
     
     return root
 
+
 # ROS 2 MAIN EXECUTION
 
 def main():
     rclpy.init(args=None)
     root = create_root()
+    
     tree = py_trees_ros.trees.BehaviourTree(
         root=root,
         unicode_tree_debug=True
     )
+
+    try:
+        py_trees.display.render_dot_tree(root, name="real_gate_gorev_agaci")
+        print("Ağaç başarıyla 'real_gate_gorev_agaci.svg' olarak kaydedildi!")
+    except Exception as e:
+        print(f"Ağaç çizilirken bir hata oluştu (Önemli değil, göreve devam edilecek): {e}")
 
     try:
         tree.setup(timeout=15)

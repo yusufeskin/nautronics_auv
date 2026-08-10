@@ -8,12 +8,10 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from auv_interfaces.msg import DetectionArray
 from auv_interfaces.action import VisualServoing
-
 import numpy as np
 import time
-
-from submodules import pid_controller
-
+import math
+from rclpy.qos import qos_profile_sensor_data
 class VisualServoingActionServer(Node):
     def __init__(self):
         super().__init__('visual_servoing_action_server')
@@ -24,21 +22,23 @@ class VisualServoingActionServer(Node):
         self.fy = None
         self.cu = None
         self.cv = None
-        self.pid_controller = pid_controller.PID(0.24, 0, 0.3)
-        self.pid_controller2 = pid_controller.PID(0.24, 0, 0.3)
+        self.lambda_surge = 0.2
+        self.lambda_sway = 0.18
+        self.lambda_heave = 0.3
+        self.lambda_yaw = 0.1
 
         self.callback_group = ReentrantCallbackGroup()
 
         self.latest_msg = None 
         self.msg_received = False
-        self.camera_info_subsc = self.create_subscription(CameraInfo, '/front_camera/camera_info', self.camera_info_callback, 10)
+        self.camera_info_subsc = self.create_subscription(CameraInfo, '/camera/camera/color/camera_info', self.camera_info_callback, 10)
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
         #will be changed
         self.subscriber = self.create_subscription(
             DetectionArray, 
-            '/yolo_detections', 
+            '/object_3d_poses', 
             self.listener_callback, 
-            10,
+            qos_profile=qos_profile_sensor_data,
             callback_group=self.callback_group
         )
 
@@ -127,9 +127,9 @@ class VisualServoingActionServer(Node):
                 (kpts[3].x,  kpts[3].y)
             ]
 
-            yaw_error = target_obj.yaw_angle
+            yaw_error = math.radians(target_obj.yaw_angle)
             # w_yaw_val = -0.2 * yaw_error
-            w_yaw_val = -self.pid_controller.calculate_power(yaw_error)
+            w_yaw_val = -self.lambda_yaw * yaw_error
 
             L_stacked = []
             error_stacked = []
@@ -161,7 +161,7 @@ class VisualServoingActionServer(Node):
             feedback_msg.current_error = float(error_norm)
             goal_handle.publish_feedback(feedback_msg)
 
-            if error_norm < 0.05:
+            if error_norm < 0.2:
                 self.get_logger().info(f"Hedefe Ulaşıldı! Hata: {error_norm:.4f}")
                 self.stop_robot()
                 goal_handle.succeed()
@@ -176,14 +176,13 @@ class VisualServoingActionServer(Node):
                 # hybrid visual servoing (https://inria.hal.science/inria-00350638v1/document)
                 # v = -lambda * L_v_inv * (error - L_w * w_yaw)
                 compensated_error = e_total - (L_w * w_yaw_val)
-                v_linear_raw = -self.pid_controller2.calculate_power(np.dot(L_v_inv, compensated_error))
-                # v_linear_raw = -0.2 * np.dot(L_v_inv, compensated_error)
-                v_linear = v_linear_raw.flatten() 
+                v_target_raw = np.dot(L_v_inv, compensated_error).flatten()
 
-                v_surge = np.clip(v_linear[2], -0.5, 0.5)
-                v_sway  = np.clip(v_linear[0], -0.5, 0.5)
-                v_heave = np.clip(v_linear[1], -0.5, 0.5)
-                v_yaw   = np.clip(w_yaw_val, -0.3, 0.3)
+
+                v_sway  = np.clip(-self.lambda_sway  * v_target_raw[0], -0.05, 0.05)
+                v_heave = np.clip(-self.lambda_heave * v_target_raw[1], -0.05, 0.05)
+                v_surge = np.clip(-self.lambda_surge * v_target_raw[2], -0.05, 0.05)
+                v_yaw   = np.clip(w_yaw_val, -0.05, 0.05)
                 
                 # self.get_logger().info(f"""
                 #     ---------------------------
@@ -198,7 +197,7 @@ class VisualServoingActionServer(Node):
                 cmd.linear.x = float(v_surge)
                 cmd.linear.y = -float(v_sway)
                 cmd.linear.z = -float(v_heave)
-                cmd.angular.z = float(v_yaw)
+                cmd.angular.z = -float(v_yaw)
 
                 self.publisher.publish(cmd)
                 

@@ -14,7 +14,7 @@ def generate_launch_description():
     
     # 1. Dosya Yolları
     xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'prototype.urdf.xacro')
-    world_file = os.path.join(pkg_share, 'worlds', 'teknofes_pool.world')
+    world_file = os.path.join(pkg_share, 'worlds', 'teknofest_pool.world')
     bridge_config_path = os.path.join(pkg_share, 'config', 'bridge.yaml')
     rviz_config_path = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
     torpedo_xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'macros', 'torpedo.xacro')

@@ -15,7 +15,6 @@ import py_trees_ros.service_clients
 import py_trees_ros.action_clients
 
 import gate.behaviours.arrange_depth_action
-import gate.behaviours.object2bb
 import gate.behaviours.depth
 import common_behaviors.state 
 
@@ -79,14 +78,14 @@ def create_root() -> py_trees.behaviour.Behaviour:
         name="Arrange Depth",
         topic_odom="/baro_data",
         topic_cmd="/cmd_vel",  
-        target_depth=-1.3,
+        target_depth=-0.9,
         tolerance=0.1,   
         speed=0.2             
     )
 
     # 3.2 ROTATE TO 10
     goal_msg_rotate_10 = YawAndScan.Goal()
-    goal_msg_rotate_10.target_angle_deg = 10.0
+    goal_msg_rotate_10.target_angle_deg = 0.0
     goal_msg_rotate_10.angular_speed = 0.05
     goal_msg_rotate_10.is_absolute = True
     
@@ -97,32 +96,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_goal=goal_msg_rotate_10
     )
 
-    # 3.3 BLIND PUSH 3s
-    blind_push_3s_1 = py_trees_ros.action_clients.FromConstant(
-        name="Blind Push 3s (1)",
-        action_type=BlindPush,
-        action_name="/blind_push",
-        action_goal=BlindPush.Goal(
-            duration=3.0,
-            speed=0.3
-        )
-    )
-
-    # 3.4 ROTATE TO 15
-    goal_msg_rotate_15 = YawAndScan.Goal()
-    goal_msg_rotate_15.target_angle_deg = 15.0
-    goal_msg_rotate_15.angular_speed = 0.05
-    goal_msg_rotate_15.is_absolute = True
-    
-    rotate_15 = py_trees_ros.action_clients.FromConstant(
-        name="Turn to Absolute 15",
-        action_type=YawAndScan,
-        action_name="/yaw_and_scan", 
-        action_goal=goal_msg_rotate_15
-    )
-
     # 3.5 BLIND PUSH 3s
-    blind_push_3s_2 = py_trees_ros.action_clients.FromConstant(
+    blind_push_9s = py_trees_ros.action_clients.FromConstant(
         name="Blind Push 3s (2)",
         action_type=BlindPush,
         action_name="/blind_push",
@@ -145,28 +120,17 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_goal=goal_msg_rotate_20
     )
 
-    # 3.7 BLIND PUSH 3s
-    blind_push_3s_3 = py_trees_ros.action_clients.FromConstant(
-        name="Blind Push 3s (3)",
-        action_type=BlindPush,
-        action_name="/blind_push",
-        action_goal=BlindPush.Goal(
-            duration=3.0,
-            speed=0.3
-        )
-    )
-
     # 3.8 ROTATE TO 25
-    goal_msg_rotate_25 = YawAndScan.Goal()
-    goal_msg_rotate_25.target_angle_deg = 25.0
-    goal_msg_rotate_25.angular_speed = 0.05
-    goal_msg_rotate_25.is_absolute = True
+    goal_msg_rotate_after_slalom = YawAndScan.Goal()
+    goal_msg_rotate_after_slalom.target_angle_deg = 25.0
+    goal_msg_rotate_after_slalom.angular_speed = 0.05
+    goal_msg_rotate_after_slalom.is_absolute = True
     
-    rotate_25 = py_trees_ros.action_clients.FromConstant(
+    rotate_after_slalom = py_trees_ros.action_clients.FromConstant(
         name="Turn to Absolute 25",
         action_type=YawAndScan,
         action_name="/yaw_and_scan", 
-        action_goal=goal_msg_rotate_25
+        action_goal=goal_msg_rotate_after_slalom
     )
 
     # 3.9 BLIND PUSH 10s
@@ -175,9 +139,31 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=10.0,
+            duration=15.0,
             speed=0.3
         )
+    )
+
+    arrange_depth_node_in_octagon = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
+        name="Arrange Depth",
+        topic_odom="/baro_data",
+        topic_cmd="/cmd_vel",  
+        target_depth=-0.5,
+        tolerance=0.1,   
+        speed=0.2             
+    )
+
+    # 3.6 ROTATE TO 20
+    goal_msg_rotate_octagon = YawAndScan.Goal()
+    goal_msg_rotate_octagon.target_angle_deg = 20.0
+    goal_msg_rotate_octagon.angular_speed = 0.05
+    goal_msg_rotate_octagon.is_absolute = True
+    
+    rotate_octagon = py_trees_ros.action_clients.FromConstant(
+        name="Turn to Absolute 20",
+        action_type=YawAndScan,
+        action_name="/yaw_and_scan", 
+        action_goal=goal_msg_rotate_octagon
     )
 
     # 3.10 SWITCH TO MANUAL
@@ -190,19 +176,64 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_manual
     )
 
+    wait_8_secs = py_trees.timers.Timer(name="Wait 8 Seconds", duration=8.0)
+
+    mode_request_althold_for_return = SetVehicleMode.Request()
+    mode_request_althold_for_return.mode_name = "ALT_HOLD"
+    switch_mode_althold_for_return = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToAltHold",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_althold_for_return
+    )
+
+    arrange_depth_node_for_return = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
+        name="Arrange Depth",
+        topic_odom="/baro_data",
+        topic_cmd="/cmd_vel",  
+        target_depth=-0.9,
+        tolerance=0.1,   
+        speed=0.2             
+    )
+
+    goal_msg_rotate_for_return = YawAndScan.Goal()
+    goal_msg_rotate_for_return.target_angle_deg = -5.0
+    goal_msg_rotate_for_return.angular_speed = 0.05
+    goal_msg_rotate_for_return.is_absolute = True
+
+    rotate_for_return = py_trees_ros.action_clients.FromConstant(
+        name="Turn to Absolute 20",
+        action_type=YawAndScan,
+        action_name="/yaw_and_scan", 
+        action_goal=goal_msg_rotate_for_return
+    )
+
+    blind_push_for_return = py_trees_ros.action_clients.FromConstant(
+        name="Blind Push 10s",
+        action_type=BlindPush,
+        action_name="/blind_push",
+        action_goal=BlindPush.Goal(
+            duration=15.0,
+            speed=0.3
+        )
+    )
+
 # 4. ASSEMBLE MAIN MISSION
     main_mission_sequence.add_children([
         switch_mode_althold,
         arrange_depth_node,
         rotate_10,
-        blind_push_3s_1,
-        rotate_15,
-        blind_push_3s_2,
-        rotate_20,
-        blind_push_3s_3,
-        rotate_25,
+        blind_push_9s,
+        rotate_after_slalom,
         blind_push_10s,
-        switch_mode_manual
+        arrange_depth_node_in_octagon ,
+        rotate_octagon,
+        switch_mode_manual,
+        wait_8_secs,
+        switch_mode_althold_for_return,
+        arrange_depth_node_for_return,
+        rotate_for_return,
+        blind_push_for_return
     ])
 
     root.add_child(publishers_parallel)

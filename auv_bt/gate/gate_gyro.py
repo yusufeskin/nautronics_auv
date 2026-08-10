@@ -110,12 +110,21 @@ def create_root() -> py_trees.behaviour.Behaviour:
         action_type=BlindPush,
         action_name="/blind_push",
         action_goal=BlindPush.Goal(
-            duration=13.0,
+            duration=8.0,
             speed=0.3
         )
     )
+
+    arrange_depth_node1 = gate.behaviours.arrange_depth_action.ArrangeDepthAction(
+        name="Arrange Depth",
+        topic_odom="/baro_data",
+        topic_cmd="/cmd_vel",  
+        target_depth=-1.5,
+        tolerance=0.1,   
+        speed=0.2             
+    )
     
-    search_and_push_sequence.add_children([rotate_to_zero, blind_push_node])
+    search_and_push_sequence.add_children([rotate_to_zero, blind_push_node, arrange_depth_node1])
 
     finish_roll_sequence = py_trees.composites.Sequence("Finish 360x2 Roll", memory=True)
 
@@ -149,9 +158,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=mode_request_althold2
     )
 
-    wait_2s_node = py_trees.timers.Timer(
-        name=f"Wait 2s",
-        duration=2.0
+    wait_1s_node = py_trees.timers.Timer(
+        name=f"Wait 1s",
+        duration=1.0
     )
 
     mode_request_acro = SetVehicleMode.Request()
@@ -182,7 +191,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     finish_roll_sequence.add_children([switch_mode_acro1, 
                                        roll_360_node1, 
                                        switch_mode_althold2, 
-                                       wait_2s_node, 
+                                       wait_1s_node, 
                                        switch_mode_acro2, 
                                        roll_360_node2, 
                                        switch_mode_althold3])

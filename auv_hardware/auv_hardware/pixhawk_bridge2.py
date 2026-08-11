@@ -17,6 +17,8 @@ from .baro_handler2 import BaroHandler2
 from geometry_msgs.msg import Vector3
 from std_msgs.msg import UInt16
 from .led_handler import LedHandler
+from .dvl_odom_handler import DvlOdomHandler
+
 
 class PixhawkBridge(Node):
     def __init__(self):
@@ -44,6 +46,7 @@ class PixhawkBridge(Node):
         self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
         self.attitude_module       = AttitudeHandler(self, self.attitude_publisher)
         self.led_module            = LedHandler(self.master, self.get_logger())
+        self.dvl_module            = DvlOdomHandler(self, self.master, self.get_logger())
         
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],

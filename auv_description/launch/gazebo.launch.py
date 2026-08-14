@@ -79,27 +79,27 @@ def generate_launch_description():
         output='screen'
     )
 
-    spawn_torpedo1 = Node(
-        package='ros_gz_sim',
-        executable='create',
-        arguments=[
-            '-string', torpedo_desc_1, 
-            '-name', 'torpedo_model1',
-            '-z', '-1.2', '-x', '-9', '-y', '5.1'
-        ],
-        output='screen'
-    )
+    # spawn_torpedo1 = Node(
+    #     package='ros_gz_sim',
+    #     executable='create',
+    #     arguments=[
+    #         '-string', torpedo_desc_1, 
+    #         '-name', 'torpedo_model1',
+    #         '-z', '-1.2', '-x', '-9', '-y', '5.1'
+    #     ],
+    #     output='screen'
+    # )
 
-    spawn_torpedo2 = Node(
-        package='ros_gz_sim',
-        executable='create',
-        arguments=[
-            '-string', torpedo_desc_2, 
-            '-name', 'torpedo_model2',
-            '-z', '-1.2', '-x', '-9', '-y', '4.9'
-        ],
-        output='screen'
-    )
+    # spawn_torpedo2 = Node(
+    #     package='ros_gz_sim',
+    #     executable='create',
+    #     arguments=[
+    #         '-string', torpedo_desc_2, 
+    #         '-name', 'torpedo_model2',
+    #         '-z', '-1.2', '-x', '-9', '-y', '4.9'
+    #     ],
+    #     output='screen'
+    # )
 
     rviz_node = Node(
         package='rviz2',
@@ -117,8 +117,8 @@ def generate_launch_description():
         ros_gz_bridge,
         gz_sim,
         spawn_entity,
-        spawn_torpedo1,
-        spawn_torpedo2,
+        # spawn_torpedo1,
+        # spawn_torpedo2,
         SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1'),
         SetEnvironmentVariable('__GLX_VENDOR_LIBRARY_NAME', 'nvidia'),
         SetEnvironmentVariable('GZ_SIM_RENDER_ENGINE', 'ogre2')

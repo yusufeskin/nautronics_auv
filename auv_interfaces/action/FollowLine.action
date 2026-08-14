@@ -1,0 +1,16 @@
+# Goal (İstem) — hat takibi başlatmak için gönderilen parametreler
+float32 target_speed    # İleri yönlü hedef hız (m/s), varsayılan 0.3
+float32 timeout         # Maksimum görev süresi (saniye), 0 = sınırsız
+string  camera_topic    # Kullanılacak kamera topic'i (boş bırakılırsa /camera/bottom)
+float32 black_value_max # HSV'de siyah tespiti için üst V sınırı (0-255), varsayılan 80.0
+---
+# Result (Sonuç)
+bool   success          # Hat takibi başarıyla tamamlandı mı?
+string message          # Açıklama mesajı (örn. "FINISHED", "TIMEOUT", "CANCELLED")
+float32 elapsed_time    # Görevin sürdüğü süre (saniye)
+---
+# Feedback (Geri Bildirim) — her işlem döngüsünde yayınlanır
+float32 lateral_error   # Yanal sapma [-1.0, +1.0] (+ sağa, - sola)
+float32 heading_error   # Yön sapması [-1.0, +1.0]
+float32 line_coverage   # Görüntüdeki toplam siyah piksel oranı [0.0, 1.0]
+string  current_state   # FOLLOWING / TURNING_LEFT / TURNING_RIGHT / SEARCHING / FINISHED

@@ -24,6 +24,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "action/ReturnLoop.action"
   "action/Roll.action"
   "action/CenterTarget.action"
+  "action/FollowLine.action"
   "msg/DetectedPipe.msg"
 
   DEPENDENCIES std_msgs geometry_msgs

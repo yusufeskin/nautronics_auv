@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import time
+
 import rclpy
 from rclpy.node import Node
 from pymavlink import mavutil
@@ -19,14 +21,23 @@ from std_msgs.msg import UInt16
 from .led_handler import LedHandler
 from .dvl_odom_handler import DvlOdomHandler
 
+POOL_ORIGIN_LAT_DEG = 39.85701944444445
+POOL_ORIGIN_LON_DEG = 32.69128611111111
+POOL_ORIGIN_ALT_M = 900.0
+
+SET_ORIGIN_RETRIES = 3
+SET_ORIGIN_RETRY_DELAY_S = 0.5
+
 
 class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')
 
-        self.master = mavutil.mavlink_connection('udpin:0.0.0.0:14551', baud=57600)
+        self.master = mavutil.mavlink_connection('udp:127.0.0.1:14551', baud=57600)
         self.master.wait_heartbeat()
         self.get_logger().info("Pixhawk'a bağlanıldı!")
+
+        self.send_gps_global_origin()
 
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_ATTITUDE, 50)
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT, 10)
@@ -52,7 +63,7 @@ class PixhawkBridge(Node):
             'HEARTBEAT': [self.telemetry_module.handle_message],
             #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
             'GLOBAL_POSITION_INT':   [self.baro_module.handle_message],
-            'ATTITUDE': [self.attitude_module.handle_message],
+            'ATTITUDE': [self.attitude_module.handle_message, self.dvl_module.handle_attitude],
             'SCALED_PRESSURE2': [self.baro_module2.handle_message] 
         }
 
@@ -79,6 +90,24 @@ class PixhawkBridge(Node):
         )
 
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
+
+    def send_gps_global_origin(self):
+        lat_e7 = int(round(POOL_ORIGIN_LAT_DEG * 1e7))
+        lon_e7 = int(round(POOL_ORIGIN_LON_DEG * 1e7))
+        alt_mm = int(round(POOL_ORIGIN_ALT_M * 1000.0))
+
+        for _ in range(SET_ORIGIN_RETRIES):
+            self.master.mav.set_gps_global_origin_send(
+                self.master.target_system,
+                lat_e7,
+                lon_e7,
+                alt_mm,
+            )
+            time.sleep(SET_ORIGIN_RETRY_DELAY_S)
+
+        self.get_logger().info(
+            f"EKF origin gonderildi: {POOL_ORIGIN_LAT_DEG:.7f}, {POOL_ORIGIN_LON_DEG:.7f}"
+        )
 
     def request_message_interval(self, message_id, frequency_hz):
         self.master.mav.command_long_send(

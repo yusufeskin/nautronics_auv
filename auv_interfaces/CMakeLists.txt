@@ -14,6 +14,7 @@ find_package(geometry_msgs REQUIRED)
 # --- LIST OF MESSAGES AND SERVICES ---
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetVehicleMode.srv"   
+  "srv/GoToGpsTarget.srv"
   "msg/VehicleStatus.msg"    
   "msg/TorpedoTarget.msg"
   "msg/DetectedObject.msg"

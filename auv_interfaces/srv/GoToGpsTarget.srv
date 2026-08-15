@@ -1,0 +1,9 @@
+float64 baslangic_lat
+float64 baslangic_lon
+float64 hedef_lat
+float64 hedef_lon
+float64 target_depth
+---
+bool success
+float64 calculated_x
+float64 calculated_y

@@ -18,6 +18,8 @@ from geometry_msgs.msg import Vector3
 from std_msgs.msg import UInt16
 from .led_handler import LedHandler
 from .dvl_odom_handler import DvlOdomHandler
+from .set_position_target_handler import SetPositionTargetHandler
+from geometry_msgs.msg import Point
 
 
 class PixhawkBridge(Node):
@@ -47,6 +49,7 @@ class PixhawkBridge(Node):
         self.attitude_module       = AttitudeHandler(self, self.attitude_publisher)
         self.led_module            = LedHandler(self.master, self.get_logger())
         self.dvl_module            = DvlOdomHandler(self, self.master, self.get_logger())
+        self.set_position_module   = SetPositionTargetHandler(self.master, self.get_logger())
         
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
@@ -76,6 +79,10 @@ class PixhawkBridge(Node):
 
         self.led_subscription = self.create_subscription(
             UInt16, 'led_control', self.led_callback, 10
+        )
+
+        self.set_position_subscription = self.create_subscription(
+            Point, 'target_position_local', self.set_position_callback, 10
         )
 
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
@@ -115,6 +122,10 @@ class PixhawkBridge(Node):
 
     def led_callback(self, msg):
         self.led_module.set_led_pwm(msg.data)
+
+    def set_position_callback(self, msg):
+        # msg.x is North, msg.y is East, msg.z is Down (positive depth)
+        self.set_position_module.set_target_position_local(msg.x, msg.y, msg.z)
 
 
 def main(args=None):

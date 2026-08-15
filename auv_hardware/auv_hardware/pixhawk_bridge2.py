@@ -21,6 +21,7 @@ from std_msgs.msg import UInt16
 from .led_handler import LedHandler
 from .dvl_odom_handler import DvlOdomHandler
 from .set_position_target_handler import SetPositionTargetHandler
+from .local_position_handler import LocalPositionHandler
 from geometry_msgs.msg import Point
 
 POOL_ORIGIN_LAT_DEG = 39.85701944444445
@@ -44,11 +45,13 @@ class PixhawkBridge(Node):
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_ATTITUDE, 50)
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT, 10)
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_SCALED_PRESSURE2, 10)
+        self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_LOCAL_POSITION_NED, 10)
 
         self.status_publisher   = self.create_publisher(VehicleStatus, 'vehicle/state', 10)
         self.baro_publisher     = self.create_publisher(Float64, 'baro_data', 10)
         self.baro_publisher2    = self.create_publisher(Float64, 'baro_data2', 10)
         self.attitude_publisher = self.create_publisher(Vector3, 'current_attitude', 10)
+        self.local_position_publisher = self.create_publisher(Point, 'vehicle/local_position', 10)
 
         self.pwm_module            = PwmHandler(self.master, self.get_logger())
         self.mode_module           = ModeHandler(self.master, self.get_logger())
@@ -61,13 +64,15 @@ class PixhawkBridge(Node):
         self.led_module            = LedHandler(self.master, self.get_logger())
         self.dvl_module            = DvlOdomHandler(self, self.master, self.get_logger())
         self.set_position_module   = SetPositionTargetHandler(self.master, self.get_logger())
+        self.local_position_module = LocalPositionHandler(self, self.local_position_publisher)
         
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
             #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
             'GLOBAL_POSITION_INT':   [self.baro_module.handle_message],
             'ATTITUDE': [self.attitude_module.handle_message, self.dvl_module.handle_attitude],
-            'SCALED_PRESSURE2': [self.baro_module2.handle_message] 
+            'SCALED_PRESSURE2': [self.baro_module2.handle_message],
+            'LOCAL_POSITION_NED': [self.local_position_module.handle_message]
         }
 
         self.mode_change_service = self.create_service(

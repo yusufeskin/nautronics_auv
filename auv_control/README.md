@@ -25,10 +25,24 @@ Implements an action server for visual servoing, allowing the AUV to align itsel
 - **`point_follower.py`**: Logic for following a set of waypoints.
 - **`yawer.py`**: Controls the yaw (heading) of the AUV to maintain a specific orientation.
 
+### `gui_node.py`
+
+PyQt6 tabanlı kontrol ve telemetri arayüzü sağlar.
+
+- **Telemetri**: Parametre ile verilen topic listesini canlı izler.
+- **Kontrol**: Arm/Disarm, Manuel/Otonom, Acil Durdurma komutları yayınlar.
+- **Yayın**: Girilen topic'e string mesaj gönderir.
+
 ## Usage
 
 To launch the thruster mixer:
 
 ```bash
 ros2 run auv_control thruster_mixer
+```
+
+To launch the GUI node:
+
+```bash
+ros2 run auv_control gui_node
 ```

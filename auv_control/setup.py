@@ -14,7 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools', 'PyQt6'],
     zip_safe=True,
     maintainer='sye',
     maintainer_email='yusuf.eskin@metu.edu.tr',
@@ -37,6 +37,7 @@ setup(
             'stabilized_roller = auv_control.stabilized_roller:main',
             'absolute_yawer = auv_control.absolute_yawer:main',
             'center_target_action = auv_control.center_target_action:main',
+            'gui_node = auv_control.gui_node:main',,
             'gtl_transporter = auv_control.gtl_transporter:main'
         ],
     },

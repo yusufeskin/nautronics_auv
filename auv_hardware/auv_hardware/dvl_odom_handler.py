@@ -144,11 +144,20 @@ class DvlOdomHandler:
         time_usec = int(t * 1.0e6)
         time_delta_usec = int(dt * 1.0e6)
 
-        self.logger.info(
-            f"VISION_POSITION_DELTA yazilim/ag gecikmesi (DVL ic gecikmesi haric): "
-            f"{(time.time() - t) * 1000.0:.1f} ms",
-            throttle_duration_sec=LOG_THROTTLE_S,
-        )
+        pipeline_latency_ms = (time.time() - t) * 1000.0
+        if pipeline_latency_ms < 0.0:
+            self.logger.warn(
+                f"Negatif gecikme olculdu ({pipeline_latency_ms:.1f} ms): bu gercek degil, "
+                "DVL'nin NTP ile senkronize saati Jetson sistem saatinden kayiyor demektir. "
+                "Bu deger VISO_DELAY_MS icin kullanilmamali; NTP senkronizasyonunu kontrol edin.",
+                throttle_duration_sec=LOG_THROTTLE_S,
+            )
+        else:
+            self.logger.info(
+                f"VISION_POSITION_DELTA yazilim/ag gecikmesi (DVL ic gecikmesi haric): "
+                f"{pipeline_latency_ms:.1f} ms",
+                throttle_duration_sec=LOG_THROTTLE_S,
+            )
 
         self._send_vision_position_delta(
             time_usec, time_delta_usec, angle_delta, position_delta, self._confidence

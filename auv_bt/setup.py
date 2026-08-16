@@ -35,6 +35,7 @@ setup(
             'mixed_mission = pool.mixed_mission:main',
             'main_behaviour_tree = pool.main_behaviour_tree:main',
             'dvl_transit_test = pool.dvl_transit_test:main',
+            'multi_point_transit = pool.multi_point_transit:main',
 
         ],
     },

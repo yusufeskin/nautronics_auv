@@ -37,7 +37,7 @@ setup(
             'stabilized_roller = auv_control.stabilized_roller:main',
             'absolute_yawer = auv_control.absolute_yawer:main',
             'center_target_action = auv_control.center_target_action:main',
-            'gui_node = auv_control.gui_node:main',,
+            'gui_node = auv_control.gui_node:main',
             'gtl_transporter = auv_control.gtl_transporter:main'
         ],
     },

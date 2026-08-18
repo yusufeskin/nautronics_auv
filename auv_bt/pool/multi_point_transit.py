@@ -14,6 +14,7 @@ import py_trees.console as console
 import py_trees_ros.service_clients
 import common_behaviors.state
 import behaviours.wait_for_arrival
+import behaviours.wait_for_depth
 
 from auv_interfaces.srv import SetVehicleMode, GoToGpsTarget
 from std_srvs.srv import SetBool
@@ -25,10 +26,13 @@ BASLANGIC_LAT = 39.856955555555555   # Havuz orijini (SET_GPS_GLOBAL_ORIGIN ile 
 BASLANGIC_LON = 32.691258333333334
 
 ARRIVAL_TOLERANCE = 0.4            # metre
+DEPTH_ARRIVAL_TOLERANCE = 0.2      # metre
 
 # Sirayla gidilecek hedefler. Her biri BASLANGIC_LAT/LON referansindan hesaplanir.
 WAYPOINTS = [
-    {"lat": 39.85703611111111, "lon": 32.69118055555556, "depth": 0.5},
+    {"lat": 39.85703611111111, "lon": 32.69118055555556, "depth": 0.7},
+    {"lat": 39.856980555555555, "lon": 32.69109722222222, "depth": 0.7},
+    {"lat": 39.85690555555555, "lon": 32.69116666666667, "depth": 0.7}
     # {"lat": ..., "lon": ..., "depth": ...},
 ]
 
@@ -69,6 +73,34 @@ def create_leg(index, waypoint):
         name=f"Leg{index}",
         memory=True,
         children=[go_to_target, wait_arrival]
+    )
+
+
+def create_dive_step(depth):
+    dive_request = GoToGpsTarget.Request()
+    dive_request.baslangic_lat = BASLANGIC_LAT
+    dive_request.baslangic_lon = BASLANGIC_LON
+    dive_request.hedef_lat = BASLANGIC_LAT   # yatayda yerinde kal (local x,y = 0,0)
+    dive_request.hedef_lon = BASLANGIC_LON
+    dive_request.target_depth = depth
+
+    dive_to_depth = py_trees_ros.service_clients.FromConstant(
+        name="DiveToDepth",
+        service_type=GoToGpsTarget,
+        service_name="/compute_and_go_gps",
+        service_request=dive_request
+    )
+
+    wait_depth = behaviours.wait_for_depth.WaitForDepth(
+        name="WaitForDiveDepth",
+        target_depth=depth,
+        tolerance=DEPTH_ARRIVAL_TOLERANCE
+    )
+
+    return py_trees.composites.Sequence(
+        name="DiveInPlace",
+        memory=True,
+        children=[dive_to_depth, wait_depth]
     )
 
 
@@ -141,10 +173,12 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     legs = [create_leg(i, waypoint) for i, waypoint in enumerate(WAYPOINTS, start=1)]
+    dive_step = create_dive_step(WAYPOINTS[0]["depth"])
 
     main_mission_sequence.add_children([
         retry_switch_guided,
         arm_vehicle,
+        dive_step,
         *legs,
     ])
 

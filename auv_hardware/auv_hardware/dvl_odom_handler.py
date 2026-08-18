@@ -17,7 +17,7 @@ MAX_SPEED_MPS = 2.0
 MAX_ACCEL_MPS2 = 5.0
 MAX_DT_S = 1.0
 
-FOM_STD_SATURATION_MPS = 0.02
+FOM_STD_SATURATION_MPS = 0.4
 GOOD_BEAMS_FULL = 4
 PARTIAL_BEAM_CONFIDENCE_FACTOR = 0.6
 
@@ -53,8 +53,9 @@ class DvlOdomHandler:
         self.logger.info("DvlOdomHandler baslatildi (VISION_POSITION_DELTA, attitude kaynagi: Pixhawk).")
 
     def handle_attitude(self, msg):
-        self._att_buf.append((time.time(), msg.roll, msg.pitch, msg.yaw))
-        self._att_mono = time.monotonic()
+        now_mono = time.monotonic()
+        self._att_buf.append((now_mono, msg.roll, msg.pitch, msg.yaw))
+        self._att_mono = now_mono
 
     def velocity_callback(self, msg: Dvl):
         raw_valid = bool(msg.beam_velocities_valid) and msg.num_good_beams >= 3
@@ -125,7 +126,7 @@ class DvlOdomHandler:
             )
             return
 
-        att_now = self._attitude_at(t)
+        att_now = self._attitude_at(now_mono)
         if self._prev_att is None or att_now is None:
             self._prev_time = t
             self._prev_velocity = (vx, vy, vz)

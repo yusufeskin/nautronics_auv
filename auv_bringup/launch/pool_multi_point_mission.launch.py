@@ -38,8 +38,8 @@ def generate_launch_description():
 
     return LaunchDescription([
         LogInfo(msg='[pool_multi_point_mission] Starting DVL driver and pixhawk_bridge2 at t=0s'),
-        dvl_driver_launch,
-        pixhawk_bridge,
+        # dvl_driver_launch,
+        # pixhawk_bridge,
 
         TimerAction(
             period=6.0,

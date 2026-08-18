@@ -21,14 +21,14 @@ from std_srvs.srv import SetBool
 # ==========================================
 # KOORDİNATLAR
 # ==========================================
-BASLANGIC_LAT = 39.85701944444445   # Havuz orijini (SET_GPS_GLOBAL_ORIGIN ile ayni nokta)
-BASLANGIC_LON = 32.69128611111111
+BASLANGIC_LAT = 39.856955555555555   # Havuz orijini (SET_GPS_GLOBAL_ORIGIN ile ayni nokta)
+BASLANGIC_LON = 32.691258333333334
 
-ARRIVAL_TOLERANCE = 0.5            # metre
+ARRIVAL_TOLERANCE = 0.4            # metre
 
 # Sirayla gidilecek hedefler. Her biri BASLANGIC_LAT/LON referansindan hesaplanir.
 WAYPOINTS = [
-    {"lat": 39.856914, "lon": 32.691067, "depth": 1.5},
+    {"lat": 39.85703611111111, "lon": 32.69118055555556, "depth": 0.5},
     # {"lat": ..., "lon": ..., "depth": ...},
 ]
 

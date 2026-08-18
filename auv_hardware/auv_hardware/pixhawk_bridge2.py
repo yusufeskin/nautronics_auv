@@ -24,9 +24,10 @@ from .set_position_target_handler import SetPositionTargetHandler
 from .local_position_handler import LocalPositionHandler
 from geometry_msgs.msg import Point
 
-POOL_ORIGIN_LAT_DEG = 39.85701944444445
-POOL_ORIGIN_LON_DEG = 32.69128611111111
-POOL_ORIGIN_ALT_M = 900.0
+POOL_ORIGIN_LAT_DEG = 39.856955555555555
+POOL_ORIGIN_LON_DEG = 32.691258333333334
+POOL_ORIGIN_ALT_M = 978.0
+
 
 SET_ORIGIN_RETRIES = 3
 SET_ORIGIN_RETRY_DELAY_S = 0.5

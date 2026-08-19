@@ -25,6 +25,7 @@ Tüm topic/servis isimleri parametre olarak değiştirilebilir, örn:
 ros2 run auv_control gui_node --ros-args -p camera_topic:=/my/image_raw
 """
 
+import re
 import sys
 import time
 from functools import partial
@@ -32,8 +33,8 @@ from functools import partial
 import numpy as np
 import rclpy
 from auv_interfaces.msg import VehicleStatus
-from auv_interfaces.srv import SetVehicleMode
-from geometry_msgs.msg import Twist, Vector3
+from auv_interfaces.srv import GoToGpsTarget, SetVehicleMode
+from geometry_msgs.msg import Point, Twist, Vector3
 from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import (
@@ -51,6 +52,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSplitter,
     QTextEdit,
@@ -75,9 +77,34 @@ SUPPORTED_MSG_TYPES = {
     "sensor_msgs/msg/Imu": Imu,
 }
 
-MODE_OPTIONS = ["STABILIZE", "ACRO", "ALT_HOLD", "AUTO", "MANUAL"]
+MODE_OPTIONS = ["STABILIZE", "ACRO", "ALT_HOLD", "AUTO", "MANUAL", "GUIDED"]
 CAMERA_STALE_SEC = 2.0
 CONNECTION_STALE_SEC = 3.0
+
+# EKF/GPS origin - pixhawk_bridge2.py (POOL_ORIGIN_LAT/LON_DEG) ile aynı nokta olmalı.
+POOL_ORIGIN_LAT_DEG = 39.85701944444445
+POOL_ORIGIN_LON_DEG = 32.69128611111111
+
+DMS_PAIR_RE = re.compile(r"(\d{1,3})[°:\s]+(\d{1,2})['’:\s]+([\d.]+)[\"”]?\s*([NSEWnsew])")
+
+
+def parse_dms_coordinate(text: str):
+    """'39°51'25.28\"N 32°41'28.64\"E' gibi metni (lat, lon) ondalık dereceye çevirir."""
+    lat = lon = None
+    for deg, minutes, seconds, hemi in DMS_PAIR_RE.findall(text):
+        value = float(deg) + float(minutes) / 60.0 + float(seconds) / 3600.0
+        hemi = hemi.upper()
+        if hemi in ("S", "W"):
+            value = -value
+        if hemi in ("N", "S"):
+            lat = value
+        else:
+            lon = value
+    if lat is None or lon is None:
+        raise ValueError(
+            "Koordinat ayrıştırılamadı. Beklenen format: 39°51'25.28\"N 32°41'28.64\"E"
+        )
+    return lat, lon
 
 COLOR_OK = "#1e8e3e"
 COLOR_DANGER = "#d93025"
@@ -236,6 +263,7 @@ class GuiSignals(QObject):
     depth_signal = pyqtSignal(float)
     attitude_signal = pyqtSignal(float, float, float)
     battery_signal = pyqtSignal(float, float, float)
+    local_position_signal = pyqtSignal(float, float)
 
 
 class ControlTelemetryNode(Node):
@@ -259,9 +287,13 @@ class ControlTelemetryNode(Node):
         self.declare_parameter("vehicle_state_topic", "vehicle/state")
         self.declare_parameter("depth_topic", "baro_data2")
         self.declare_parameter("attitude_topic", "current_attitude")
+        self.declare_parameter("local_position_topic", "vehicle/local_position")
         self.declare_parameter("battery_topic", "/battery/status")
         self.declare_parameter("arm_service", "/arm")
         self.declare_parameter("mode_service", "/change_mode")
+        self.declare_parameter("gps_service", "/compute_and_go_gps")
+        self.declare_parameter("origin_lat", POOL_ORIGIN_LAT_DEG)
+        self.declare_parameter("origin_lon", POOL_ORIGIN_LON_DEG)
         self.declare_parameter("target_depth_topic", "target_depth")
         self.declare_parameter("target_attitude_topic", "target_attitude")
 
@@ -272,9 +304,13 @@ class ControlTelemetryNode(Node):
         vehicle_state_topic = self.get_parameter("vehicle_state_topic").value
         depth_topic = self.get_parameter("depth_topic").value
         attitude_topic = self.get_parameter("attitude_topic").value
+        local_position_topic = self.get_parameter("local_position_topic").value
         battery_topic = self.get_parameter("battery_topic").value
         self.arm_service = self.get_parameter("arm_service").value
         self.mode_service = self.get_parameter("mode_service").value
+        self.gps_service = self.get_parameter("gps_service").value
+        self.origin_lat = self.get_parameter("origin_lat").value
+        self.origin_lon = self.get_parameter("origin_lon").value
         target_depth_topic = self.get_parameter("target_depth_topic").value
         target_attitude_topic = self.get_parameter("target_attitude_topic").value
         telemetry_specs = self.get_parameter("telemetry_topics").value
@@ -285,6 +321,7 @@ class ControlTelemetryNode(Node):
 
         self.arm_client = self.create_client(SetBool, self.arm_service)
         self.mode_client = self.create_client(SetVehicleMode, self.mode_service)
+        self.gps_client = self.create_client(GoToGpsTarget, self.gps_service)
 
         self._telemetry_subs.append(
             self.create_subscription(String, status_log_topic, self._status_log_callback, 50)
@@ -307,6 +344,9 @@ class ControlTelemetryNode(Node):
         )
         self._telemetry_subs.append(
             self.create_subscription(Vector3, attitude_topic, self._attitude_callback, 10)
+        )
+        self._telemetry_subs.append(
+            self.create_subscription(Point, local_position_topic, self._local_position_callback, 10)
         )
         self._telemetry_subs.append(
             self.create_subscription(BatteryState, battery_topic, self._battery_callback, 10)
@@ -342,6 +382,9 @@ class ControlTelemetryNode(Node):
 
     def _attitude_callback(self, msg: Vector3):
         self.signals.attitude_signal.emit(msg.x, msg.y, msg.z)
+
+    def _local_position_callback(self, msg: Point):
+        self.signals.local_position_signal.emit(msg.x, msg.y)
 
     def _battery_callback(self, msg: BatteryState):
         self.signals.battery_signal.emit(msg.voltage, msg.current, msg.percentage)
@@ -405,6 +448,33 @@ class ControlTelemetryNode(Node):
             self._emit_log(f"Mod değiştirildi: {mode_name}")
         else:
             self._emit_log(f"Mod değiştirme başarısız: {mode_name} — {response.message}")
+
+    def call_go_to_gps(self, lat: float, lon: float, depth: float):
+        if not self.gps_client.service_is_ready():
+            self._emit_log(f"Hata: {self.gps_service} servisi hazır değil.")
+            return
+        request = GoToGpsTarget.Request()
+        request.baslangic_lat = self.origin_lat
+        request.baslangic_lon = self.origin_lon
+        request.hedef_lat = lat
+        request.hedef_lon = lon
+        request.target_depth = depth
+        self._emit_log(f"GPS hedefi gönderiliyor: lat={lat:.7f}, lon={lon:.7f}, derinlik={depth:.2f} m")
+        future = self.gps_client.call_async(request)
+        future.add_done_callback(self._on_gps_response)
+
+    def _on_gps_response(self, future):
+        try:
+            response = future.result()
+        except Exception as exc:
+            self._emit_log(f"GPS hedef hatası: {exc}")
+            return
+        if response.success:
+            self._emit_log(
+                f"GPS hedefi kabul edildi: X={response.calculated_x:.2f} m, Y={response.calculated_y:.2f} m"
+            )
+        else:
+            self._emit_log("GPS hedefi reddedildi.")
 
     def publish_target_depth(self, depth: float):
         self.target_depth_pub.publish(Float64(data=depth))
@@ -518,6 +588,7 @@ class GuiWindow(QMainWindow):
         self.signals.depth_signal.connect(self.update_depth)
         self.signals.attitude_signal.connect(self.update_attitude)
         self.signals.battery_signal.connect(self.update_battery)
+        self.signals.local_position_signal.connect(self.update_local_position)
 
         self.watchdog_timer = QTimer(self)
         self.watchdog_timer.timeout.connect(self._check_watchdogs)
@@ -608,9 +679,16 @@ class GuiWindow(QMainWindow):
         layout.addWidget(self._build_telemetry_group())
         layout.addWidget(self._build_battery_group())
         layout.addWidget(self._build_control_group())
+        layout.addWidget(self._build_gps_group())
         layout.addWidget(self._build_advanced_group())
         layout.addStretch()
-        return container
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setWidget(container)
+        return scroll
 
     def _build_telemetry_group(self):
         group = QGroupBox("Telemetri")
@@ -624,6 +702,10 @@ class GuiWindow(QMainWindow):
         grid.addWidget(QLabel("Roll / Pitch / Yaw"), 1, 0)
         self.attitude_label = QLabel("-- / -- / --")
         grid.addWidget(self.attitude_label, 1, 1)
+
+        grid.addWidget(QLabel("Local Konum (X / Y)"), 2, 0)
+        self.local_position_label = QLabel("-- / -- m")
+        grid.addWidget(self.local_position_label, 2, 1)
         return group
 
     def _build_battery_group(self):
@@ -700,6 +782,47 @@ class GuiWindow(QMainWindow):
         vbox.addLayout(target_form)
 
         return group
+
+    def _build_gps_group(self):
+        group = QGroupBox("GPS Git")
+        vbox = QVBoxLayout(group)
+
+        form = QFormLayout()
+        self.gps_coord_input = QLineEdit()
+        self.gps_coord_input.setPlaceholderText("39°51'25.28\"N 32°41'28.64\"E")
+        form.addRow("Koordinat", self.gps_coord_input)
+
+        self.gps_depth_spin = QDoubleSpinBox()
+        self.gps_depth_spin.setRange(-5.0, 50.0)
+        self.gps_depth_spin.setSingleStep(0.1)
+        self.gps_depth_spin.setValue(1.5)
+        self.gps_depth_spin.setSuffix(" m")
+        form.addRow("Hedef Derinlik", self.gps_depth_spin)
+        vbox.addLayout(form)
+
+        self.gps_preview_label = QLabel("—")
+        self.gps_preview_label.setStyleSheet("color: #5f6368;")
+        vbox.addWidget(self.gps_preview_label)
+
+        gps_go_button = QPushButton("Git")
+        gps_go_button.clicked.connect(self.on_gps_go_clicked)
+        vbox.addWidget(gps_go_button)
+
+        return group
+
+    def on_gps_go_clicked(self):
+        text = self.gps_coord_input.text().strip()
+        if not text:
+            QMessageBox.warning(self, "Koordinat Boş", "Önce bir GPS koordinatı yapıştırın.")
+            return
+        try:
+            lat, lon = parse_dms_coordinate(text)
+        except ValueError as exc:
+            self.gps_preview_label.setText(str(exc))
+            QMessageBox.warning(self, "Geçersiz Koordinat", str(exc))
+            return
+        self.gps_preview_label.setText(f"lat={lat:.7f}, lon={lon:.7f}")
+        self.node.call_go_to_gps(lat, lon, self.gps_depth_spin.value())
 
     def _build_advanced_group(self):
         group = QGroupBox("Gelişmiş / Hata Ayıklama")
@@ -779,6 +902,9 @@ class GuiWindow(QMainWindow):
 
     def update_attitude(self, roll: float, pitch: float, yaw: float):
         self.attitude_label.setText(f"{roll:.1f}° / {pitch:.1f}° / {yaw:.1f}°")
+
+    def update_local_position(self, x: float, y: float):
+        self.local_position_label.setText(f"{x:.2f} / {y:.2f} m")
 
     def update_battery(self, voltage: float, current: float, percentage: float):
         self.battery_label.setText(f"{voltage:.2f} V / {current:.2f} A")

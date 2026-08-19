@@ -6,7 +6,7 @@ class ModeHandler:
         self.logger = logger
         self.modes = {
             'STABILIZE': 0, 'ACRO': 1, 'ALT_HOLD': 2, 'AUTO': 3,
-            'MANUAL': 19
+            'MANUAL': 19, 'GUIDED': 4
         }
 
     def change_mode_callback(self, request, response):

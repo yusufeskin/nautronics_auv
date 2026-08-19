@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
+
+  <xacro:macro name="add_dvl" params="name parent_link topic update_rate x y z r p yaw">
+
+    <gazebo reference="${parent_link}">
+      <sensor name="${name}" type="custom" gz:type="dvl">
+        <pose>${x} ${y} ${z} ${r} ${p} ${yaw}</pose>
+        <topic>${topic}</topic>
+        <update_rate>${update_rate}</update_rate>
+        <always_on>true</always_on>
+        <gz:dvl>
+          <type>piston</type>
+          <arrangement degrees="true">
+            <beam id="1">
+              <aperture>2.1</aperture>
+              <rotation>45</rotation>
+              <tilt>22.5</tilt>
+            </beam>
+            <beam id="2">
+              <aperture>2.1</aperture>
+              <rotation>135</rotation>
+              <tilt>22.5</tilt>
+            </beam>
+            <beam id="3">
+              <aperture>2.1</aperture>
+              <rotation>-135</rotation>
+              <tilt>22.5</tilt>
+            </beam>
+            <beam id="4">
+              <aperture>2.1</aperture>
+              <rotation>-45</rotation>
+              <tilt>22.5</tilt>
+            </beam>
+          </arrangement>
+          <minimum_range>0.05</minimum_range>
+          <maximum_range>50.0</maximum_range>
+          <bottom_mode>
+            <when>best</when>
+          </bottom_mode>
+          <noise>
+            <type>gaussian</type>
+            <stddev>0.002</stddev>
+          </noise>
+        </gz:dvl>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

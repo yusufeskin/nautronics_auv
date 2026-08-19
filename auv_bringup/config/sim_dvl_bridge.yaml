@@ -1,0 +1,5 @@
+- ros_topic_name: "/sim/dvl/raw"
+  gz_topic_name: "/model/prototype_vehicle/dvl"
+  ros_type_name: "marine_acoustic_msgs/msg/Dvl"
+  gz_type_name: "gz.msgs.DVLVelocityTracking"
+  direction: GZ_TO_ROS

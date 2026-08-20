@@ -22,16 +22,16 @@ from std_srvs.srv import SetBool
 # ==========================================
 # KOORDİNATLAR
 # ==========================================
-BASLANGIC_LAT = 40.7580083333   # Baslangic noktasi: 40deg45'28.83"N (SET_GPS_GLOBAL_ORIGIN ile ayni nokta)
-BASLANGIC_LON = 29.9014166667   # 29deg54'05.10"E
+BASLANGIC_LAT = 40.7582555556   # Baslangic noktasi: 40deg45'29.72"N (SET_GPS_GLOBAL_ORIGIN ile ayni nokta)
+BASLANGIC_LON = 29.9017138889   # 29deg54'06.17"E
 
 ARRIVAL_TOLERANCE = 0.4            # metre
 DEPTH_ARRIVAL_TOLERANCE = 0.2      # metre
 
 # Sirayla gidilecek hedefler. Her biri BASLANGIC_LAT/LON referansindan hesaplanir.
 WAYPOINTS = [
-    {"lat": 40.7579472222, "lon": 29.9014138889, "depth": 0.5},  # nokta 2: 40deg45'28.61"N 29deg54'05.09"E
-    {"lat": 40.7579638889, "lon": 29.9015500000, "depth": 0.5},  # nokta 3: 40deg45'28.67"N 29deg54'05.58"E
+    {"lat": 40.7582389856, "lon": 29.9018080689, "depth": 0.5},  # nokta 2 (olcekli, ~8.1m): orijinal yon korunarak %31 boyutta
+    {"lat": 40.7581971456, "lon": 29.9017374289, "depth": 0.5},  # nokta 3 (olcekli, ~7.6m sonraki bacak): orijinal yon korunarak %31 boyutta
     {"lat": BASLANGIC_LAT, "lon": BASLANGIC_LON, "depth": 0.5},  # donus: baslangic noktasina geri don
     # {"lat": ..., "lon": ..., "depth": ...},
 ]

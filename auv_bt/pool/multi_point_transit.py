@@ -32,6 +32,7 @@ DEPTH_ARRIVAL_TOLERANCE = 0.2      # metre
 WAYPOINTS = [
     {"lat": 40.7579472222, "lon": 29.9014138889, "depth": 0.5},  # nokta 2: 40deg45'28.61"N 29deg54'05.09"E
     {"lat": 40.7579638889, "lon": 29.9015500000, "depth": 0.5},  # nokta 3: 40deg45'28.67"N 29deg54'05.58"E
+    {"lat": BASLANGIC_LAT, "lon": BASLANGIC_LON, "depth": 0.5},  # donus: baslangic noktasina geri don
     # {"lat": ..., "lon": ..., "depth": ...},
 ]
 

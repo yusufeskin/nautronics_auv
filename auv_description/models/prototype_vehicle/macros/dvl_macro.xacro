@@ -35,13 +35,14 @@
           </arrangement>
           <minimum_range>0.05</minimum_range>
           <maximum_range>50.0</maximum_range>
-          <bottom_mode>
-            <when>best</when>
-          </bottom_mode>
-          <noise>
-            <type>gaussian</type>
-            <stddev>0.002</stddev>
-          </noise>
+          <tracking>
+            <bottom_mode>
+              <when>best</when>
+              <noise type="gaussian">
+                <stddev>0.002</stddev>
+              </noise>
+            </bottom_mode>
+          </tracking>
         </gz:dvl>
       </sensor>
     </gazebo>

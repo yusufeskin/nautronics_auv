@@ -34,24 +34,32 @@ class SimDvlAdapter(Node):
         force_invalid = self.get_parameter('force_invalid').value
         variance = self.get_parameter('velocity_variance').value
         child_frame_id = self.get_parameter('child_frame_id').value
-        stamp = self.get_clock().now().to_msg()
 
         covar = self._resolve_covar(msg.velocity_covar, variance)
 
         out = Dvl()
-        out.header.stamp = stamp
-        out.header.frame_id = msg.header.frame_id
+        out.header = msg.header
+        out.velocity_mode = msg.velocity_mode
+        out.dvl_type = msg.dvl_type
         out.velocity = msg.velocity
         out.velocity_covar = covar
-        out.num_good_beams = 0 if force_invalid else 4
-        out.beam_velocities_valid = self._resolve_beam_validity(
-            out.beam_velocities_valid, force_invalid
-        )
+        out.course_gnd = msg.course_gnd
+        out.speed_gnd = msg.speed_gnd
+        out.altitude = msg.altitude
+        out.sound_speed = msg.sound_speed
+        out.num_good_beams = 0 if force_invalid else msg.num_good_beams
+        out.beam_ranges_valid = False if force_invalid else msg.beam_ranges_valid
+        out.beam_velocities_valid = False if force_invalid else msg.beam_velocities_valid
+        out.beam_unit_vec = msg.beam_unit_vec
+        out.range = msg.range
+        out.range_covar = msg.range_covar
+        out.beam_quality = msg.beam_quality
+        out.beam_velocity = msg.beam_velocity
+        out.beam_velocity_covar = msg.beam_velocity_covar
         self.velocity_report_pub.publish(out)
 
         odom = Odometry()
-        odom.header.stamp = stamp
-        odom.header.frame_id = msg.header.frame_id
+        odom.header = msg.header
         odom.child_frame_id = child_frame_id
         odom.twist.twist.linear.x = msg.velocity.x
         odom.twist.twist.linear.y = msg.velocity.y
@@ -71,14 +79,6 @@ class SimDvlAdapter(Node):
         diagonal[4] = variance
         diagonal[8] = variance
         return diagonal
-
-    @staticmethod
-    def _resolve_beam_validity(default_value, force_invalid):
-        valid = not force_invalid
-        if isinstance(default_value, (list, tuple)):
-            length = len(default_value) if len(default_value) else 4
-            return [valid] * length
-        return valid
 
 
 def main(args=None):

@@ -32,6 +32,7 @@ setup(
             # 'pixhawk_bridge = auv_hardware.pixhawk_bridge:main',
             'pixhawk_bridge2 = auv_hardware.pixhawk_bridge2:main',
             'sim_dvl_adapter = auv_hardware.sim_dvl_adapter:main',
+            'sim_dvl_bridge = auv_hardware.sim_dvl_bridge:main',
 
         ],
     },

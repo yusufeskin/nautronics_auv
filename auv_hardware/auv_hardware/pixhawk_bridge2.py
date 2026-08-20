@@ -24,9 +24,9 @@ from .set_position_target_handler import SetPositionTargetHandler
 from .local_position_handler import LocalPositionHandler
 from geometry_msgs.msg import Point
 
-POOL_ORIGIN_LAT_DEG = 39.856955555555555
-POOL_ORIGIN_LON_DEG = 32.691258333333334
-POOL_ORIGIN_ALT_M = 978.0
+POOL_ORIGIN_LAT_DEG = 40.7580083333   # 40deg45'28.83"N
+POOL_ORIGIN_LON_DEG = 29.9014166667   # 29deg54'05.10"E
+POOL_ORIGIN_ALT_M = 0.0
 
 
 SET_ORIGIN_RETRIES = 3

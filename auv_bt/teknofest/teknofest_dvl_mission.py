@@ -36,7 +36,8 @@ LOOP_RADIUS_M = 2.0                 # metre, samandiradan uzaklik
 LOOP_POINTS = 11                    # poligon nokta sayisi (10 esit aralik)
 LOOP_DIRECTION = -1.0               # -1 = CCW (saat yonu tersi)
 
-ARRIVAL_TOLERANCE = 0.4             # metre
+ARRIVAL_TOLERANCE = 0.4  
+LOOP_ARRIVAL_TOLERANCE = 0.15
 DEPTH_ARRIVAL_TOLERANCE = 0.2       # metre
 
 METERS_PER_DEGREE = 111320.0
@@ -116,7 +117,7 @@ WAYPOINTS = compute_loop_waypoints() + [
 ]
 
 
-def create_leg(index, waypoint):
+def create_leg(index, waypoint, tolerance):
     target_x, target_y = latlon_to_local(waypoint["lat"], waypoint["lon"])
 
     gps_request = GoToGpsTarget.Request()
@@ -137,7 +138,7 @@ def create_leg(index, waypoint):
         name=f"WaitForArrival{index}",
         target_x=target_x,
         target_y=target_y,
-        tolerance=ARRIVAL_TOLERANCE
+        tolerance=tolerance
     )
 
     return py_trees.composites.Sequence(
@@ -252,7 +253,9 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=disarm_request
     )
 
-    legs = [create_leg(i, waypoint) for i, waypoint in enumerate(WAYPOINTS, start=1)]
+    loop_waypoints, exit_waypoint = WAYPOINTS[:-1], WAYPOINTS[-1]
+    legs = [create_leg(i, wp, LOOP_ARRIVAL_TOLERANCE) for i, wp in enumerate(loop_waypoints, start=1)]
+    legs.append(create_leg(len(WAYPOINTS), exit_waypoint, ARRIVAL_TOLERANCE))
     dive_step = create_dive_step(MISSION_DEPTH)
 
     main_mission_sequence.add_children([

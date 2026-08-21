@@ -37,6 +37,7 @@ setup(
             'dvl_transit_test = pool.dvl_transit_test:main',
             'multi_point_transit = pool.multi_point_transit:main',
             'relative_zigzag_test = pool.relative_zigzag_test:main',
+            'teknofest_dvl_mission = teknofest.teknofest_dvl_mission:main',
 
         ],
     },

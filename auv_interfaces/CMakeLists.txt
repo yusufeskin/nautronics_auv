@@ -26,6 +26,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "action/Roll.action"
   "action/CenterTarget.action"
   "msg/DetectedPipe.msg"
+  "msg/PositionYawTarget.msg"
 
   DEPENDENCIES std_msgs geometry_msgs
 )

@@ -10,7 +10,7 @@ from .telemetry_handler import TelemetryHandler
 from .baro_handler import BaroHandler
 from std_srvs.srv import SetBool
 from auv_interfaces.srv import SetVehicleMode
-from auv_interfaces.msg import VehicleStatus
+from auv_interfaces.msg import VehicleStatus, PositionYawTarget
 from std_msgs.msg import Float64, UInt16MultiArray
 from .set_depth_handler import SetDepthHandler
 from .set_attitude_handler import SetAttitudeHandler
@@ -102,6 +102,10 @@ class PixhawkBridge(Node):
             Point, 'target_position_local', self.set_position_callback, 10
         )
 
+        self.set_position_yaw_subscription = self.create_subscription(
+            PositionYawTarget, 'target_position_yaw', self.set_position_yaw_callback, 10
+        )
+
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
 
     def send_gps_global_origin(self):
@@ -161,6 +165,11 @@ class PixhawkBridge(Node):
     def set_position_callback(self, msg):
         # msg.x is North, msg.y is East, msg.z is Down (positive depth)
         self.set_position_module.set_target_position_local(msg.x, msg.y, msg.z)
+
+    def set_position_yaw_callback(self, msg):
+        # msg.x is North, msg.y is East, msg.z is Down (positive depth)
+        yaw = msg.yaw_deg if msg.use_yaw else None
+        self.set_position_module.set_target_position_local(msg.x, msg.y, msg.z, yaw=yaw)
 
 
 def main(args=None):

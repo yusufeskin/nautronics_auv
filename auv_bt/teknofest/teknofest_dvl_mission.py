@@ -22,8 +22,6 @@ from std_srvs.srv import SetBool
 # ==========================================
 # KOORDİNATLAR
 # ==========================================
-# Iskele: mevcut POOL_ORIGIN (pixhawk_bridge2.py) ile ayni nokta, ek bir
-# origin ayari gerekmiyor.
 BASLANGIC_LAT = 40.7582555556   # Iskele: 40deg45'29.72"N
 BASLANGIC_LON = 29.9017138889   # 29deg54'06.17"E
 
@@ -36,7 +34,7 @@ EXIT_LON = 29.9017361111        # 29deg54'06.25"E
 MISSION_DEPTH = 1.0                 # metre, gorev boyunca sabit
 LOOP_RADIUS_M = 2.0                 # metre, samandiradan uzaklik
 LOOP_POINTS = 11                    # poligon nokta sayisi (10 esit aralik)
-LOOP_DIRECTION = +1.0               # +1 = CW (saat yonu)
+LOOP_DIRECTION = -1.0               # -1 = CCW (saat yonu tersi)
 
 ARRIVAL_TOLERANCE = 0.4             # metre
 DEPTH_ARRIVAL_TOLERANCE = 0.2       # metre

@@ -19,10 +19,11 @@ import behaviours.relative_motion
 from auv_interfaces.srv import SetVehicleMode
 from std_srvs.srv import SetBool
 
-TARGET_DEPTH = 0.35 
+TARGET_DEPTH = 0.35
 LEG_DISTANCE1 = 2.0
 LEG_DISTANCE2 = 2.3
-TURN_DEG = 90.0 
+TURN_DEG = 90.0
+TARGET_SPEED_MPS = 0.2  # yavas/hassas hareket icin GUIDED hiz limiti
 
 
 def create_root() -> py_trees.behaviour.Behaviour:
@@ -106,6 +107,11 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=arm_request
     )
 
+    set_speed = behaviours.relative_motion.SetSpeedAction(
+        name="SetSlowSpeed",
+        speed_mps=TARGET_SPEED_MPS
+    )
+
     dive_step = behaviours.relative_motion.create_forward_step(
         0.0, TARGET_DEPTH, "DiveInPlace"
     )
@@ -160,6 +166,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     main_mission_sequence.add_children([
         retry_switch_guided,
         arm_vehicle,
+        set_speed,
         dive_step,
         forward1,
         turn_right,

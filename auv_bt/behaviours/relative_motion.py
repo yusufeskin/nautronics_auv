@@ -4,8 +4,28 @@
 import math
 import py_trees
 from py_trees.common import Status
+from std_msgs.msg import Float64
 from auv_interfaces.msg import PositionYawTarget
 import behaviours.attitude
+
+
+class SetSpeedAction(py_trees.behaviour.Behaviour):
+    def __init__(self, name, speed_mps, topic="/target_speed"):
+        super().__init__(name)
+        self.speed_mps = speed_mps
+        self.topic = topic
+        self.node = None
+        self.pub = None
+
+    def setup(self, **kwargs):
+        self.node = kwargs.get('node')
+        self.pub = self.node.create_publisher(Float64, self.topic, 10)
+
+    def update(self):
+        msg = Float64()
+        msg.data = self.speed_mps
+        self.pub.publish(msg)
+        return Status.SUCCESS
 
 
 class SetForwardTargetAction(py_trees.behaviour.Behaviour):

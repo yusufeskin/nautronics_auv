@@ -22,6 +22,7 @@ from .led_handler import LedHandler
 from .dvl_odom_handler import DvlOdomHandler
 from .set_position_target_handler import SetPositionTargetHandler
 from .local_position_handler import LocalPositionHandler
+from .set_speed_handler import SetSpeedHandler
 from geometry_msgs.msg import Point
 
 POOL_ORIGIN_LAT_DEG = 40.7582555556   # 40deg45'29.72"N
@@ -66,6 +67,7 @@ class PixhawkBridge(Node):
         self.dvl_module            = DvlOdomHandler(self, self.master, self.get_logger())
         self.set_position_module   = SetPositionTargetHandler(self.master, self.get_logger())
         self.local_position_module = LocalPositionHandler(self, self.local_position_publisher)
+        self.set_speed_module      = SetSpeedHandler(self.master, self.get_logger())
         
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
@@ -104,6 +106,10 @@ class PixhawkBridge(Node):
 
         self.set_position_yaw_subscription = self.create_subscription(
             PositionYawTarget, 'target_position_yaw', self.set_position_yaw_callback, 10
+        )
+
+        self.set_speed_subscription = self.create_subscription(
+            Float64, 'target_speed', self.set_speed_callback, 10
         )
 
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
@@ -170,6 +176,9 @@ class PixhawkBridge(Node):
         # msg.x is North, msg.y is East, msg.z is Down (positive depth)
         yaw = msg.yaw_deg if msg.use_yaw else None
         self.set_position_module.set_target_position_local(msg.x, msg.y, msg.z, yaw=yaw)
+
+    def set_speed_callback(self, msg):
+        self.set_speed_module.set_speed(msg.data)
 
 
 def main(args=None):

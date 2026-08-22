@@ -15,6 +15,7 @@ import common_behaviors.state
 import behaviours.attitude_to_bb
 import behaviours.local_position_to_bb
 import behaviours.relative_motion
+import behaviours.wait_for_depth
 
 from auv_interfaces.srv import SetVehicleMode
 from std_srvs.srv import SetBool
@@ -24,6 +25,7 @@ LEG_DISTANCE1 = 2.0
 LEG_DISTANCE2 = 2.3
 TURN_DEG = 90.0
 TARGET_SPEED_MPS = 0.2  # yavas/hassas hareket icin GUIDED hiz limiti
+DEPTH_ARRIVAL_TOLERANCE = 0.2  # metre
 
 
 def create_root() -> py_trees.behaviour.Behaviour:
@@ -112,8 +114,20 @@ def create_root() -> py_trees.behaviour.Behaviour:
         speed_mps=TARGET_SPEED_MPS
     )
 
-    dive_step = behaviours.relative_motion.create_forward_step(
-        0.0, TARGET_DEPTH, "DiveInPlace"
+    dive_set_target = behaviours.relative_motion.SetForwardTargetAction(
+        name="Send Dive Target",
+        distance=0.0,
+        depth=TARGET_DEPTH
+    )
+    dive_wait_depth = behaviours.wait_for_depth.WaitForDepth(
+        name="WaitForDiveDepth",
+        target_depth=TARGET_DEPTH,
+        tolerance=DEPTH_ARRIVAL_TOLERANCE
+    )
+    dive_step = py_trees.composites.Sequence(
+        name="DiveInPlace",
+        memory=True,
+        children=[dive_set_target, dive_wait_depth]
     )
     forward1 = behaviours.relative_motion.create_forward_step(
         LEG_DISTANCE1, TARGET_DEPTH, "Forward1"

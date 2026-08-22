@@ -22,99 +22,28 @@ from std_srvs.srv import SetBool
 # ==========================================
 # KOORDİNATLAR
 # ==========================================
-BASLANGIC_LAT = 40.7582555556   # Iskele: 40deg45'29.72"N
-BASLANGIC_LON = 29.9017138889   # 29deg54'06.17"E
-
-BUOY_LAT = 40.7582388889        # Samandira: 40deg45'29.66"N
-BUOY_LON = 29.9018055556        # 29deg54'06.50"E
-
-EXIT_LAT = 40.7581972222        # Cikis / 2. nokta: 40deg45'29.51"N
-EXIT_LON = 29.9017361111        # 29deg54'06.25"E
+# Baslangic: pixhawk_bridge2.py'deki POOL_ORIGIN_LAT/LON ile ayni olmali.
+BASLANGIC_LAT = 40.7580166667
+BASLANGIC_LON = 29.9013972222
 
 MISSION_DEPTH = 1.0                 # metre, gorev boyunca sabit
-LOOP_RADIUS_M = 2.0                 # metre, samandiradan uzaklik
-LOOP_POINTS = 11                    # poligon nokta sayisi (10 esit aralik)
-LOOP_DIRECTION = -1.0               # -1 = CCW (saat yonu tersi)
-
-ARRIVAL_TOLERANCE = 0.4  
-LOOP_ARRIVAL_TOLERANCE = 0.15
+ARRIVAL_TOLERANCE = 0.4             # metre
 DEPTH_ARRIVAL_TOLERANCE = 0.2       # metre
 
 METERS_PER_DEGREE = 111320.0
+
+# Yarisma gunu Google Earth'ten okunan noktalari sirayla buraya ekleyin.
+# Baslangic ayrica WAYPOINTS'e eklenmez, arac zaten oradan basliyor.
+WAYPOINTS = [
+    {"lat": 40.7579750000, "lon": 29.9012694444, "depth": MISSION_DEPTH},
+    {"lat": 40.7580416667, "lon": 29.9013500000, "depth": MISSION_DEPTH},
+]
 
 
 def latlon_to_local(lat, lon):
     x = (lat - BASLANGIC_LAT) * METERS_PER_DEGREE
     y = (lon - BASLANGIC_LON) * METERS_PER_DEGREE * math.cos(math.radians(BASLANGIC_LAT))
     return x, y
-
-
-def local_to_latlon(x, y):
-    lat = BASLANGIC_LAT + x / METERS_PER_DEGREE
-    lon = BASLANGIC_LON + y / (METERS_PER_DEGREE * math.cos(math.radians(BASLANGIC_LAT)))
-    return lat, lon
-
-
-def bearing_deg(dx, dy):
-    """dx=kuzey bileseni, dy=dogu bileseni -> 0-360 derece (0=Kuzey, saat yonunde artar)."""
-    return math.degrees(math.atan2(dy, dx)) % 360.0
-
-
-def circle_point(cx, cy, radius, angle_deg):
-    angle_rad = math.radians(angle_deg)
-    return cx + radius * math.cos(angle_rad), cy + radius * math.sin(angle_rad)
-
-
-def tangent_points(ext_x, ext_y, cx, cy, radius):
-    dx, dy = cx - ext_x, cy - ext_y
-    d = math.hypot(dx, dy)
-    theta = math.asin(radius / d)
-    alpha = math.atan2(dy, dx)
-    tangent_len = math.sqrt(d * d - radius * radius)
-
-    points = []
-    for sign in (+1.0, -1.0):
-        a = alpha + sign * theta
-        tx = ext_x + tangent_len * math.cos(a)
-        ty = ext_y + tangent_len * math.sin(a)
-        angle = bearing_deg(tx - cx, ty - cy)
-        points.append((tx, ty, angle))
-    return points
-
-
-def compute_loop_waypoints():
-    buoy_x, buoy_y = latlon_to_local(BUOY_LAT, BUOY_LON)
-    exit_x, exit_y = latlon_to_local(EXIT_LAT, EXIT_LON)
-
-    entry_candidates = tangent_points(0.0, 0.0, buoy_x, buoy_y, LOOP_RADIUS_M)
-    exit_candidates = tangent_points(exit_x, exit_y, buoy_x, buoy_y, LOOP_RADIUS_M)
-
-    best = None
-    for _, _, entry_angle in entry_candidates:
-        for _, _, exit_angle in exit_candidates:
-            if LOOP_DIRECTION > 0:
-                arc = (exit_angle - entry_angle) % 360.0
-            else:
-                arc = (entry_angle - exit_angle) % 360.0
-            if best is None or arc > best[0]:
-                best = (arc, entry_angle, exit_angle)
-
-    _, entry_angle, exit_angle = best
-
-    waypoints = []
-    step = best[0] / (LOOP_POINTS - 1)
-    for i in range(LOOP_POINTS):
-        angle = entry_angle + LOOP_DIRECTION * step * i
-        px, py = circle_point(buoy_x, buoy_y, LOOP_RADIUS_M, angle)
-        lat, lon = local_to_latlon(px, py)
-        waypoints.append({"lat": lat, "lon": lon, "depth": MISSION_DEPTH})
-
-    return waypoints
-
-
-WAYPOINTS = compute_loop_waypoints() + [
-    {"lat": EXIT_LAT, "lon": EXIT_LON, "depth": MISSION_DEPTH},
-]
 
 
 def create_leg(index, waypoint, tolerance):
@@ -253,9 +182,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         service_request=disarm_request
     )
 
-    loop_waypoints, exit_waypoint = WAYPOINTS[:-1], WAYPOINTS[-1]
-    legs = [create_leg(i, wp, LOOP_ARRIVAL_TOLERANCE) for i, wp in enumerate(loop_waypoints, start=1)]
-    legs.append(create_leg(len(WAYPOINTS), exit_waypoint, ARRIVAL_TOLERANCE))
+    legs = [create_leg(i, wp, ARRIVAL_TOLERANCE) for i, wp in enumerate(WAYPOINTS, start=1)]
     dive_step = create_dive_step(MISSION_DEPTH)
 
     main_mission_sequence.add_children([

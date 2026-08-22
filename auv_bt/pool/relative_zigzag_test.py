@@ -20,11 +20,12 @@ import behaviours.wait_for_depth
 from auv_interfaces.srv import SetVehicleMode
 from std_srvs.srv import SetBool
 
-TARGET_DEPTH = 0.35
+TARGET_DEPTH = 0.60
 LEG_DISTANCE1 = 2.0
 LEG_DISTANCE2 = 2.3
 TURN_DEG = 90.0
 TARGET_SPEED_MPS = 0.2  # yavas/hassas hareket icin GUIDED hiz limiti
+TURN_SPEED_MPS = 0.15  # 90 derecelik donuslerde kullanilacak hiz
 DEPTH_ARRIVAL_TOLERANCE = 0.2  # metre
 
 
@@ -130,19 +131,19 @@ def create_root() -> py_trees.behaviour.Behaviour:
         children=[dive_set_target, dive_wait_depth]
     )
     forward1 = behaviours.relative_motion.create_forward_step(
-        LEG_DISTANCE1, TARGET_DEPTH, "Forward1"
+        LEG_DISTANCE1, TARGET_DEPTH, "Forward1", speed_mps=TARGET_SPEED_MPS
     )
     turn_right = behaviours.relative_motion.create_turn_step(
-        +TURN_DEG, TARGET_DEPTH, "TurnRight"
+        +TURN_DEG, TARGET_DEPTH, "TurnRight", speed_mps=TURN_SPEED_MPS
     )
     forward2 = behaviours.relative_motion.create_forward_step(
-        LEG_DISTANCE2, TARGET_DEPTH, "Forward2"
+        LEG_DISTANCE2, TARGET_DEPTH, "Forward2", speed_mps=TARGET_SPEED_MPS
     )
     turn_left = behaviours.relative_motion.create_turn_step(
-        -TURN_DEG, TARGET_DEPTH, "TurnLeft"
+        -TURN_DEG, TARGET_DEPTH, "TurnLeft", speed_mps=TURN_SPEED_MPS
     )
     forward3 = behaviours.relative_motion.create_forward_step(
-        LEG_DISTANCE1, TARGET_DEPTH, "Forward3"
+        LEG_DISTANCE1, TARGET_DEPTH, "Forward3", speed_mps=TARGET_SPEED_MPS
     )
 
     mode_request_poshold = SetVehicleMode.Request()

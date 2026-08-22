@@ -172,7 +172,10 @@ class WaitForArrivalDynamic(py_trees.behaviour.Behaviour):
         return Status.RUNNING
 
 
-def create_forward_step(distance: float, depth: float, step_name: str) -> py_trees.composites.Sequence:
+def create_forward_step(distance: float, depth: float, step_name: str, speed_mps: float = None) -> py_trees.composites.Sequence:
+    children = []
+    if speed_mps is not None:
+        children.append(SetSpeedAction(name=f"SetSpeed {speed_mps:.2f}", speed_mps=speed_mps))
     set_target = SetForwardTargetAction(
         name=f"Send {distance:.1f}m Forward",
         distance=distance,
@@ -182,10 +185,14 @@ def create_forward_step(distance: float, depth: float, step_name: str) -> py_tre
         name=f"Check {distance:.1f}m Forward",
         tolerance=0.4
     )
-    return py_trees.composites.Sequence(name=step_name, memory=True, children=[set_target, checker])
+    children.extend([set_target, checker])
+    return py_trees.composites.Sequence(name=step_name, memory=True, children=children)
 
 
-def create_turn_step(yaw_increment: float, depth: float, step_name: str) -> py_trees.composites.Sequence:
+def create_turn_step(yaw_increment: float, depth: float, step_name: str, speed_mps: float = None) -> py_trees.composites.Sequence:
+    children = []
+    if speed_mps is not None:
+        children.append(SetSpeedAction(name=f"SetSpeed {speed_mps:.2f}", speed_mps=speed_mps))
     set_target = SetTurnInPlaceAction(
         name=f"Turn {yaw_increment:+.0f}°",
         yaw_increment=yaw_increment,
@@ -195,4 +202,5 @@ def create_turn_step(yaw_increment: float, depth: float, step_name: str) -> py_t
         name=f"Check Turn {yaw_increment:+.0f}°",
         tolerance=3.0
     )
-    return py_trees.composites.Sequence(name=step_name, memory=True, children=[set_target, checker])
+    children.extend([set_target, checker])
+    return py_trees.composites.Sequence(name=step_name, memory=True, children=children)

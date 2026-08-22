@@ -72,8 +72,8 @@ class SetForwardTargetAction(py_trees.behaviour.Behaviour):
         self.msg.x = target_x
         self.msg.y = target_y
         self.msg.z = self.depth
-        self.msg.yaw_deg = 0.0
-        self.msg.use_yaw = False
+        self.msg.yaw_deg = current_yaw
+        self.msg.use_yaw = True
 
         self.target_calculated = True
 

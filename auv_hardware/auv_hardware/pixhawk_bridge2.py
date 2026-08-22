@@ -25,8 +25,8 @@ from .local_position_handler import LocalPositionHandler
 from .set_speed_handler import SetSpeedHandler
 from geometry_msgs.msg import Point
 
-POOL_ORIGIN_LAT_DEG = 40.7582555556   # 40deg45'29.72"N
-POOL_ORIGIN_LON_DEG = 29.9017138889   # 29deg54'06.17"E
+POOL_ORIGIN_LAT_DEG = 40.72304
+POOL_ORIGIN_LON_DEG = 29.82703
 POOL_ORIGIN_ALT_M = 0.0
 
 

@@ -23,17 +23,21 @@ from std_srvs.srv import SetBool
 # ==========================================
 # KOORDİNATLAR
 # ==========================================
-BASLANGIC_LAT = 40.7582555556   # Baslangic noktasi: 40deg45'29.72"N (SET_GPS_GLOBAL_ORIGIN ile ayni nokta)
-BASLANGIC_LON = 29.9017138889   # 29deg54'06.17"E
+BASLANGIC_LAT = 40.72304   # Baslangic noktasi (pixhawk_bridge2.py'deki POOL_ORIGIN_LAT_DEG ile ayni olmali!)
+BASLANGIC_LON = 29.82703   # (pixhawk_bridge2.py'deki POOL_ORIGIN_LON_DEG ile ayni olmali!)
 
 ARRIVAL_TOLERANCE = 0.4            # metre
 DEPTH_ARRIVAL_TOLERANCE = 0.2      # metre
-STARTUP_WAIT_S = 35.0          
+STARTUP_WAIT_S = 35.0
+DIVE_DEPTH = 0.5                   # WAYPOINTS henuz bos iken kullanilacak ilk dalis derinligi
+
+# Noktalar henuz belirlenmedi -> toplam 4 nokta eklenecek (sirayla).
+# Son (4.) noktaya varilinca gorev MANUAL moda gecip araci disarm eder.
 WAYPOINTS = [
-    {"lat": 40.7582389856, "lon": 29.9018080689, "depth": 0.5},  
-    {"lat": 40.7581971456, "lon": 29.9017374289, "depth": 0.5}, 
-    {"lat": BASLANGIC_LAT, "lon": BASLANGIC_LON, "depth": 0.5},  
-    # {"lat": ..., "lon": ..., "depth": ...},
+    # {"lat": ..., "lon": ..., "depth": ...},  # 1. nokta
+    # {"lat": ..., "lon": ..., "depth": ...},  # 2. nokta
+    # {"lat": ..., "lon": ..., "depth": ...},  # 3. nokta
+    # {"lat": ..., "lon": ..., "depth": ...},  # 4. nokta (son nokta)
 ]
 
 METERS_PER_DEGREE = 111320.0
@@ -101,6 +105,32 @@ def create_dive_step(depth):
         name="DiveInPlace",
         memory=True,
         children=[dive_to_depth, wait_depth]
+    )
+
+
+def create_finish_step():
+    mode_request_manual = SetVehicleMode.Request()
+    mode_request_manual.mode_name = "MANUAL"
+    switch_to_manual = py_trees_ros.service_clients.FromConstant(
+        name="SwitchToManual",
+        service_type=SetVehicleMode,
+        service_name="/change_mode",
+        service_request=mode_request_manual
+    )
+
+    disarm_request = SetBool.Request()
+    disarm_request.data = False
+    disarm_vehicle = py_trees_ros.service_clients.FromConstant(
+        name="DisarmVehicle",
+        service_type=SetBool,
+        service_name="/arm",
+        service_request=disarm_request
+    )
+
+    return py_trees.composites.Sequence(
+        name="FinishMission",
+        memory=True,
+        children=[switch_to_manual, disarm_vehicle]
     )
 
 
@@ -178,7 +208,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     legs = [create_leg(i, waypoint) for i, waypoint in enumerate(WAYPOINTS, start=1)]
-    dive_step = create_dive_step(WAYPOINTS[0]["depth"])
+    dive_step = create_dive_step(WAYPOINTS[0]["depth"] if WAYPOINTS else DIVE_DEPTH)
+    finish_step = create_finish_step()
 
     main_mission_sequence.add_children([
         wait_before_start,
@@ -186,6 +217,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
         arm_vehicle,
         dive_step,
         *legs,
+        finish_step,
     ])
 
     root.add_child(publishers_parallel)

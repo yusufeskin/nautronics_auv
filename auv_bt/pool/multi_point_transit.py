@@ -26,8 +26,8 @@ from std_srvs.srv import SetBool
 BASLANGIC_LAT = 40.72304   # Baslangic noktasi (pixhawk_bridge2.py'deki POOL_ORIGIN_LAT_DEG ile ayni olmali!)
 BASLANGIC_LON = 29.82703   # (pixhawk_bridge2.py'deki POOL_ORIGIN_LON_DEG ile ayni olmali!)
 
-ARRIVAL_TOLERANCE = 0.4            # metre
-DEPTH_ARRIVAL_TOLERANCE = 0.2      # metre
+ARRIVAL_TOLERANCE = 0.2            # metre
+DEPTH_ARRIVAL_TOLERANCE = 0.1      # metre
 STARTUP_WAIT_S = 35.0
 DIVE_DEPTH = 0.5                   # WAYPOINTS henuz bos iken kullanilacak ilk dalis derinligi
 

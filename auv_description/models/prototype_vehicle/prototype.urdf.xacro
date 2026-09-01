@@ -5,7 +5,7 @@
   <xacro:include filename="macros/thruster_macro.xacro" />
   <xacro:include filename="macros/plugins.xacro" />
   <xacro:include filename="macros/imu_macro.xacro"/>
-  <xacro:include filename="macros/sonar_macro.xacro" />
+  <xacro:include filename="macros/ping1d_macro.xacro" />
   <xacro:include filename="macros/camera_macro.xacro" />
   <xacro:include filename="macros/dvl_macro.xacro" />
 
@@ -39,13 +39,12 @@
                  
   <xacro:add_imu name="vio_imu" parent_link="base_link" update_rate="50.0" topic="/imu0" 
                  x="0" y="0" z="0" r="0" p="0" yaw="0" />
-<!-- 
-  <xacro:add_sonar 
-      name="ping_sonar" 
-      parent_link="base_link" 
-      topic="sensors/sonar/front"
-      x="0.188254" y="-0.038661" z="0.09952" 
-      r="0.0" p="0.0" yaw="0.0" /> -->
+  <xacro:add_ping1d
+      name="ping1d_sonar"
+      parent_link="base_link"
+      topic="/sensors/sonar/front"
+      x="0.188254" y="-0.038661" z="0.09952"
+      r="0.0" p="0.0" yaw="0.0" />
 
   <xacro:add_camera
     name="front_camera"
@@ -72,7 +71,7 @@
     color="Green" />
 
   <xacro:add_dvl
-    name="dvl_sensor"
+    name="dvl"
     parent_link="base_link"
     topic="/model/prototype_vehicle/dvl"
     update_rate="8"

@@ -1,11 +1,16 @@
 <?xml version="1.0"?>
-<!-- SONAR MACRO FILE (to import simulation), we are using gazebo's lidar sensor to imitate bluerobotics' sonar 1D
-a cone created, which apical angle is approximately 30 degree (as like blue sonar), 
-and the parameters can be adjusted depending intended usage case -->
+<!-- Blue Robotics Ping1D (Ping Sonar Altimeter/Echosounder) macro.
+
+gz-sim has no dedicated single-beam sonar sensor, so this imitates the
+Ping1D with a narrow gpu_lidar: a ~30 deg apical cone (matching the Ping1D
+datasheet beam width) sampled at 32x32 rays instead of the single physical
+transducer's one range reading. A consumer that wants the real Ping1D
+behaviour (one Range message) should reduce this scan to its minimum valid
+return, not consume every ray as if it were a multi-beam sonar. -->
 
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <xacro:macro name="add_sonar" params="name parent_link topic x y z r p yaw">
+  <xacro:macro name="add_ping1d" params="name parent_link topic x y z r p yaw">
 
     <link name="${name}_link">
       <inertial>
@@ -47,7 +52,7 @@ and the parameters can be adjusted depending intended usage case -->
         <always_on>true</always_on>
         <visualize>true</visualize>
         
-        <gz_frame_id>${name}_link</gz_frame_id>
+        <frame_id>${name}_link</frame_id>
         
         <lidar>
           <scan>
@@ -61,8 +66,8 @@ and the parameters can be adjusted depending intended usage case -->
           </scan>
           
           <range>
-            <min>0.2</min>
-            <max>30.0</max> <resolution>0.01</resolution>
+            <min>0.5</min>
+            <max>50.0</max> <resolution>0.01</resolution>
           </range>
           <noise>
             <type>gaussian</type>

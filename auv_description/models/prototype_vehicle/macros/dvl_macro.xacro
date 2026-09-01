@@ -1,16 +1,51 @@
 <?xml version="1.0"?>
+<!-- Water Linked DVL-A50 macro. Real hardware is a phased-array (electronic
+beam steering) transducer, not a mechanical piston, and the driver referenced
+by this repo (additional_drivers/waterlinked_dvl) targets that same A50. -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
   <xacro:macro name="add_dvl" params="name parent_link topic update_rate x y z r p yaw">
 
-    <gazebo reference="${parent_link}">
+    <link name="${name}_link">
+      <inertial>
+        <mass value="0.00000001"/> <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.00000001" ixy="0" ixz="0" iyy="0.00000001" iyz="0" izz="0.00000001"/>
+      </inertial>
+
+      <!-- DVL-A50: 73.5mm diameter, ~40mm tall puck. -->
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder length="0.04" radius="0.0368"/>
+        </geometry>
+        <material name="dvl_black">
+          <color rgba="0.08 0.08 0.08 1"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder length="0.04" radius="0.0368"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="${name}_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="${r} ${p} ${yaw}"/>
+    </joint>
+
+    <gazebo reference="${name}_link">
       <sensor name="${name}" type="custom" gz:type="dvl">
-        <pose>${x} ${y} ${z} ${r} ${p} ${yaw}</pose>
+        <pose>0 0 0 0 0 0</pose>
         <topic>${topic}</topic>
         <update_rate>${update_rate}</update_rate>
         <always_on>true</always_on>
+        <frame_id>${name}_link</frame_id>
         <gz:dvl>
-          <type>piston</type>
+          <type>phased_array</type>
           <arrangement degrees="true">
             <beam id="1">
               <aperture>2.1</aperture>

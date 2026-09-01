@@ -1,0 +1,1109 @@
+<?xml version="1.0"?>
+<!--
+  Textured competition pool: 25m x 50m x 2.13m, matching the geometry that
+  used to be hand-placed in teknofest_pool.world (pool_floor + four walls).
+  Include at pose "2 -3 0 0 0 0" to reproduce the original layout exactly.
+
+  Floor/wall PBR textures (pool_floor.png, pool_tile.png, + normal/roughness
+  maps) ported from HonuRobotics/bluerobotics_models
+  (bluerobotics_common/models/pool), Apache-2.0. See NOTICE in this model dir.
+-->
+<sdf version="1.6">
+  <model name="pool">
+    <static>true</static>
+
+    <!-- Floor: one physics collision box, a tiled grid of visual-only
+         squares on top so the PBR texture keeps a 1:1 aspect ratio instead
+         of stretching across the full 25x50m span. -->
+    <link name="floor_link">
+      <collision name="floor_collision">
+        <pose>0 0 -2.18 0 0 0</pose>
+        <geometry>
+          <box><size>25.0 50.0 0.1</size></box>
+        </geometry>
+        <surface>
+          <friction><ode><mu>0.5</mu><mu2>0.5</mu2></ode></friction>
+          <contact><ode/></contact>
+          <bounce/>
+        </surface>
+      </collision>
+      <visual name="floor_tile_1_visual">
+        <pose>-10 -22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_2_visual">
+        <pose>-10 -17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_3_visual">
+        <pose>-10 -12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_4_visual">
+        <pose>-10 -7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_5_visual">
+        <pose>-10 -2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_6_visual">
+        <pose>-10 2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_7_visual">
+        <pose>-10 7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_8_visual">
+        <pose>-10 12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_9_visual">
+        <pose>-10 17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_10_visual">
+        <pose>-10 22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_11_visual">
+        <pose>-5 -22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_12_visual">
+        <pose>-5 -17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_13_visual">
+        <pose>-5 -12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_14_visual">
+        <pose>-5 -7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_15_visual">
+        <pose>-5 -2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_16_visual">
+        <pose>-5 2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_17_visual">
+        <pose>-5 7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_18_visual">
+        <pose>-5 12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_19_visual">
+        <pose>-5 17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_20_visual">
+        <pose>-5 22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_21_visual">
+        <pose>0 -22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_22_visual">
+        <pose>0 -17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_23_visual">
+        <pose>0 -12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_24_visual">
+        <pose>0 -7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_25_visual">
+        <pose>0 -2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_26_visual">
+        <pose>0 2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_27_visual">
+        <pose>0 7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_28_visual">
+        <pose>0 12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_29_visual">
+        <pose>0 17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_30_visual">
+        <pose>0 22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_31_visual">
+        <pose>5 -22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_32_visual">
+        <pose>5 -17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_33_visual">
+        <pose>5 -12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_34_visual">
+        <pose>5 -7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_35_visual">
+        <pose>5 -2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_36_visual">
+        <pose>5 2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_37_visual">
+        <pose>5 7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_38_visual">
+        <pose>5 12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_39_visual">
+        <pose>5 17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_40_visual">
+        <pose>5 22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_41_visual">
+        <pose>10 -22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_42_visual">
+        <pose>10 -17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_43_visual">
+        <pose>10 -12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_44_visual">
+        <pose>10 -7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_45_visual">
+        <pose>10 -2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_46_visual">
+        <pose>10 2.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_47_visual">
+        <pose>10 7.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_48_visual">
+        <pose>10 12.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_49_visual">
+        <pose>10 17.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <visual name="floor_tile_50_visual">
+        <pose>10 22.5 -2.13 0 0 0</pose>
+        <geometry>
+          <box><size>5 5 0.001</size></box>
+        </geometry>
+          <material>
+            <ambient>0.55 0.7 0.75 1</ambient>
+            <diffuse>0.7 0.82 0.85 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_floor.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_floor_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_floor_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+    </link>
+
+    <!-- Walls: one collision box per side, one visual per side (tiled floor
+         gets the careful treatment because the downward camera stares at it;
+         walls are rarely seen up close). -->
+    <link name="walls_link">
+      <collision name="wall_north_collision">
+        <pose>0 25 -1.065 0 0 0</pose>
+        <geometry>
+          <box><size>25 0.3 2.13</size></box>
+        </geometry>
+        <surface>
+          <friction><ode><mu>0.5</mu><mu2>0.5</mu2></ode></friction>
+          <contact><ode/></contact>
+          <bounce/>
+        </surface>
+      </collision>
+      <visual name="wall_north_visual">
+        <pose>0 25 -1.065 0 0 0</pose>
+        <geometry>
+          <box><size>25 0.3 2.13</size></box>
+        </geometry>
+          <material>
+            <ambient>0.6 0.75 0.8 1</ambient>
+            <diffuse>0.75 0.87 0.9 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_tile.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_tile_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_tile_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <collision name="wall_south_collision">
+        <pose>0 -25 -1.065 0 0 0</pose>
+        <geometry>
+          <box><size>25 0.3 2.13</size></box>
+        </geometry>
+        <surface>
+          <friction><ode><mu>0.5</mu><mu2>0.5</mu2></ode></friction>
+          <contact><ode/></contact>
+          <bounce/>
+        </surface>
+      </collision>
+      <visual name="wall_south_visual">
+        <pose>0 -25 -1.065 0 0 0</pose>
+        <geometry>
+          <box><size>25 0.3 2.13</size></box>
+        </geometry>
+          <material>
+            <ambient>0.6 0.75 0.8 1</ambient>
+            <diffuse>0.75 0.87 0.9 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_tile.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_tile_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_tile_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <collision name="wall_west_collision">
+        <pose>-12.5 0 -1.065 0 0 0</pose>
+        <geometry>
+          <box><size>0.3 50 2.13</size></box>
+        </geometry>
+        <surface>
+          <friction><ode><mu>0.5</mu><mu2>0.5</mu2></ode></friction>
+          <contact><ode/></contact>
+          <bounce/>
+        </surface>
+      </collision>
+      <visual name="wall_west_visual">
+        <pose>-12.5 0 -1.065 0 0 0</pose>
+        <geometry>
+          <box><size>0.3 50 2.13</size></box>
+        </geometry>
+          <material>
+            <ambient>0.6 0.75 0.8 1</ambient>
+            <diffuse>0.75 0.87 0.9 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_tile.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_tile_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_tile_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+      <collision name="wall_east_collision">
+        <pose>12.5 0 -1.065 0 0 0</pose>
+        <geometry>
+          <box><size>0.3 50 2.13</size></box>
+        </geometry>
+        <surface>
+          <friction><ode><mu>0.5</mu><mu2>0.5</mu2></ode></friction>
+          <contact><ode/></contact>
+          <bounce/>
+        </surface>
+      </collision>
+      <visual name="wall_east_visual">
+        <pose>12.5 0 -1.065 0 0 0</pose>
+        <geometry>
+          <box><size>0.3 50 2.13</size></box>
+        </geometry>
+          <material>
+            <ambient>0.6 0.75 0.8 1</ambient>
+            <diffuse>0.75 0.87 0.9 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+            <pbr>
+              <metal>
+                <albedo_map>model://pool/materials/textures/pool_tile.png</albedo_map>
+                <normal_map>model://pool/materials/textures/pool_tile_normal.png</normal_map>
+                <roughness_map>model://pool/materials/textures/pool_tile_roughness.png</roughness_map>
+                <metalness>0.0</metalness>
+              </metal>
+            </pbr>
+          </material>
+      </visual>
+    </link>
+
+  </model>
+</sdf>

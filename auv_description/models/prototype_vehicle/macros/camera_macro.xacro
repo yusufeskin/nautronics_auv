@@ -33,6 +33,7 @@
       
       <sensor name="${name}" type="camera">
         <pose>0 0 0 0 0 0</pose>
+        <frame_id>${name}_link</frame_id>
         <camera>
           <horizontal_fov>1.047</horizontal_fov> <!-- 60 Derece -->
           <image>
@@ -44,13 +45,28 @@
             <near>0.1</near>
             <far>100</far>
           </clip>
+          <!-- Mild sensor noise and lens distortion so images aren't
+               pinhole-perfect; roughly a cheap wide-angle underwater lens. -->
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+          <distortion>
+            <k1>-0.06</k1>
+            <k2>0.01</k2>
+            <k3>0.0</k3>
+            <p1>0.0004</p1>
+            <p2>-0.0002</p2>
+            <center>0.5 0.5</center>
+          </distortion>
         </camera>
-        
+
         <always_on>true</always_on>
 
         <update_rate>100</update_rate>
         <visualize>true</visualize>
-        <topic>${topic}</topic> 
+        <topic>${topic}</topic>
       </sensor>
     </gazebo>
 

@@ -10,26 +10,37 @@
   gz_type_name: "gz.msgs.Odometry"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/world/prototype_world/dynamic_pose/info"
-  gz_topic_name: "/world/deneme/dynamic_pose/info" 
-  ros_type_name: "geometry_msgs/msg/PoseArray"
-  gz_type_name: "gz.msgs.Pose_V"
-  direction: GZ_TO_ROS
+# NOTE: dropped two entries that could never carry data -
+#   /world/deneme/dynamic_pose/info  (world is named prototype_world, and
+#                                     deneme.world no longer exists)
+#   /model/prototype_vehicle/pose    (nothing publishes it; the model has an
+#                                     OdometryPublisher, not a PosePublisher)
+# Re-add a PosePublisher plugin in macros/plugins.xacro first if you want poses.
 
-- ros_topic_name: "/model/prototype_vehicle/pose"
-  gz_topic_name: "/model/prototype_vehicle/pose"
-  ros_type_name: "geometry_msgs/msg/PoseArray"
-  gz_type_name: "gz.msgs.Pose_V"
-  direction: GZ_TO_ROS
-  
 - ros_topic_name: "/model/prototype_vehicle/imu"
   gz_topic_name: "/model/prototype_vehicle/imu"
   ros_type_name: "sensor_msgs/msg/Imu"
   gz_type_name: "gz.msgs.IMU"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/camera/camera_info"
-  gz_topic_name: "/camera/camera_info"
+# Camera intrinsics, one per camera. These come from <camera_info_topic> in
+# macros/camera_macro.xacro, which is set to "<image topic>/camera_info" -
+# the old single "/camera/camera_info" entry matched no gz topic at all, so
+# bbox_pnp_solver waited on intrinsics forever and never solved a pose.
+- ros_topic_name: "/camera/front/camera_info"
+  gz_topic_name: "/camera/front/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/camera/bottom/camera_info"
+  gz_topic_name: "/camera/bottom/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/camera/back/camera_info"
+  gz_topic_name: "/camera/back/camera_info"
   ros_type_name: "sensor_msgs/msg/CameraInfo"
   gz_type_name: "gz.msgs.CameraInfo"
   direction: GZ_TO_ROS

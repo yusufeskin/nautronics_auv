@@ -13,7 +13,7 @@ class BBoxPnPSolverNode(Node):
         super().__init__('bbox_pnp_solver_node')
         self.get_logger().info('BBox PnP Solver Node başlatıldı.')
         
-        self.declare_parameter('info_topic', '/camera/camera_info')
+        self.declare_parameter('info_topic', '/camera/front/camera_info')
         self.info_topic = self.get_parameter('info_topic').get_parameter_value().string_value
         self.camera_matrix = None
         self.dist_coeffs = None

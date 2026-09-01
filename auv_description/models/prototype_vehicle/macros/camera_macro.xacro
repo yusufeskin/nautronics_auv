@@ -33,8 +33,15 @@
       
       <sensor name="${name}" type="camera">
         <pose>0 0 0 0 0 0</pose>
-        <frame_id>${name}_link</frame_id>
+        <!-- gz_frame_id, not frame_id: see the note in ping1d_macro.xacro. -->
+        <gz_frame_id>${name}_link</gz_frame_id>
         <camera>
+          <!-- Publish intrinsics next to the image (<topic>/camera_info).
+               Without this gz still derives a camera_info topic, but from the
+               fully-scoped sensor path, which is not what the vision nodes
+               subscribe to - bbox_pnp_solver sat waiting on a topic that
+               never existed. Keep this in sync with bridge.yaml. -->
+          <camera_info_topic>${topic}/camera_info</camera_info_topic>
           <horizontal_fov>1.047</horizontal_fov> <!-- 60 Derece -->
           <image>
             <width>640</width>
@@ -64,7 +71,11 @@
 
         <always_on>true</always_on>
 
-        <update_rate>100</update_rate>
+        <!-- 30 Hz, matching the real cameras. Was 100: three 640x480 render
+             passes at 100 Hz is far more than the GPU delivers, so the sim
+             just loses real-time factor while the images still arrive late
+             and irregularly. Nothing downstream consumes faster than 30. -->
+        <update_rate>30</update_rate>
         <visualize>true</visualize>
         <topic>${topic}</topic>
       </sensor>

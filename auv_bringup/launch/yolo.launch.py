@@ -30,7 +30,10 @@ def generate_launch_description():
         emulate_tty=True,
         parameters=[
             {
-                'info_topic': '/camera/camera_info'
+                # Intrinsics for the same camera yolo_node reads above
+                # (/camera/front); auv_description publishes them alongside
+                # the image. The old '/camera/camera_info' never existed.
+                'info_topic': '/camera/front/camera_info'
             }
         ]
     

@@ -47,12 +47,17 @@ return, not consume every ray as if it were a multi-beam sonar. -->
         
         <topic>${topic}</topic>
         
-        <update_rate>30</update_rate>
+        <!-- Real Ping1D pings at roughly 10 Hz; it is time-of-flight bound,
+             it cannot do 30. Also one fewer GPU render pass per frame. -->
+        <update_rate>10</update_rate>
         
         <always_on>true</always_on>
         <visualize>true</visualize>
         
-        <frame_id>${name}_link</frame_id>
+        <!-- gz_frame_id, NOT frame_id: gz-sensors 8 (Harmonic, what this repo
+             targets) only reads gz_frame_id. frame_id arrives in gz-sensors 9
+             (Ionic), which then deprecates this one - swap on that upgrade. -->
+        <gz_frame_id>${name}_link</gz_frame_id>
         
         <lidar>
           <scan>

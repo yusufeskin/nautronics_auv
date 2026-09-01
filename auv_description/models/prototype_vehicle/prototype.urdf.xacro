@@ -26,15 +26,28 @@
       </geometry>
     </visual>
 
+    <!-- This box is what the world's Buoyancy plugin displaces, so its VOLUME
+         sets net buoyancy (0.457*0.575*0.05 * 1000 = 13.14 kg vs 12.8 kg mass,
+         i.e. slightly positive) and its CENTROID is the centre of buoyancy.
+         z=0.0376 puts the CoB 0.049 m above the CoM at z=-0.0114 - the same
+         separation bluerov2_heavy/model.sdf uses (0.060 vs 0.011).
+         Was 0.376 (a dropped zero): that sat 20 cm above the hull's actual
+         top (the mesh ends at z=0.145), giving an 8x too stiff righting
+         moment and a vehicle that could never float to the surface. -->
     <collision name="base_collision">
-      <origin xyz="0 0 0.376" rpy="0 0 0"/> 
+      <origin xyz="0 0 0.0376" rpy="0 0 0"/>
       <geometry>
-        <box size="0.457 0.575 0.05"/> 
+        <box size="0.457 0.575 0.05"/>
       </geometry>
     </collision>
   </link>
 
-  <xacro:add_imu name="imu_sensor" parent_link="base_link" update_rate="400.0" 
+  <!-- Flight IMU. ArduPilotPlugin binds to it by sensor NAME (<imuName>), not
+       by topic; the explicit topic is only so bridge.yaml can expose it to ROS
+       for debugging. Without it gz publishes on the fully-scoped sensor path
+       and the bridge entry matches nothing. -->
+  <xacro:add_imu name="imu_sensor" parent_link="base_link" update_rate="400.0"
+                 topic="/model/prototype_vehicle/imu"
                  x="0" y="0" z="0" r="${pi}" p="0" yaw="0" />
                  
   <xacro:add_imu name="vio_imu" parent_link="base_link" update_rate="50.0" topic="/imu0" 

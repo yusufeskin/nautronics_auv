@@ -43,7 +43,8 @@ by this repo (additional_drivers/waterlinked_dvl) targets that same A50. -->
         <topic>${topic}</topic>
         <update_rate>${update_rate}</update_rate>
         <always_on>true</always_on>
-        <frame_id>${name}_link</frame_id>
+        <!-- gz_frame_id, not frame_id: see the note in ping1d_macro.xacro. -->
+        <gz_frame_id>${name}_link</gz_frame_id>
         <gz:dvl>
           <type>phased_array</type>
           <arrangement degrees="true">

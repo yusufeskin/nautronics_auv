@@ -1,0 +1,103 @@
+# Layer 1 gate tuning.
+#
+# Rates and timeouts describe the sensors you actually have; limits describe
+# what the vehicle can physically do. Both need revisiting when hardware
+# changes - in particular every value marked TUNE should be set from pool
+# measurements rather than left at these defaults.
+
+dvl_gate:
+  ros__parameters:
+    # Water Linked A50 ping rate. The stale timeout is a little over two
+    # periods, so a single dropped ping is not treated as a dead sensor.
+    expected_rate_hz: 8.0
+    stale_timeout_s: 0.75
+
+    # The A50 reports velocity FRD. Leave true unless a driver is already
+    # publishing FLU.
+    input_is_frd: true
+
+    min_good_beams: 3
+    beams_for_full_confidence: 4
+
+    # TUNE: set from the vehicle's measured top speed plus a margin. Too high
+    # and acoustic artefacts get through; too low and hard manoeuvres are
+    # rejected exactly when odometry matters most.
+    max_speed_mps: 2.0
+    max_accel_mps2: 5.0
+    max_dt_s: 1.0
+
+    lock_loss_streak: 4
+    lock_regain_streak: 2
+
+    # TUNE: replace once the A50's reported covariance has been sanity
+    # checked against DVL-versus-tape-measure transits.
+    default_velocity_variance: 0.0025
+    degraded_variance_scale: 4.0
+
+    # Water track is relative to the water column, not the ground. Off by
+    # default; turning it on trades a correct-but-unavailable velocity for an
+    # available-but-biased one.
+    allow_water_track: false
+
+    max_clock_skew_s: 0.5
+    beam_aperture_rad: 0.0366
+    altitude_min_m: 0.05
+    altitude_max_m: 50.0
+
+imu_gate:
+  ros__parameters:
+    expected_rate_hz: 100.0
+    stale_timeout_s: 0.1
+
+    # Magnetometer-aided orientation is not trusted in a steel pool; the
+    # estimator integrates the gyro instead. See the module docstring in
+    # imu_gate.py for why.
+    use_orientation: false
+    subtract_gyro_bias: true
+
+    # TUNE: set to the full-scale range of the IMU you actually buy.
+    max_gyro_rad_s: 8.0
+    max_accel_mps2: 58.8
+    max_clock_skew_s: 0.2
+
+    # TUNE: from the IMU datasheet's noise density, integrated to the
+    # publishing rate.
+    default_gyro_variance: 4.0e-6
+    default_accel_variance: 4.0e-4
+
+    # Turn-on bias calibration. The vehicle must be still for
+    # bias_settle_time_s before this converges, which is the operational
+    # reason to float it on the surface for half a minute before arming.
+    bias_still_gyro_threshold_rad_s: 0.02
+    bias_still_accel_tolerance_mps2: 0.5
+    bias_settle_time_s: 20.0
+    bias_min_samples: 200
+
+depth_gate:
+  ros__parameters:
+    expected_rate_hz: 20.0
+    stale_timeout_s: 0.5
+
+    water_density_kg_m3: 1000.0
+    min_pressure_pa: 50000.0
+    max_pressure_pa: 400000.0
+    max_depth_rate_mps: 3.0
+    max_dt_s: 1.0
+    max_clock_skew_s: 0.5
+
+    # TUNE: measure the standing noise on the bench, then again in the pool
+    # with thrusters running - wash over the port usually dominates.
+    depth_variance_m2: 4.0e-4
+
+    # Refuse to publish depth until the surface reference is taken. This is a
+    # deliberate operational gate, not an inconvenience: a run started
+    # without it carries a constant depth bias nothing downstream can detect.
+    require_surface_zero: true
+
+sim_pressure_source:
+  ros__parameters:
+    ground_truth_topic: "/odom"
+    frame_id: "depth_link"
+    water_density_kg_m3: 1000.0
+    noise_stddev_pa: 30.0
+    publish_rate_hz: 20.0

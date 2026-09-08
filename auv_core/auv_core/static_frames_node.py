@@ -6,9 +6,10 @@ to need them - and they drift apart the first time a sensor is remounted.
 Here the YAML is authoritative and this node is the only publisher of
 base_link -> sensor transforms, so a remount is a one-line change.
 
-Note this publishes only the rigid vehicle tree. ``odom -> base_link`` is the
-estimator's output and ``map -> odom`` is the landmark corrector's, because
-both are estimates rather than geometry.
+Note this publishes only the rigid vehicle tree. ``odom -> base_link`` is an
+estimate, so it belongs to the estimator rather than here. ``map -> odom`` has
+no producer yet and stays identity until a global corrector exists; see
+docs/ARCHITECTURE.md.
 """
 
 from __future__ import annotations

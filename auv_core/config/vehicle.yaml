@@ -19,10 +19,12 @@
   ros__parameters:
 
     frames:
-      # REP-105: map is the drift-free competition frame corrected by landmark
-      # observations, odom is the continuous frame the controller lives in,
-      # base_link is the vehicle body. Nothing in the control loop may consume
-      # a pose in map, and nothing in the mission layer should consume odom.
+      # REP-105. odom is the continuous, never-jumping frame the controller
+      # lives in; base_link is the vehicle body. map is declared for the
+      # global frame a future corrector will maintain, and stays identical to
+      # odom until one exists - so today every pose is effectively in odom and
+      # accumulates drift. Nothing in the control loop may consume a pose in
+      # map, because a corrected frame jumps.
       map: "map"
       odom: "odom"
       base_link: "base_link"

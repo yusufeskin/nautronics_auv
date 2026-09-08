@@ -1,8 +1,12 @@
 # Autonomy stack architecture
 
 The reference for how this vehicle's software is split up and why. Read this
-before adding a node; it says which layer your code belongs in and what it is
+before adding a node: it says which layer your code belongs in and what it is
 allowed to talk to.
+
+New to the project? Read [ONBOARDING.md](ONBOARDING.md) first — it explains
+the underlying problem and walks through the code. This document assumes you
+already know that and want the map.
 
 ## Principles
 
@@ -14,8 +18,8 @@ allocation in the same week.
 
 **Standard messages wherever one exists.** Pose, twist, wrench, odometry,
 IMU and range stay on `geometry_msgs` / `nav_msgs` / `sensor_msgs` so that
-rviz, `robot_localization`, rosbag tooling and Nav2 keep working. `auv_core_msgs`
-holds only the handful of interfaces with no standard equivalent.
+rviz, `robot_localization`, rosbag tooling and Nav2 keep working.
+`auv_core_msgs` holds only the interfaces with no standard equivalent.
 
 **One conversion point per convention.** Frame conversions live in
 `auv_core/frames.py` and nowhere else. A sign flip written anywhere else is a
@@ -32,31 +36,31 @@ time to sensors that degraded silently.
 |---|-------|---------|--------|
 | 0 | Frames, geometry, contracts | `auv_core`, `auv_core_msgs` | built |
 | 1 | Sensor gates | `auv_sensors` | built |
-| 2 | State estimation (odom + map correction) | — | next |
-| 3 | Perception and object map | — | not started |
-| 4 | Guidance and trajectory | — | not started |
-| 5 | Control and thrust allocation | — | not started |
-| 6 | Mission (behaviour tree) | — | not started |
-| 7 | Simulation harness | `auv_description` | inherited |
+| 2 | State estimation (`odom`) | — | next |
+| 3 | Guidance and trajectory | — | not started |
+| 4 | Control and thrust allocation | — | not started |
+| 5 | Mission (behaviour tree) | — | not started |
+| — | Simulation harness | `auv_description` | inherited |
+
+Perception and a global (`map` frame) corrector are deliberately out of scope
+for now. See [Known open items](#known-open-items) for what that costs.
 
 ## Contracts
 
 | Boundary | Message | Frame |
 |---|---|---|
 | sensor → gate | driver-native | sensor |
-| gate → estimator | `sensor_msgs/Imu`, `nav_msgs/Odometry` (twist), `geometry_msgs/PoseWithCovarianceStamped`, `sensor_msgs/Range` | sensor |
+| gate → estimator | `sensor_msgs/Imu`, `nav_msgs/Odometry` (twist only), `geometry_msgs/PoseWithCovarianceStamped`, `sensor_msgs/Range` | sensor |
 | gate → operators | `auv_core_msgs/SensorHealth` | — |
-| perception → map | `auv_core_msgs/LandmarkObservationArray` | camera |
 | estimator → control | `nav_msgs/Odometry` on `/odom/filtered` | `odom` |
-| estimator → mission | `nav_msgs/Odometry` on `/pose/map`, `auv_core_msgs/NavStatus` | `map` |
+| estimator → mission | `auv_core_msgs/NavStatus` | — |
 | guidance → control | `geometry_msgs/TwistStamped` | `base_link` |
 | control → allocation | `geometry_msgs/WrenchStamped` | `base_link` |
 | allocation → hardware | `auv_core_msgs/ThrusterCommand` | — |
 
-The two estimator outputs are separate on purpose. `odom` is continuous and
-never jumps, so the controller can differentiate it; `map` is corrected by
-landmark observations and *does* jump, which is fine for a mission planner
-and fatal for a control loop.
+Fixing these now is what lets Layer 2 and Layer 4 be built in parallel: the
+estimator author and the allocation author never have to agree on anything
+beyond the table above.
 
 ## Frame conventions
 
@@ -66,19 +70,23 @@ places — the DVL gate on the way in, and the autopilot bridge on the way out.
 Both call `auv_core/frames.py`.
 
 ```
-map ──(landmark corrector, Layer 2)──▶ odom ──(estimator, Layer 2)──▶ base_link
-                                                                          │
-                              (static, from config/vehicle.yaml) ─────────┤
-                                                                          ├─▶ imu_link
-                                                                          ├─▶ dvl_link
-                                                                          ├─▶ depth_link
-                                                                          └─▶ *_camera_link
+map ─(no producer yet, identity)─▶ odom ─(estimator, Layer 2)─▶ base_link
+                                                                    │
+                        (static, from config/vehicle.yaml) ─────────┤
+                                                                    ├─▶ imu_link
+                                                                    ├─▶ dvl_link
+                                                                    ├─▶ depth_link
+                                                                    └─▶ *_camera_link
 ```
 
 `base_link → sensor` transforms come from `auv_core/config/vehicle.yaml` and
 are published by the `static_frames` node. That file is the single source of
 truth for vehicle geometry: the static TFs, the thrust allocation
 configuration matrix and the simulator's URDF all have to agree with it.
+
+`map` is declared because REP-105 expects it and a global corrector will
+eventually own it, but nothing publishes `map → odom` today. Treat every pose
+as living in `odom`, and remember that `odom` drifts.
 
 ## What exists today
 
@@ -106,26 +114,18 @@ synthetic pressure source, because the Gazebo model carries no barometer. On
 the real vehicle:
 
 ```bash
-ros2 launch auv_core   frames.launch.py
+ros2 launch auv_core    frames.launch.py
 ros2 launch auv_sensors sensors.launch.py
 ```
 
-Before every run, with the vehicle floating on the surface:
-
-```bash
-ros2 service call /depth_gate/zero_surface std_srvs/srv/Trigger
-```
-
-The depth gate refuses to publish until this is done. A run started without it
-carries a constant depth bias that nothing downstream can detect.
-
-Hold the vehicle still for ~30 s at the same time so the gyro bias converges;
-`/imu_gate/health` reports DEGRADED until it does.
+The pre-run checklist and the debugging walkthrough are in
+[ONBOARDING.md](ONBOARDING.md).
 
 ## Tests
 
 ```bash
 colcon test --packages-select auv_core auv_sensors
+colcon test-result --verbose
 ```
 
 The validation logic in every gate is a plain Python class with no ROS
@@ -136,12 +136,13 @@ tests are the specification of what each gate lets through.
 that thruster geometry has rank 6 (fully actuated, so arbitrary attitude
 while translating is possible), that the vehicle is slightly positively
 buoyant, and that the centre of buoyancy sits above the centre of mass. If one
-of those fails, the fix is on the vehicle or in `vehicle.yaml`.
+of those fails, the fix is on the vehicle or in `vehicle.yaml`, not in the
+code that reads it.
 
 ## Remaining build order
 
-Each step is testable on its own. Steps 4 and 5 can run in parallel with 3
-because the contracts between them are already fixed.
+Each step is testable on its own. Steps 4 and 5 can run in parallel because
+the contract between them is already fixed.
 
 1. ~~Frames, contracts, sim harness~~ — done
 2. ~~Sensor gates~~ — done
@@ -149,17 +150,35 @@ because the contracts between them are already fixed.
    drag and added mass into `vehicle.yaml`. Feeds both control feedforward and
    simulator fidelity. Cheapest high-value step available, and the DVL makes
    it nearly free.
-4. Thrust allocation and the wrench interface.
-5. Estimator. Start with `robot_localization` behind the `/odom/filtered`
+4. **Thrust allocation** and the wrench interface.
+5. **Estimator.** Start with `robot_localization` behind the `/odom/filtered`
    contract; replace with an error-state filter if and when it earns it.
-6. Velocity control loop (needs 4 and 5).
-7. Position/attitude loop, trajectory generation, LOS guidance.
-8. Perception and object map.
-9. **Landmark re-alignment.** With no magnetometer, yaw comes from a gyro
-   integral and drifts; depth and velocity do not. Bounding that drift with
-   observations of known objects is the hardest and highest-value work in the
-   whole stack. Start it as soon as 8 produces anything.
-10. Mission behaviour tree.
+6. **Velocity control loop** (needs 4 and 5).
+7. **Position/attitude loop**, trajectory generation, LOS guidance.
+8. **Mission behaviour tree.**
+
+## Known open items
+
+**Yaw drift is unbounded.** With the magnetometer out of the loop, heading
+comes from integrating the gyro. Removing the turn-on bias (which `imu_gate`
+does) makes the drift slow, but nothing stops it: heading error grows with run
+time, and horizontal position error grows with the integral of the heading
+error. Depth does not drift, and velocity is measured directly, so this is the
+only unbounded error in the estimate — and it is the one that decides whether
+the vehicle can find its way back to where it started.
+
+Bounding it needs an absolute heading reference. The realistic options, in
+rough order of cost:
+
+- observing objects of known orientation and correcting yaw against them
+  (needs perception, which is not in this stack yet);
+- a gyro good enough that the drift over a run is tolerable without
+  correction;
+- accepting the drift and designing missions to be short and relative.
+
+Nothing here forecloses any of those. Decide it before Layer 2 is finished,
+because the estimator's interface to a global correction is easier to add
+early than to retrofit.
 
 ## Where the design decisions came from
 

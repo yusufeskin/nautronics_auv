@@ -12,8 +12,6 @@ find_package(geometry_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/SensorHealth.msg"
-  "msg/LandmarkObservation.msg"
-  "msg/LandmarkObservationArray.msg"
   "msg/ThrusterCommand.msg"
   "msg/NavStatus.msg"
 

@@ -10,8 +10,13 @@ underwater until they moved to a relative heading mode and recalibrated away
 from magnetic influence, and NUS Bumblebee simply bolt a fibre-optic gyro to
 the vehicle rather than trust a magnetic heading. Feeding a mag-aided
 orientation into the estimator imports the pool's rebar into the yaw
-solution. The estimator integrates the (bias-corrected) gyro instead, and
-yaw drift is bounded by landmark observations from Layer 3.
+solution. The estimator integrates the (bias-corrected) gyro instead.
+
+That leaves yaw with no absolute reference, so it drifts - slowly if the
+turn-on bias below is removed, quickly if it is not. Nothing in the stack
+bounds that drift today; doing so needs an absolute heading observation from
+somewhere, and until then yaw error grows with run time. This is a known open
+item, recorded in docs/ARCHITECTURE.md rather than papered over here.
 """
 
 from __future__ import annotations

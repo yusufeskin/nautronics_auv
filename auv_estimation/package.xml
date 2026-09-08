@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>auv_estimation</name>
+  <version>0.0.0</version>
+  <description>
+    Layer 2 of the autonomy stack: fuses the Layer 1 gate outputs into one
+    continuous state estimate on /odom/filtered, and reports how much that
+    estimate is worth. The filter itself is robot_localization, configured
+    here; the only code in this package is nav_status.
+  </description>
+  <maintainer email="yusuf.eskin@metu.edu.tr">sye</maintainer>
+  <license>TODO: License declaration</license>
+
+  <depend>rclpy</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>auv_core</depend>
+  <depend>auv_core_msgs</depend>
+  <depend>auv_sensors</depend>
+
+  <!-- Released ROS packages, installed by rosdep from apt. They are not
+       vendored into this repository and must not be added to
+       nautronics.repos, which is only for sources we build ourselves. -->
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>imu_filter_madgwick</exec_depend>
+
+  <exec_depend>ros2launch</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

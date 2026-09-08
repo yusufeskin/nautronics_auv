@@ -84,7 +84,8 @@ This repository consists of several ROS 2 packages:
 
 - **[auv_core](auv_core/README.md)**: Layer 0 — frame conventions, vehicle geometry, sensor gate base.
 - **[auv_core_msgs](auv_core_msgs/README.md)**: Layer boundary contracts.
-- **[auv_sensors](auv_sensors/README.md)**: Layer 1 — DVL, IMU and depth sensor gates.
+- **[auv_sensors](auv_sensors/README.md)**: Layer 1 — DVL, IMU, depth and heading sensor gates.
+- **[auv_estimation](auv_estimation/README.md)**: Layer 2 — state estimation and navigation status.
 - **[auv_bt](auv_bt/README.md)**: Behavior Tree implementations for mission planning.
 - **[auv_cam](auv_cam/README.md)**: Camera handling and image collection nodes.
 - **[auv_control](auv_control/README.md)**: Control algorithms, including thruster mixing and visual servoing.

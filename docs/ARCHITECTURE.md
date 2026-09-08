@@ -36,8 +36,8 @@ time to sensors that degraded silently.
 |---|-------|---------|--------|
 | 0 | Frames, geometry, contracts | `auv_core`, `auv_core_msgs` | built |
 | 1 | Sensor gates | `auv_sensors` | built |
-| 2 | State estimation (`odom`) | — | next |
-| 3 | Guidance and trajectory | — | not started |
+| 2 | State estimation (`odom`) | `auv_estimation` | built, untuned |
+| 3 | Guidance and trajectory | — | next |
 | 4 | Control and thrust allocation | — | not started |
 | 5 | Mission (behaviour tree) | — | not started |
 | — | Simulation harness | `auv_description` | inherited |
@@ -120,6 +120,24 @@ else measures a rate, and rates have to be integrated. Depth is always
 available; heading needs hardware the vehicle does not have yet, so
 `heading_gate` is off unless launched with `use_heading:=true`.
 
+Layer 2 sits on top of those:
+
+```
+/imu_gate/data ──▶ imu_filter_madgwick ──▶ /imu/attitude ──┐
+                      (use_mag: false)                     ▼
+/dvl_gate/velocity ──────────────────────────────▶ ekf_filter_node ──▶ /odom/filtered
+/depth_gate/pose  ───────────────────────────────▶ (robot_localization)  + TF odom→base_link
+/heading_gate/pose ──────────────────────────────▶
+
+all */health, /odom/filtered ──────────────────▶ nav_status ──▶ /nav_status
+```
+
+`robot_localization` and `imu_filter_madgwick` come from apt via rosdep; the
+only code in `auv_estimation` is `nav_status`. The fusion design — z from
+pressure, roll and pitch from gravity, velocity from the DVL, yaw integrated
+from the gyro with an absolute correction when available — lives in
+`auv_estimation/config/ekf.yaml`, which is commented at length.
+
 Run it against the simulator:
 
 ```bash
@@ -163,7 +181,11 @@ the contract between them is already fixed.
 
 1. ~~Frames, contracts, sim harness~~ — done
 2. ~~Sensor gates~~ — done
-3. **Thruster and drag calibration** — the measurable part only. Command a
+3. ~~Estimator~~ — built as `auv_estimation`, but **untuned**: the process
+   noise is `robot_localization`'s default and nobody has compared the output
+   against a known trajectory. Tuning needs ground truth, which needs either
+   the simulator or a synthetic trajectory generator.
+4. **Thruster and drag calibration** — the measurable part only. Command a
    constant thrust, wait for the vehicle to stop accelerating, read terminal
    velocity off the DVL: at terminal velocity thrust equals drag, so this
    gives the translational quadratic drag coefficient directly, one steady run
@@ -172,19 +194,7 @@ the contract between them is already fixed.
    placeholders if you do not. Nothing downstream is blocked either way,
    because the model is only feedforward and the feedback loop closes on
    measured DVL velocity.
-4. **Thrust allocation** and the wrench interface.
-5. **Estimator.** Three nodes:
-   - `imu_filter_madgwick` with `use_mag: false`, turning the gate's gyro and
-     accelerometer into an orientation whose roll and pitch are
-     gravity-referenced and absolute. Without this, `robot_localization` gets
-     roll and pitch only by integrating the gyro and throws away the free
-     absolute reference gravity provides;
-   - `robot_localization` behind the `/odom/filtered` contract. Note it does
-     **not** estimate gyro bias — that is why `imu_gate` removes it upfront;
-   - a small node publishing `NavStatus` from the gates' health topics, since
-     `robot_localization` will not tell you it is dead reckoning.
-
-   Replace with an error-state filter if and when it earns it.
+5. **Thrust allocation** and the wrench interface.
 6. **Velocity control loop** (needs 4 and 5).
 7. **Position/attitude loop**, trajectory generation, LOS guidance.
 8. **Mission behaviour tree.**

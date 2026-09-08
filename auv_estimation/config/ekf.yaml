@@ -1,0 +1,176 @@
+# robot_localization EKF configuration for the AUV.
+#
+# The state vector is 15 elements, always in this order:
+#
+#   index  0   1   2    3     4      5    6   7   8    9      10      11    12  13  14
+#   state  x   y   z   roll  pitch  yaw  vx  vy  vz  vroll  vpitch  vyaw   ax  ay  az
+#
+# Every `*_config` array below is 15 booleans in that order, saying which
+# states that sensor observes. Getting one wrong is silent: the filter simply
+# ignores a measurement, or worse, believes one it should not.
+#
+# The design in one sentence: z comes from pressure, roll and pitch from
+# gravity, velocity from the DVL, and yaw is integrated from the gyro inside
+# the filter with an absolute correction from heading_gate when one is
+# available. Nothing else is fused.
+
+ekf_filter_node:
+  ros__parameters:
+
+    frequency: 30.0
+
+    # NOT two_d_mode. This is an underwater vehicle with six degrees of
+    # freedom; leaving this true is the classic way to get a filter that
+    # quietly pins z, roll and pitch to zero.
+    two_d_mode: false
+
+    # There is no map frame on this vehicle - nothing measures absolute
+    # position, so odom is the only world frame and it drifts. Setting
+    # world_frame to odom is what stops robot_localization from trying to
+    # publish a map -> odom transform it has no business publishing.
+    map_frame: map              # declared but unused; world_frame decides
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    # This node owns odom -> base_link. static_frames owns base_link ->
+    # sensors. Nothing else may publish either, and in particular
+    # imu_filter_madgwick must run with publish_tf: false.
+    publish_tf: true
+    publish_acceleration: false
+
+    # A sensor silent for longer than this stops contributing and the filter
+    # predicts through the gap instead. It does not stop publishing - that is
+    # what nav_status is for.
+    sensor_timeout: 0.2
+
+    # The DVL's samples arrive late: acoustic travel time, the unit's own
+    # processing, then the network hop to the companion. Without this the
+    # filter treats an old velocity as a current one. history_length must be
+    # comfortably longer than the worst latency.
+    smooth_lagged_data: true
+    history_length: 1.0
+
+    # ------------------------------------------------------------------
+    # odom0: DVL body velocity, from dvl_gate
+    # ------------------------------------------------------------------
+    # Velocity only - a DVL measures no position and no attitude. The message
+    # carries child_frame_id: dvl_link, and robot_localization uses the static
+    # base_link -> dvl_link transform to bring the twist to the body frame.
+    # That includes the lever-arm term (omega x r), which is what stops an
+    # off-centre DVL from reporting a false lateral velocity every time the
+    # vehicle yaws. It only works if the DVL mount in vehicle.yaml is right.
+    odom0: /dvl_gate/velocity
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  true,  true,
+                   false, false, false,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 10
+
+    # ------------------------------------------------------------------
+    # pose0: depth, from depth_gate
+    # ------------------------------------------------------------------
+    # An absolute z, not a change in z. This is the only measurement on the
+    # vehicle that never drifts, so it is the backbone of the estimate.
+    pose0: /depth_gate/pose
+    pose0_config: [false, false, true,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
+    pose0_differential: false
+    pose0_relative: false
+    pose0_queue_size: 10
+
+    # ------------------------------------------------------------------
+    # pose1: absolute heading, from heading_gate
+    # ------------------------------------------------------------------
+    # Inert until heading_gate is running - robot_localization tolerates a
+    # configured topic that never publishes. When it is running, this is the
+    # only absolute yaw in the system and the only thing bounding yaw drift.
+    #
+    # heading_gate refuses any heading that disagrees with the gyro, so what
+    # arrives here has already been cross-checked. Do not add a Mahalanobis
+    # rejection threshold as a second line of defence: it would reject exactly
+    # the large, correct corrections that follow a period of drift.
+    pose1: /heading_gate/pose
+    pose1_config: [false, false, false,
+                   false, false, true,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
+    pose1_differential: false
+    pose1_relative: false
+    pose1_queue_size: 10
+
+    # ------------------------------------------------------------------
+    # imu0: attitude and rates, from imu_filter_madgwick
+    # ------------------------------------------------------------------
+    # roll and pitch: TRUE. Madgwick derives them from gravity, so they are
+    # absolute and do not drift. This is the reason madgwick is in the chain
+    # at all - imu_gate strips orientation, and without something to observe
+    # the accelerometer the filter would integrate roll and pitch from the
+    # gyro and throw away a free absolute reference.
+    #
+    # yaw: FALSE. Madgwick's yaw is a gyro integral and drifts. Fusing it as
+    # an absolute orientation would make the filter cling to a drifting value
+    # and fight with heading_gate. Instead vyaw below is fused and the filter
+    # integrates yaw itself, which is the same information without the false
+    # claim of absoluteness.
+    #
+    # accelerations: FALSE, for now. The DVL already measures velocity
+    # directly at 8 Hz, so accelerometer fusion buys little except the ability
+    # to coast through DVL dropouts - and on a low-cost IMU the accelerometer
+    # bias integrates into velocity error fast enough to spoil that. Revisit
+    # once the IMU is chosen: measure how far the estimate walks during a
+    # deliberate dropout with this off, then with it on.
+    imu0: /imu/attitude
+    imu0_config: [false, false, false,
+                  true,  true,  false,
+                  false, false, false,
+                  true,  true,  true,
+                  false, false, false]
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 20
+    imu0_remove_gravitational_acceleration: true
+
+    # ------------------------------------------------------------------
+    # Process noise
+    # ------------------------------------------------------------------
+    # How much the filter expects the state to wander between measurements.
+    # Only the diagonal matters in practice; the index order is the one at the
+    # top of this file. Larger means "trust the model less, the sensors more".
+    #
+    # These are robot_localization's defaults and are a starting point, not a
+    # tuned set. TUNE against a known trajectory - the two entries that matter
+    # most here are yaw (index 5), which governs how fast a heading correction
+    # is accepted, and vx/vy (6, 7), which govern how much the filter leans on
+    # the DVL against its own model.
+    process_noise_covariance: [
+      0.05, 0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+      0,    0.05, 0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+      0,    0,    0.06, 0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+      0,    0,    0,    0.03, 0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+      0,    0,    0,    0,    0.03, 0,    0,     0,     0,    0,    0,    0,    0,    0,    0,
+      0,    0,    0,    0,    0,    0.06, 0,     0,     0,    0,    0,    0,    0,    0,    0,
+      0,    0,    0,    0,    0,    0,    0.025, 0,     0,    0,    0,    0,    0,    0,    0,
+      0,    0,    0,    0,    0,    0,    0,     0.025, 0,    0,    0,    0,    0,    0,    0,
+      0,    0,    0,    0,    0,    0,    0,     0,     0.04, 0,    0,    0,    0,    0,    0,
+      0,    0,    0,    0,    0,    0,    0,     0,     0,    0.01, 0,    0,    0,    0,    0,
+      0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0.01, 0,    0,    0,    0,
+      0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0.02, 0,    0,    0,
+      0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0.01, 0,    0,
+      0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0.01, 0,
+      0,    0,    0,    0,    0,    0,    0,     0,     0,    0,    0,    0,    0,    0,    0.015]
+
+    # KNOWN TUNING ITEM: initial_estimate_covariance is left at the default,
+    # which declares the initial state almost perfectly known. That is correct
+    # for position - the odom origin is *defined* as wherever the vehicle
+    # started - but wrong for yaw once heading_gate is fitted, because the
+    # true initial heading is whatever the compass says, not zero. Expect the
+    # filter to take a few seconds to swing onto the first heading fix. If
+    # that matters, supply the full 15x15 array with a large yaw entry.

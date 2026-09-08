@@ -1,0 +1,42 @@
+# Mag-free attitude filter.
+#
+# imu_gate strips the driver's fused orientation, so something has to observe
+# the accelerometer for roll and pitch to be absolute rather than integrated.
+# That is this node's whole job: gyro plus accelerometer in, orientation out,
+# with roll and pitch referenced to gravity and yaw left as a gyro integral.
+#
+# Absolute yaw is heading_gate's business, not this node's.
+
+imu_filter_madgwick:
+  ros__parameters:
+
+    # The point of the whole arrangement. With a magnetometer in the loop this
+    # node would import the pool's rebar into the attitude solution, which is
+    # precisely what imu_gate dropped the driver's orientation to avoid.
+    use_mag: false
+
+    # REP-103, matching every other topic in this stack.
+    world_frame: "enu"
+
+    # robot_localization owns odom -> base_link. Two publishers on one
+    # transform is a fight nobody wins, and it is the first thing to check if
+    # TF starts jittering.
+    publish_tf: false
+
+    # Madgwick's beta: how hard the accelerometer pulls the attitude away from
+    # the gyro integral. Higher converges faster but lets thruster-induced
+    # accelerations tilt the estimate; a vehicle under thrust is not in
+    # free-fall, so its accelerometer is not measuring pure gravity.
+    # TUNE: start here, then raise the vehicle's thrust and watch whether
+    # reported roll and pitch lean into the acceleration.
+    gain: 0.05
+
+    # Gyro drift compensation. Leave off: imu_gate already removes the turn-on
+    # bias with a proper still-vehicle average, and two bias estimators
+    # fighting each other is worse than either alone.
+    zeta: 0.0
+
+    # The stack never trusts this node's yaw as absolute, and there is no
+    # magnetometer to align to, so there is nothing to declinate.
+    stateless: false
+    remove_gravity_vector: false

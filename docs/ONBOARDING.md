@@ -307,8 +307,8 @@ fixed message type on a fixed topic. That fixed message type is called a
 ```
 Layer 0   frames, geometry, contracts          auv_core, auv_core_msgs   ← built
 Layer 1   sensor gates                         auv_sensors               ← built
-Layer 2   state estimation                     —                         ← next
-Layer 3   guidance and trajectory              —
+Layer 2   state estimation                     auv_estimation            ← built, untuned
+Layer 3   guidance and trajectory              —                         ← next
 Layer 4   control and thrust allocation        —
 Layer 5   mission behaviour tree               —
 ```
@@ -540,7 +540,8 @@ this case. Tests that need generated messages still need a build.)
 Start the simulator the way you normally do, then:
 
 ```bash
-ros2 launch auv_sensors sensors_sim.launch.py
+ros2 launch auv_estimation navigation.launch.py sim:=true   # layers 0+1+2
+ros2 launch auv_sensors    sensors_sim.launch.py            # layers 0+1 only
 ```
 
 That brings up the static frames, all three gates wired to simulator topics,
@@ -556,13 +557,24 @@ ros2 topic hz /imu_gate/data          # should be around 100 Hz
 ros2 topic hz /depth_gate/pose        # should be around 20 Hz
 ros2 topic echo /dvl_gate/health
 ros2 run tf2_tools view_frames        # writes a PDF of the frame tree
+
+# with Layer 2 running:
+ros2 topic hz /odom/filtered          # should be around 30 Hz
+ros2 topic echo /nav_status           # mode 1 = AIDED
 ```
 
 ### Run on the vehicle
 
 ```bash
-ros2 launch auv_core    frames.launch.py
-ros2 launch auv_sensors sensors.launch.py
+ros2 launch auv_estimation navigation.launch.py   # layers 0+1+2
+```
+
+or, to bring up the layers separately:
+
+```bash
+ros2 launch auv_core       frames.launch.py
+ros2 launch auv_sensors    sensors.launch.py
+ros2 launch auv_estimation estimation.launch.py
 ```
 
 Raw topic names default to the real drivers and can be overridden:
@@ -689,6 +701,11 @@ rejection would bury the one line that mattered under thousands of duplicates.
 | Heading: `"tilt N deg beyond the limit"` | Normal during a roll or pitch manoeuvre. An absolute heading means nothing at that attitude. |
 | Heading: `"recovering from disturbance"` | Working as intended. Recovery is slow on purpose. |
 | Heading: `"field magnitude N% off expected"` | Something ferrous or electrical is near the magnetometer. Check `expected_field_magnitude_t` was measured at this venue. |
+| `/nav_status` mode 3 (FAULT), `"filter silent"` | `ekf_filter_node` has died or is not receiving anything. Check its log first. |
+| `/nav_status` mode 3, `"critical sensor unavailable: imu"` | The IMU gate is stale or rejecting. The IMU drives the prediction step, so nothing works without it. |
+| `/nav_status` mode 2 (DEAD_RECKONING) | Normal during a DVL dropout. Watch `dead_reckoning_time_s` and `position_sigma_xy_m` grow. |
+| TF jitters, two publishers on `odom → base_link` | Something other than `ekf_filter_node` is publishing it. `imu_filter_madgwick` must run with `publish_tf: false`. |
+| z, roll and pitch are pinned to zero | `two_d_mode` got set true. It must be false on a six-degree-of-freedom vehicle. |
 | Everything looks fine but the vehicle moves wrong | Frames. Check the mount rotations in `vehicle.yaml` against the physical vehicle. See section 11. |
 
 ### Recording a run
@@ -701,6 +718,7 @@ ros2 bag record -o run_$(date +%F_%H%M) \
   /imu_gate/data /imu_gate/gyro_bias /imu_gate/health \
   /depth_gate/pose /depth_gate/depth /depth_gate/health \
   /heading_gate/pose /heading_gate/yaw_deg /heading_gate/health \
+  /imu/attitude /odom/filtered /nav_status \
   /tf /tf_static
 ```
 
@@ -856,9 +874,14 @@ produce errors that are undetectable after the fact.
 
 ## 12. What is not built yet
 
-Layers 2 through 5 do not exist. The contracts they will use are already fixed
+Layers 3 through 5 do not exist. The contracts they will use are already fixed
 in [ARCHITECTURE.md](ARCHITECTURE.md#contracts), which is what lets them be
 built in parallel.
+
+Layer 2 exists but is **untuned**: the filter's process noise is
+`robot_localization`'s default, and nobody has compared its output against a
+known trajectory. Tuning needs ground truth, which needs either the simulator
+or a synthetic trajectory generator.
 
 The build order, with reasoning, is in
 [ARCHITECTURE.md](ARCHITECTURE.md#remaining-build-order). The next item is

@@ -70,10 +70,21 @@ echo 'export GZ_SIM_RESOURCE_PATH=$HOME/ardupilot_gazebo/models:$HOME/ardupilot_
 source ~/.bashrc
 ```
 
+## Documentation
+
+- **[docs/ONBOARDING.md](docs/ONBOARDING.md)** — start here if you are new. Explains
+  the underwater navigation problem, the frame conventions, and walks through the
+  code from zero.
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — the layer split, the contract
+  table, and the remaining build order.
+
 ## Packages
 
 This repository consists of several ROS 2 packages:
 
+- **[auv_core](auv_core/README.md)**: Layer 0 — frame conventions, vehicle geometry, sensor gate base.
+- **[auv_core_msgs](auv_core_msgs/README.md)**: Layer boundary contracts.
+- **[auv_sensors](auv_sensors/README.md)**: Layer 1 — DVL, IMU and depth sensor gates.
 - **[auv_bt](auv_bt/README.md)**: Behavior Tree implementations for mission planning.
 - **[auv_cam](auv_cam/README.md)**: Camera handling and image collection nodes.
 - **[auv_control](auv_control/README.md)**: Control algorithms, including thruster mixing and visual servoing.

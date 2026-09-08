@@ -57,8 +57,9 @@ nothing to correct against. See [Frame conventions](#frame-conventions) and
 | estimator → control | `nav_msgs/Odometry` on `/odom/filtered` | `odom` |
 | estimator → mission | `auv_core_msgs/NavStatus` | — |
 | guidance → control | `geometry_msgs/TwistStamped` | `base_link` |
-| control → hardware | `geometry_msgs/WrenchStamped` | `base_link` |
-| hardware → control | `geometry_msgs/WrenchStamped` (realised) | `base_link` |
+| control → output stage | `geometry_msgs/WrenchStamped` | `base_link` |
+| output stage → control | `geometry_msgs/WrenchStamped` (realised) | `base_link` |
+| output stage → autopilot bridge | `auv_core_msgs/PilotDemand` | — |
 
 Fixing these now is what lets Layer 2 and Layer 4 be built in parallel: the
 estimator author and the allocation author never have to agree on anything
@@ -268,9 +269,17 @@ Two consequences are permanent features of this choice rather than bugs:
   stabilises, the external sensors navigate.
 
 If either becomes intolerable, the escape is already designed: replace
-`ardusub_bridge` with a thrust allocator driving the thrusters directly. The
+`pilot_demand` with a thrust allocator driving the thrusters directly. The
 `WrenchStamped` contract above it does not move, and `vehicle.yaml` already
 carries the rank-6 configuration matrix that allocation needs.
+
+**One process owns the MAVLink link**, and it is `auv_hardware/pixhawk_bridge2`.
+Nothing in the new stack opens its own connection: a second process cannot
+bind the same endpoint, and two independent sources of command authority over
+one vehicle is a worse problem than a port conflict. `auv_actuation` publishes
+`auv_core_msgs/PilotDemand` and that bridge forwards it as `MANUAL_CONTROL`.
+Note that this and the existing `pwm_router` RC-override path are both pilot
+input — run one at a time.
 
 ## Where the design decisions came from
 

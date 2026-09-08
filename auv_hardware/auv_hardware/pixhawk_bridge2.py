@@ -11,6 +11,7 @@ from .baro_handler import BaroHandler
 from std_srvs.srv import SetBool
 from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.msg import VehicleStatus, PositionYawTarget
+from auv_core_msgs.msg import PilotDemand
 from std_msgs.msg import Float64, UInt16MultiArray
 from .set_depth_handler import SetDepthHandler
 from .set_attitude_handler import SetAttitudeHandler
@@ -23,6 +24,7 @@ from .dvl_odom_handler import DvlOdomHandler
 from .set_position_target_handler import SetPositionTargetHandler
 from .local_position_handler import LocalPositionHandler
 from .set_speed_handler import SetSpeedHandler
+from .manual_control_handler import ManualControlHandler
 from geometry_msgs.msg import Point
 
 POOL_ORIGIN_LAT_DEG = 40.72304
@@ -112,6 +114,17 @@ class PixhawkBridge(Node):
             Float64, 'target_speed', self.set_speed_callback, 10
         )
 
+        # Pilot demand from the new control stack (auv_actuation). This
+        # process owns the MAVLink link, so that stack publishes a ROS message
+        # and this bridge is what actually talks to the autopilot.
+        #
+        # Only one source of pilot input at a time: this and the pwm_router
+        # path below are both pilot input, and the autopilot acts on whichever
+        # arrived last.
+        self.pilot_demand_subscription = self.create_subscription(
+            PilotDemand, 'pilot_demand', self.pilot_demand_callback, 10
+        )
+
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
 
     def send_gps_global_origin(self):
@@ -179,6 +192,9 @@ class PixhawkBridge(Node):
 
     def set_speed_callback(self, msg):
         self.set_speed_module.set_speed(msg.data)
+
+    def pilot_demand_callback(self, msg):
+        self.manual_control_module.send_demand(msg)
 
 
 def main(args=None):

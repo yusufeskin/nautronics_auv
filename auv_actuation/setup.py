@@ -20,7 +20,7 @@ setup(
     zip_safe=True,
     maintainer='sye',
     maintainer_email='yusuf.eskin@metu.edu.tr',
-    description='Layer 4: cascaded pose control and the boundary to ArduSub.',
+    description='Layer 4: cascaded pose control and the ArduSub pilot demand it produces.',
     license='TODO: License declaration',
     extras_require={
         'test': [
@@ -29,7 +29,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'ardusub_bridge = auv_actuation.ardusub_bridge:main',
+            'pilot_demand = auv_actuation.pilot_demand_node:main',
             'pose_controller = auv_actuation.pose_controller_node:main',
         ],
     },

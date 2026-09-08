@@ -11,7 +11,7 @@
 # the inner loop, which closes on measured velocity.
 #
 # TUNING ORDER. Do not skip ahead; each step depends on the one before.
-#   1. Measure the bridge's full-scale forces (config/ardusub_bridge.yaml).
+#   1. Measure the bridge's full-scale forces (config/pilot_demand.yaml).
 #      Until then the controller asks for newtons and the vehicle receives
 #      stick deflections through an unknown conversion, and no gain here
 #      means anything.
@@ -54,7 +54,7 @@ pose_controller:
 
     # --- inner loop ---------------------------------------------------
     # output_limit must not exceed the matching full-scale force in
-    # ardusub_bridge.yaml: asking for more than the bridge can express only
+    # pilot_demand.yaml: asking for more than the bridge can express only
     # produces saturation, and saturation freezes the integrators.
     surge:
       kp: 20.0

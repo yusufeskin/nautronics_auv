@@ -8,11 +8,14 @@ Two ways to drive it, and the more recent one wins:
   ~/cmd_vel       a body velocity directly, bypassing the outer loop. This is
                   the socket the guidance layer plugs into later.
 
-The wrench it produces goes to ardusub_bridge, which converts it to pilot
-input. The autopilot stabilises attitude and this loop decides where to go -
-and because the loop closes on this stack's own estimate, the autopilot's
-internal idea of heading never has to agree with ours. It only has to hold
-still when we stop asking it to move.
+The wrench it produces goes to pilot_demand, which converts it to ArduSub's
+pilot-input axes; auv_hardware/pixhawk_bridge2 then forwards that as
+MANUAL_CONTROL, because it is the one process that owns the MAVLink link.
+
+The autopilot stabilises attitude and this loop decides where to go. Because
+the loop closes on this stack's own estimate, the autopilot's internal idea of
+heading never has to agree with ours - it only has to hold still when we stop
+asking it to move.
 """
 
 from __future__ import annotations

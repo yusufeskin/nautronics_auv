@@ -4,10 +4,10 @@
   <name>auv_actuation</name>
   <version>0.0.0</version>
   <description>
-    Layer 4 of the autonomy stack: the boundary between our control loop and
-    ArduSub. ArduSub keeps the inner loop - attitude stabilisation and depth
-    hold - and this package converts a commanded body wrench into the
-    pilot-input axes it expects.
+    Layer 4 of the autonomy stack: the outer control loop, and the conversion
+    of its commanded wrench into the pilot-input axes ArduSub expects. It does
+    not speak MAVLink - auv_hardware/pixhawk_bridge2 owns that link and
+    forwards the demand this package publishes.
   </description>
   <maintainer email="yusuf.eskin@metu.edu.tr">sye</maintainer>
   <license>TODO: License declaration</license>

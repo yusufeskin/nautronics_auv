@@ -1,27 +1,19 @@
-"""Layer 4 hardware boundary: commanded wrench out to ArduSub.
+"""Layer 4 output stage: commanded wrench to an ArduSub pilot demand.
 
-This is the only node in the new stack that talks to the autopilot. Everything
-above it works in forces and torques and knows nothing about MAVLink; ArduSub
-below it keeps doing the job it is already good at - stabilising attitude,
-holding depth, and failing safe.
+This node does the unit conversion and the safety gating, and then stops.
+It does **not** speak MAVLink.
 
-Deliberately not this node's job:
+That restraint is the whole point. Only one process may hold the link to the
+autopilot - a second one cannot bind the same endpoint, and even if it could,
+two independent sources of command authority over one vehicle is a worse
+problem than a port conflict. auv_hardware/pixhawk_bridge2 owns the link; this
+node publishes auv_core_msgs/PilotDemand and that bridge forwards it as
+MANUAL_CONTROL without thinking about it.
 
-  arming and mode changes   Those stay with the operator and the existing
-                            mode/arm services. A bridge that can arm the
-                            vehicle is a bridge that can arm it by accident.
-  absolute heading          ArduSub holds heading with its own EKF3 yaw, which
-                            is magnetometer-aided and is not the yaw this
-                            stack estimates. Only rates are commanded here;
-                            the outer loop owns absolute heading.
-  thrust allocation         ArduSub's mixer does it. If that is ever replaced
-                            by our own allocator, this node is swapped out and
-                            the WrenchStamped contract above it does not move.
-
-Safety behaviour, in order of precedence: output is neutral unless explicitly
-enabled; it reverts to neutral if the commanded wrench goes stale; and it is
-sent continuously at a fixed rate so ArduSub's own pilot-input failsafe never
-sees a gap it has to interpret.
+Everything above works in newtons and knows nothing about stick counts;
+everything below works in stick counts and knows nothing about forces. The
+conversion, its calibration, and the decision to send nothing at all live
+here.
 """
 
 from __future__ import annotations
@@ -34,22 +26,15 @@ from std_msgs.msg import Bool
 from std_srvs.srv import SetBool
 
 from auv_actuation.demand_mapping import DemandLimits, WrenchDemandMapper
-
-try:
-    from pymavlink import mavutil
-except ImportError as exc:  # pragma: no cover - runtime dependency
-    raise ImportError(
-        "pymavlink is required by ardusub_bridge; it is listed in requirements.txt"
-    ) from exc
+from auv_core_msgs.msg import PilotDemand
 
 LOG_THROTTLE_S = 5.0
 
 
-class ArduSubBridge(Node):
+class PilotDemandNode(Node):
     def __init__(self):
-        super().__init__("ardusub_bridge")
+        super().__init__("pilot_demand")
 
-        self.declare_parameter("connection", "udp:127.0.0.1:14551")
         self.declare_parameter("send_rate_hz", 20.0)
         # Longer than a couple of controller periods, short enough that a dead
         # controller cannot keep the vehicle driving into a wall.
@@ -79,14 +64,7 @@ class ArduSubBridge(Node):
         self._last_command_time = None
         self._was_stale = False
 
-        self._master = mavutil.mavlink_connection(self._param("connection"))
-        self.get_logger().info("waiting for heartbeat...")
-        self._master.wait_heartbeat()
-        self.get_logger().info(
-            f"connected to system {self._master.target_system}, "
-            f"component {self._master.target_component}"
-        )
-
+        self._demand_pub = self.create_publisher(PilotDemand, "~/demand", 10)
         # What the vehicle will actually feel, after clipping and after the
         # axes ArduSub cannot deliver are dropped. The controller compares it
         # against what it asked for and stops integrating on the difference.
@@ -97,7 +75,7 @@ class ArduSubBridge(Node):
         self.create_service(SetBool, "~/enable", self._on_enable)
 
         rate = max(1.0, self._param("send_rate_hz"))
-        self.create_timer(1.0 / rate, self._send)
+        self.create_timer(1.0 / rate, self._publish)
 
         self.get_logger().warn(
             "output disabled; call ~/enable with data:=true to allow commands"
@@ -118,33 +96,43 @@ class ArduSubBridge(Node):
         state = "ENABLED" if self._enabled else "disabled"
         self.get_logger().warn(f"output {state}")
         response.success = True
-        response.message = f"ardusub_bridge output {state}"
+        response.message = f"pilot_demand output {state}"
         return response
 
     # -- output ------------------------------------------------------------
 
-    def _send(self) -> None:
+    def _publish(self) -> None:
         demand = self._resolve_demand()
+        stamp = self.get_clock().now().to_msg()
 
-        try:
-            # Sent unconditionally at a fixed rate, even when neutral: a gap in
-            # pilot input is something ArduSub has to interpret, and a steady
-            # neutral is unambiguous where silence is not.
-            self._master.mav.manual_control_send(
-                self._master.target_system,
-                int(demand.x),
-                int(demand.y),
-                int(demand.z),
-                int(demand.r),
-                0,  # buttons
-            )
-        except Exception as exc:
-            self.get_logger().error(
-                f"MANUAL_CONTROL send failed: {exc}", throttle_duration_sec=LOG_THROTTLE_S
-            )
-            return
+        # Published unconditionally at a fixed rate, even when neutral. A gap
+        # in pilot input is something the autopilot has to interpret; a steady
+        # neutral is unambiguous.
+        msg = PilotDemand()
+        msg.header.stamp = stamp
+        msg.header.frame_id = "base_link"
+        msg.x = int(demand.x)
+        msg.y = int(demand.y)
+        msg.z = int(demand.z)
+        msg.r = int(demand.r)
+        msg.buttons = 0
+        msg.saturated = bool(demand.saturated)
+        self._demand_pub.publish(msg)
 
-        self._publish_realised(demand)
+        realised = WrenchStamped()
+        realised.header.stamp = stamp
+        realised.header.frame_id = "base_link"
+        realised.wrench.force.x = float(demand.realised_force[0])
+        realised.wrench.force.y = float(demand.realised_force[1])
+        realised.wrench.force.z = float(demand.realised_force[2])
+        realised.wrench.torque.x = float(demand.realised_torque[0])
+        realised.wrench.torque.y = float(demand.realised_torque[1])
+        realised.wrench.torque.z = float(demand.realised_torque[2])
+        self._realised_pub.publish(realised)
+
+        flag = Bool()
+        flag.data = bool(demand.saturated)
+        self._saturated_pub.publish(flag)
 
     def _resolve_demand(self):
         if not self._enabled:
@@ -182,22 +170,6 @@ class ArduSubBridge(Node):
             )
         return demand
 
-    def _publish_realised(self, demand) -> None:
-        msg = WrenchStamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = "base_link"
-        msg.wrench.force.x = float(demand.realised_force[0])
-        msg.wrench.force.y = float(demand.realised_force[1])
-        msg.wrench.force.z = float(demand.realised_force[2])
-        msg.wrench.torque.x = float(demand.realised_torque[0])
-        msg.wrench.torque.y = float(demand.realised_torque[1])
-        msg.wrench.torque.z = float(demand.realised_torque[2])
-        self._realised_pub.publish(msg)
-
-        flag = Bool()
-        flag.data = bool(demand.saturated)
-        self._saturated_pub.publish(flag)
-
     # -- helpers -----------------------------------------------------------
 
     def _now(self) -> float:
@@ -209,7 +181,7 @@ class ArduSubBridge(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ArduSubBridge()
+    node = PilotDemandNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

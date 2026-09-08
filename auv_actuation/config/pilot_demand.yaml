@@ -1,4 +1,9 @@
-# ArduSub bridge tuning.
+# Pilot demand tuning.
+#
+# This node converts the controller's wrench into ArduSub's pilot-input axes
+# and publishes it. It does not talk to the autopilot: pixhawk_bridge2 owns
+# the MAVLink link and forwards what this publishes, because only one process
+# may hold that connection and only one thing may command the vehicle.
 #
 # The full-scale values are the calibration between this stack's units
 # (newtons and newton-metres) and ArduSub's pilot-input counts. Every control
@@ -16,10 +21,9 @@
 # Half an hour per axis. Until then these are placeholders from the T200
 # datasheet and the thruster geometry, not measurements.
 
-ardusub_bridge:
+pilot_demand:
   ros__parameters:
 
-    connection: "udp:127.0.0.1:14551"
     send_rate_hz: 20.0
 
     # Longer than a couple of controller periods, short enough that a dead

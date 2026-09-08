@@ -15,11 +15,26 @@ it should be, and how fast it should get there.
 ```
 Layer 2   /odom/filtered ──┐
                            ▼
-Layer 4   pose_controller ──▶ WrenchStamped ──▶ ardusub_bridge ──▶ MANUAL_CONTROL
-             ▲       ▲                                                    │
-   target_pose    cmd_vel (Layer 3, later)      STABILIZE / ALT_HOLD ◀─────┘
-                                                  └─▶ mixer ─▶ PWM
+Layer 4   pose_controller ──▶ WrenchStamped ──▶ pilot_demand ──▶ PilotDemand
+             ▲       ▲                                                │
+   target_pose    cmd_vel (Layer 3, later)                            ▼
+                                              auv_hardware/pixhawk_bridge2
+                                                    (owns the MAVLink link)
+                                                          │ MANUAL_CONTROL
+                                                          ▼
+                                          ArduSub STABILIZE / ALT_HOLD
+                                                    └─▶ mixer ─▶ PWM
 ```
+
+**Nothing in this package speaks MAVLink.** Only one process may hold the link
+to the autopilot — a second cannot bind the same endpoint, and even if it
+could, two independent sources of command authority over one vehicle is a
+worse problem than a port conflict. `pixhawk_bridge2` owns it; this package
+publishes `auv_core_msgs/PilotDemand` and that bridge forwards it.
+
+One consequence to watch: `pilot_demand` and `pixhawk_bridge2`'s existing
+`pwm_router` path are both pilot input by another name. Run one at a time —
+the autopilot acts on whichever arrived last.
 
 `pose_controller` runs two nested loops. The outer one turns a position or
 heading error into a **sensible speed to approach at**, saturated so the
@@ -69,6 +84,9 @@ pure gyro hold instead. Only worth doing if you actually see it.
 
 ## Running
 
+`pixhawk_bridge2` must already be running — it is what actually reaches the
+autopilot.
+
 ```bash
 ros2 launch auv_actuation actuation.launch.py
 ```
@@ -79,7 +97,7 @@ their own:
 ```bash
 ros2 service call /change_mode  auv_interfaces/srv/SetVehicleMode "{mode_name: 'ALT_HOLD'}"
 ros2 service call /arm          std_srvs/srv/SetBool "{data: true}"
-ros2 service call /ardusub_bridge/enable  std_srvs/srv/SetBool "{data: true}"
+ros2 service call /pilot_demand/enable     std_srvs/srv/SetBool "{data: true}"
 ros2 service call /pose_controller/enable std_srvs/srv/SetBool "{data: true}"
 ```
 
@@ -118,7 +136,7 @@ something ArduSub has to interpret; a steady neutral is unambiguous.
 
 ## Tuning order, which cannot be skipped
 
-1. **Measure the bridge's full-scale forces.** Until then the controller asks
+1. **Measure the full-scale forces** in `config/pilot_demand.yaml`. Until then the controller asks
    for newtons and the vehicle receives stick deflections through an unknown
    conversion, and no gain means anything.
 2. **Inner loop alone.** Publish a constant `~/cmd_vel`, watch the DVL. Raise
@@ -130,7 +148,7 @@ something ArduSub has to interpret; a steady neutral is unambiguous.
 
 ## Calibration is not optional
 
-`config/ardusub_bridge.yaml` holds the full-scale force per axis — the
+`config/pilot_demand.yaml` holds the full-scale force per axis — the
 conversion between newtons and stick counts. Until those are measured, every
 control gain above this node is meaningless, because the controller is asking
 for forces and the vehicle is receiving stick deflections.

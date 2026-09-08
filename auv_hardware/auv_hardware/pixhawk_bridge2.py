@@ -4,7 +4,14 @@ import time
 import rclpy
 from rclpy.node import Node
 from pymavlink import mavutil
-from .pwm_handler import PwmHandler
+# RC_CHANNELS_OVERRIDE yolu devre disi birakildi. Bu yol da MANUAL_CONTROL
+# gibi "pilot girdisi" sayiliyor ve otopilot en son geleni uyguluyor - ikisi
+# ayni anda calisirsa hangisinin kazandigi belirsiz olur. Yeni kontrol yigini
+# (auv_actuation -> /pilot_demand -> ManualControlHandler) tek pilot girdisi
+# kaynagi olarak kaliyor.
+# Geri acmak icin: bu satir, PwmHandler kurulumu, pwm_subscription ve
+# pwm_callback yorumdan cikarilir; ayni anda /pilot_demand yayinlanmamalidir.
+# from .pwm_handler import PwmHandler
 from .mode_handler import ModeHandler
 from .telemetry_handler import TelemetryHandler
 from .baro_handler import BaroHandler
@@ -57,7 +64,7 @@ class PixhawkBridge(Node):
         self.attitude_publisher = self.create_publisher(Vector3, 'current_attitude', 10)
         self.local_position_publisher = self.create_publisher(Point, 'vehicle/local_position', 10)
 
-        self.pwm_module            = PwmHandler(self.master, self.get_logger())
+        # self.pwm_module            = PwmHandler(self.master, self.get_logger())
         self.mode_module           = ModeHandler(self.master, self.get_logger())
         self.telemetry_module      = TelemetryHandler(self, self.status_publisher)
         self.baro_module           = BaroHandler(self, self.baro_publisher)
@@ -86,9 +93,9 @@ class PixhawkBridge(Node):
         self.arm_service = self.create_service(
             SetBool, '/arm', self.mode_module.arm_callback
         )
-        self.pwm_subscription = self.create_subscription(
-            UInt16MultiArray, 'pwm_router', self.pwm_callback, 10
-        )
+        # self.pwm_subscription = self.create_subscription(
+        #     UInt16MultiArray, 'pwm_router', self.pwm_callback, 10
+        # )
 
         self.set_depth_subscription = self.create_subscription(
             Float64, 'target_depth', self.set_depth_callback, 10
@@ -118,9 +125,8 @@ class PixhawkBridge(Node):
         # process owns the MAVLink link, so that stack publishes a ROS message
         # and this bridge is what actually talks to the autopilot.
         #
-        # Only one source of pilot input at a time: this and the pwm_router
-        # path below are both pilot input, and the autopilot acts on whichever
-        # arrived last.
+        # Tek pilot girdisi kaynagi budur. RC_CHANNELS_OVERRIDE yolu yukarida
+        # bilerek yorum satirina alindi.
         self.pilot_demand_subscription = self.create_subscription(
             PilotDemand, 'pilot_demand', self.pilot_demand_callback, 10
         )
@@ -166,8 +172,8 @@ class PixhawkBridge(Node):
                 for handler in self.msg_handlers[msg_type]:
                     handler(msg)
 
-    def pwm_callback(self, msg):
-        self.pwm_module.send_pwm(msg.data)
+    # def pwm_callback(self, msg):
+    #     self.pwm_module.send_pwm(msg.data)
 
     def set_depth_callback(self, msg):
         self.set_depth_module.set_target_depth(msg.data)

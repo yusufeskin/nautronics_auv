@@ -19,13 +19,17 @@
   ros__parameters:
 
     frames:
-      # REP-105. odom is the continuous, never-jumping frame the controller
-      # lives in; base_link is the vehicle body. map is declared for the
-      # global frame a future corrector will maintain, and stays identical to
-      # odom until one exists - so today every pose is effectively in odom and
-      # accumulates drift. Nothing in the control loop may consume a pose in
-      # map, because a corrected frame jumps.
-      map: "map"
+      # There is deliberately no map frame. REP-105 reserves one for a global,
+      # drift-free world frame, but this vehicle has no source of absolute
+      # position - no GPS underwater, no surveyed acoustic beacons, no prior
+      # map - so a map frame would be an alias for odom pretending to be
+      # something better.
+      #
+      # odom is therefore the only world frame. Its origin is wherever the
+      # vehicle was when the estimator started, and it drifts. Every mission
+      # must be expressed relative to that origin or relative to something the
+      # vehicle can currently see; nothing may assume a pose means the same
+      # thing at minute 15 as it did at minute 0.
       odom: "odom"
       base_link: "base_link"
 
@@ -50,6 +54,13 @@
         frame: "imu_link"
         xyz: [0.0, 0.0, 0.0]        # MEASURE: put the IMU as near the CoM as the hull allows
         rpy: [0.0, 0.0, 0.0]        # MEASURE: mount rotation dominates yaw error, do not guess
+      # Absolute heading source (compass / AHRS / gyrocompass). If it is the
+      # same physical device as `imu` above, repeat that device's xyz and rpy
+      # here - the gates are separate nodes but the mount is one object.
+      heading:
+        frame: "heading_link"
+        xyz: [0.0, 0.0, 0.0]        # MEASURE
+        rpy: [0.0, 0.0, 0.0]        # MEASURE: a yaw error here is a constant heading bias
       dvl:
         frame: "dvl_link"
         xyz: [0.0, 0.0, -0.15]
@@ -103,15 +114,47 @@
         - {id: 7, xyz: [-0.0884, -0.2126,  0.0056], rpy: [0.0, 0.0, 0.0], direction_sign: -1.0}
         - {id: 8, xyz: [-0.0884,  0.2126,  0.0056], rpy: [0.0, 0.0, 0.0], direction_sign:  1.0}
 
-    # Hydrodynamic model, filled in by the system-identification step (build
-    # order item 3) and consumed as feedforward by Layer 5 and by the
-    # simulator so that both agree. Linear + quadratic drag per axis, in the
-    # order [surge, sway, heave, roll, pitch, yaw].
+    # Hydrodynamic model, in the order [surge, sway, heave, roll, pitch, yaw].
     #
-    # The placeholders below mirror the Gazebo Hydrodynamics plugin in
-    # macros/plugins.xacro so sim and real start from the same numbers.
-    # IDENTIFY: replace with values fitted to DVL step-response logs.
+    # READ THIS BEFORE TRYING TO FILL IT IN. These numbers are used ONLY as
+    # feedforward - a head start the controller gets for free. The feedback
+    # loop does the actual work and closes on the DVL's measured velocity, so
+    # a wrong or missing model costs some crispness and nothing else. Nothing
+    # in the stack is blocked on this block being right, and no one should
+    # spend a month on it.
+    #
+    # The three groups differ enormously in how hard they are to obtain, so
+    # each carries its provenance. Update `source` when you update a value.
     hydrodynamics:
-      linear_damping: [-5.0, -5.0, -5.0, -5.0, -5.0, -5.0]
-      quadratic_damping: [-58.42, -55.137, -124.818, -4.0, -4.0, -4.0]
-      added_mass: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+      # Quadratic drag in surge/sway/heave. MEASURABLE, and cheaply: command a
+      # constant thrust, wait for the vehicle to stop accelerating, and read
+      # the terminal velocity off the DVL. At terminal velocity thrust equals
+      # drag, so one steady run per axis per thrust level gives you the
+      # coefficient directly. Half an hour of pool time for all three axes.
+      translational_quadratic_damping:
+        source: placeholder    # placeholder | measured
+        values: [-58.42, -55.137, -124.818]
+
+      # Rotational damping. Much harder to measure - it needs a known torque
+      # and a rate measurement the DVL cannot give you. Take it from CFD, or
+      # leave it and let the yaw-rate feedback loop absorb it.
+      rotational_damping:
+        source: placeholder    # placeholder | cfd | measured
+        values: [-4.0, -4.0, -4.0]
+
+      # Linear damping term. Dominated by the quadratic term at any speed the
+      # vehicle actually swims, so it is the least worthwhile of the three.
+      linear_damping:
+        source: placeholder
+        values: [-5.0, -5.0, -5.0, -5.0, -5.0, -5.0]
+
+      # Added mass: the water the hull drags along with it, which makes the
+      # vehicle behave as if heavier under acceleration. Only observable in
+      # transients, so measuring it needs clean step responses and a fit -
+      # realistically this comes from CFD or stays zero. Zero is a safe
+      # placeholder: it makes the feedforward under-predict, which the
+      # feedback loop handles, rather than over-predict and overshoot.
+      added_mass:
+        source: placeholder    # placeholder | cfd
+        values: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

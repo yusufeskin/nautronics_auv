@@ -26,6 +26,7 @@ testable without a running graph.
 | `dvl_gate` | `~/raw` (`marine_acoustic_msgs/Dvl`) | `~/velocity` (`nav_msgs/Odometry`, twist only), `~/altitude` (`sensor_msgs/Range`), `~/health` |
 | `imu_gate` | `~/raw` (`sensor_msgs/Imu`) | `~/data` (`sensor_msgs/Imu`, no orientation), `~/gyro_bias` (`geometry_msgs/Vector3Stamped`), `~/health` |
 | `depth_gate` | `~/raw` (`sensor_msgs/FluidPressure`) | `~/pose` (`geometry_msgs/PoseWithCovarianceStamped`), `~/depth` (`std_msgs/Float64`), `~/health` |
+| `heading_gate` | `~/raw` (`sensor_msgs/Imu` with orientation), `~/gyro`, optional `~/magnetic_field` | `~/pose` (`geometry_msgs/PoseWithCovarianceStamped`, yaw only), `~/yaw_deg` (`std_msgs/Float64`), `~/health` |
 | `sim_pressure_source` | `/odom` (Gazebo ground truth) | `~/raw` (`sensor_msgs/FluidPressure`) — **simulation only** |
 
 `depth_gate` also serves `~/zero_surface` (`std_srvs/Trigger`).
@@ -36,6 +37,10 @@ testable without a running graph.
 ros2 launch auv_sensors sensors_sim.launch.py    # simulator
 ros2 launch auv_sensors sensors.launch.py        # vehicle
 ```
+
+`heading_gate` is off by default — the vehicle has no absolute heading source
+yet. Enable it with `use_heading:=true` and point `heading_raw_topic` at the
+device.
 
 Raw topics are launch arguments (`dvl_raw_topic`, `imu_raw_topic`,
 `pressure_raw_topic`), which is what makes simulation and hardware
@@ -56,10 +61,17 @@ that are undetectable afterwards. Full checklist in
 
 ## Two design choices worth knowing
 
-**The IMU's fused orientation is dropped by default.** It is
-magnetometer-aided, and a competition pool is a steel box. The estimator
-integrates the bias-corrected gyro instead. See the module docstring in
+**The IMU's fused orientation is dropped.** Absolute heading is
+`heading_gate`'s job; forwarding it from `imu_gate` too would fuse the same
+measurement twice. See the module docstring in
 [`imu_gate.py`](auv_sensors/imu_gate.py).
+
+**Every heading is cross-checked against the gyro.** A magnetically disturbed
+heading is *biased*, not noisy, and a bias delivered with an honest-looking
+covariance is worse than no measurement. `heading_gate` compares the source's
+own rate of turn against the gyro's and refuses the heading while they
+disagree. Run the swing test to set the threshold before trusting the source —
+see [`heading_validation.py`](auv_sensors/heading_validation.py).
 
 **Bottom lock has hysteresis in both directions.** Four consecutive bad
 samples to lose it, two good ones to regain it, so a single reflected ping

@@ -42,8 +42,10 @@ time to sensors that degraded silently.
 | 5 | Mission (behaviour tree) | — | not started |
 | — | Simulation harness | `auv_description` | inherited |
 
-Perception and a global (`map` frame) corrector are deliberately out of scope
-for now. See [Known open items](#known-open-items) for what that costs.
+Perception is out of scope for now, and so is any global (`map`-frame)
+correction — this vehicle has no source of absolute position, so there is
+nothing to correct against. See [Frame conventions](#frame-conventions) and
+[Known open items](#known-open-items).
 
 ## Contracts
 
@@ -70,13 +72,13 @@ places — the DVL gate on the way in, and the autopilot bridge on the way out.
 Both call `auv_core/frames.py`.
 
 ```
-map ─(no producer yet, identity)─▶ odom ─(estimator, Layer 2)─▶ base_link
-                                                                    │
-                        (static, from config/vehicle.yaml) ─────────┤
-                                                                    ├─▶ imu_link
-                                                                    ├─▶ dvl_link
-                                                                    ├─▶ depth_link
-                                                                    └─▶ *_camera_link
+odom ─(estimator, Layer 2)─▶ base_link
+                                 │
+     (static, from config/vehicle.yaml) ─┬─▶ imu_link
+                                         ├─▶ heading_link
+                                         ├─▶ dvl_link
+                                         ├─▶ depth_link
+                                         └─▶ *_camera_link
 ```
 
 `base_link → sensor` transforms come from `auv_core/config/vehicle.yaml` and
@@ -84,9 +86,16 @@ are published by the `static_frames` node. That file is the single source of
 truth for vehicle geometry: the static TFs, the thrust allocation
 configuration matrix and the simulator's URDF all have to agree with it.
 
-`map` is declared because REP-105 expects it and a global corrector will
-eventually own it, but nothing publishes `map → odom` today. Treat every pose
-as living in `odom`, and remember that `odom` drifts.
+**There is no `map` frame, deliberately.** REP-105 reserves one for a global,
+drift-free world frame, but this vehicle has no source of absolute position:
+no GPS underwater, no surveyed acoustic beacons, no prior map. A `map` frame
+would be an alias for `odom` pretending to be something better, and code
+would start assuming a pose means the same thing at minute 15 as at minute 0.
+
+So `odom` is the only world frame. Its origin is wherever the vehicle was when
+the estimator started, and it drifts in yaw and horizontal position. Every
+mission has to be expressed relative to that origin, or relative to something
+the vehicle can currently see.
 
 ## What exists today
 
@@ -100,8 +109,16 @@ as living in `odom`, and remember that `odom` drifts.
                     ├─────────────┼─────────────────────────┤──▶ /imu_gate/health
 /pressure/raw ─────▶│ depth_gate  │ surface zero, rate and  │──▶ /depth_gate/pose     (PoseWithCovarianceStamped)
                     │             │ plausibility checks     │──▶ /depth_gate/depth    (Float64)
-                    └─────────────┴─────────────────────────┘──▶ /depth_gate/health
+                    ├─────────────┼─────────────────────────┤──▶ /depth_gate/health
+/heading/raw ──────▶│heading_gate │ gyro cross-check, tilt  │──▶ /heading_gate/pose   (PoseWithCovarianceStamped)
+  + /imu_gate/data  │  (optional) │ limit, field magnitude  │──▶ /heading_gate/yaw_deg (Float64)
+                    └─────────────┴─────────────────────────┘──▶ /heading_gate/health
 ```
+
+`depth_gate` and `heading_gate` are the two **absolute** sensors: everything
+else measures a rate, and rates have to be integrated. Depth is always
+available; heading needs hardware the vehicle does not have yet, so
+`heading_gate` is off unless launched with `use_heading:=true`.
 
 Run it against the simulator:
 
@@ -146,39 +163,68 @@ the contract between them is already fixed.
 
 1. ~~Frames, contracts, sim harness~~ — done
 2. ~~Sensor gates~~ — done
-3. **System identification.** Command thruster steps, log DVL velocity, fit
-   drag and added mass into `vehicle.yaml`. Feeds both control feedforward and
-   simulator fidelity. Cheapest high-value step available, and the DVL makes
-   it nearly free.
+3. **Thruster and drag calibration** — the measurable part only. Command a
+   constant thrust, wait for the vehicle to stop accelerating, read terminal
+   velocity off the DVL: at terminal velocity thrust equals drag, so this
+   gives the translational quadratic drag coefficient directly, one steady run
+   per axis. Half an hour of pool time. Added mass and rotational damping are
+   *not* worth chasing this way — take them from CFD if you have it, leave the
+   placeholders if you do not. Nothing downstream is blocked either way,
+   because the model is only feedforward and the feedback loop closes on
+   measured DVL velocity.
 4. **Thrust allocation** and the wrench interface.
-5. **Estimator.** Start with `robot_localization` behind the `/odom/filtered`
-   contract; replace with an error-state filter if and when it earns it.
+5. **Estimator.** Three nodes:
+   - `imu_filter_madgwick` with `use_mag: false`, turning the gate's gyro and
+     accelerometer into an orientation whose roll and pitch are
+     gravity-referenced and absolute. Without this, `robot_localization` gets
+     roll and pitch only by integrating the gyro and throws away the free
+     absolute reference gravity provides;
+   - `robot_localization` behind the `/odom/filtered` contract. Note it does
+     **not** estimate gyro bias — that is why `imu_gate` removes it upfront;
+   - a small node publishing `NavStatus` from the gates' health topics, since
+     `robot_localization` will not tell you it is dead reckoning.
+
+   Replace with an error-state filter if and when it earns it.
 6. **Velocity control loop** (needs 4 and 5).
 7. **Position/attitude loop**, trajectory generation, LOS guidance.
 8. **Mission behaviour tree.**
 
 ## Known open items
 
-**Yaw drift is unbounded.** With the magnetometer out of the loop, heading
-comes from integrating the gyro. Removing the turn-on bias (which `imu_gate`
-does) makes the drift slow, but nothing stops it: heading error grows with run
-time, and horizontal position error grows with the integral of the heading
-error. Depth does not drift, and velocity is measured directly, so this is the
-only unbounded error in the estimate — and it is the one that decides whether
-the vehicle can find its way back to where it started.
+**Yaw is the only unbounded error, and it is not solved yet.** Depth is
+measured absolutely, roll and pitch are pinned by gravity, velocity comes
+straight from the DVL. Yaw comes from integrating the gyro, and horizontal
+position error then grows as roughly `distance travelled × heading error`. It
+is the error that decides whether the vehicle can navigate back to where it
+started.
 
-Bounding it needs an absolute heading reference. The realistic options, in
-rough order of cost:
+The plan is to close it in hardware, with an absolute heading source, and
+`heading_gate` is the socket that source plugs into. Two things still have to
+happen:
 
-- observing objects of known orientation and correcting yaw against them
-  (needs perception, which is not in this stack yet);
-- a gyro good enough that the drift over a run is tolerable without
-  correction;
-- accepting the drift and designing missions to be short and relative.
+- **pick the part.** The specification that matters is heading stability
+  indoors, not accuracy on a bench. A magnetic compass is cheap and will be
+  disturbed by the pool; an AHRS with good disturbance rejection is better; a
+  gyrocompass or fibre-optic gyro sidesteps magnetism entirely and costs
+  accordingly. The fallback if none is fitted is a gyro whose bias instability
+  is low enough that the drift over one run is tolerable.
+- **tune the cross-check.** `heading_gate` refuses any heading that disagrees
+  with the gyro, because a disturbed magnetic heading is *biased* rather than
+  noisy and a bias delivered with an honest-looking covariance is worse than
+  no measurement. The threshold has to be set from a pool swing test before
+  the source can be trusted. See `max_yaw_rate_mismatch_deg_s` in
+  `config/sensors.yaml`.
 
-Nothing here forecloses any of those. Decide it before Layer 2 is finished,
-because the estimator's interface to a global correction is easier to add
-early than to retrofit.
+Until then the vehicle navigates relative to where it started, and missions
+should be designed to be short and relative rather than to depend on a
+heading that holds for fifteen minutes.
+
+**The hydrodynamic model is placeholders.** Only the translational drag terms
+are realistically measurable with the equipment on hand; added mass and
+rotational damping would need CFD. This is not blocking: the model is used as
+feedforward only, and the feedback loop closes on the DVL's measured velocity.
+A missing model costs some crispness in the controller, not correctness. Do
+not let anyone spend a month here.
 
 ## Where the design decisions came from
 

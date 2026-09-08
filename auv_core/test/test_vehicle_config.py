@@ -17,13 +17,23 @@ def config():
 
 
 def test_required_frames_are_declared(config):
-    for key in ("map", "odom", "base_link"):
+    for key in ("odom", "base_link"):
         assert config.frames[key]
+
+
+def test_no_map_frame_is_declared(config):
+    """There is no source of absolute position on this vehicle.
+
+    A map frame would be an alias for odom pretending to be drift-free, which
+    is worse than not having one: code would start assuming a pose means the
+    same thing at minute 15 as at minute 0.
+    """
+    assert "map" not in config.frames
 
 
 def test_every_layer_one_sensor_has_a_mount(config):
     # The gates in auv_sensors look these up by name at startup.
-    for name in ("imu", "dvl", "depth"):
+    for name in ("imu", "dvl", "depth", "heading"):
         mount = config.sensor(name)
         assert mount.frame
         assert mount.xyz.shape == (3,)

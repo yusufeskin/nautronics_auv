@@ -108,6 +108,17 @@ Measures absolute water pressure. Pressure rises linearly with depth, so
 That makes depth the backbone of the whole estimate, and it is why
 `depth_gate` is fussy about its zero reference (section 8).
 
+### Absolute heading source (optional, not fitted yet)
+
+A compass, an AHRS, or a gyrocompass — something that reports **which way the
+vehicle is pointing**, absolutely, rather than how fast it is turning.
+
+- Like depth, this measures a coordinate rather than a rate, so it does not
+  drift. It is the only thing that can stop yaw drifting (section 3).
+- Magnetic ones are cheap and are disturbed indoors. See section 11.
+- The vehicle does not have one yet. `heading_gate` exists and is wired up,
+  but is off by default until the hardware is chosen.
+
 ---
 
 ## 3. Drift: the one idea everything else follows from
@@ -119,7 +130,7 @@ Put the three sensors together and you get this picture:
 | Depth (z) | pressure, directly | **No.** Absolute measurement. |
 | Roll, pitch | accelerometer sees gravity | **No.** Gravity is an absolute reference. |
 | Velocity (u, v, w) | DVL, directly | **No.** Measured, not integrated. |
-| **Yaw (heading)** | integrating the gyro | **Yes.** Nothing corrects it. |
+| **Yaw (heading)** | integrating the gyro | **Yes**, unless an absolute heading source is fitted. |
 | **Horizontal position (x, y)** | integrating velocity, rotated by yaw | **Yes**, and worse than yaw. |
 
 Read the last two rows carefully, because they drive most of the design
@@ -145,9 +156,14 @@ So:
 > heading is dominant, the way to improve navigation is to improve heading,
 > not to buy a better DVL.
 
-This is why `imu_gate` spends effort on gyro bias, and why "yaw drift is
-unbounded" is written down as the top open item in
+This is why `imu_gate` spends effort on gyro bias, why `heading_gate` exists,
+and why yaw is written down as the top open item in
 [ARCHITECTURE.md](ARCHITECTURE.md#known-open-items) rather than buried.
+
+Note the asymmetry this creates. Depth has an absolute sensor, so it is solved
+for free. Yaw needs one too, and the plan is to buy it — but until that part
+is chosen and its cross-check tuned, yaw drift is what limits how long a
+mission can be.
 
 ---
 
@@ -201,17 +217,13 @@ ROS tracks the relationships between frames in a structure called **TF**. Ours
 looks like this:
 
 ```
-map ─(nothing publishes this yet, treat as identity)─▶ odom
-                                                        │
-                              (the estimator, Layer 2) ─┘
-                                                        ▼
-                                                    base_link
-                                                        │
-                        (static, from vehicle.yaml) ────┤
-                                                        ├─▶ imu_link
-                                                        ├─▶ dvl_link
-                                                        ├─▶ depth_link
-                                                        └─▶ front_camera_link ...
+odom  ─(the estimator, Layer 2)─▶  base_link
+                                       │
+           (static, from vehicle.yaml) ─┬─▶ imu_link
+                                        ├─▶ heading_link
+                                        ├─▶ dvl_link
+                                        ├─▶ depth_link
+                                        └─▶ front_camera_link ...
 ```
 
 - **`base_link`** is the vehicle itself. Its origin is a fixed reference point
@@ -221,12 +233,23 @@ map ─(nothing publishes this yet, treat as identity)─▶ odom
   quite a velocity "of the vehicle" when the vehicle is rotating. TF handles
   that, *provided* the offsets in `vehicle.yaml` are correct.
 - **`odom`** is a fixed frame in the world that the vehicle moves around in.
-  It is **continuous**: it never jumps. It **drifts**: after ten minutes,
-  `odom` is not quite where it was. Control loops live here, because a
-  controller differentiating a position that jumps produces a spike in the
-  thrusters.
-- **`map`** is reserved for a corrected, non-drifting world frame. Nothing
-  produces it yet. Ignore it for now.
+  Its origin is wherever the vehicle happened to be when the estimator
+  started. It is **continuous** — it never jumps — and it **drifts**: after
+  ten minutes, "2 metres north in odom" is not quite the place it was at the
+  start.
+
+**There is no `map` frame here**, and that is a deliberate decision rather
+than something missing. REP-105 reserves `map` for a global, drift-free world
+frame, but a frame is only drift-free if something measures absolute position
+to correct it — GPS, surveyed acoustic beacons, a prior map. This vehicle has
+none of those and will not have any. Declaring a `map` frame anyway would give
+you an alias for `odom` wearing a badge that says "trustworthy", and code
+would start assuming a pose means the same thing an hour later.
+
+The practical consequence: **every mission has to be relative.** Relative to
+where the run started, or relative to something the vehicle can currently see.
+Nothing may be expressed as an absolute pool coordinate, because the vehicle
+has no way to know one.
 
 The `base_link → sensor` transforms are published by the `static_frames` node,
 which reads them from [`auv_core/config/vehicle.yaml`](../auv_core/config/vehicle.yaml).
@@ -417,6 +440,39 @@ Note the deliberate asymmetry: motion resets the accumulation in progress, but
 never discards a bias that has already converged. Somebody bumping the vehicle
 on the deck must not throw away a good calibration.
 
+### `auv_sensors/auv_sensors/heading_validation.py`
+
+The newest and, if the hardware lands, the most consequential gate. An
+absolute heading source is the only thing that can stop yaw drifting, so this
+is where that hole gets closed.
+
+It does not simply forward headings. Every sample is cross-checked against the
+gyro — which cannot be magnetically disturbed — by comparing how fast the
+heading source says the vehicle is turning against how fast the gyro says it
+is. When they disagree beyond a threshold, the source is being disturbed and
+the gate refuses it.
+
+Two design points worth understanding:
+
+**Why refuse rather than inflate the covariance.** A disturbed compass is not
+noisier, it is *biased*: it reports a consistent wrong answer. Handing a
+filter a biased measurement with a wide error bar still pulls the estimate
+toward the wrong value, just more slowly. Refusing is the correct model.
+
+**Why it goes quiet at high tilt.** Past about 60° of roll or pitch an
+absolute heading is untrustworthy, and past 90° of pitch yaw is not even well
+defined — it degenerates onto the same axis as roll. This vehicle deliberately
+rolls 90° through the gate for style points, so it *will* spend time there.
+The gate stops publishing rather than forwarding a meaningless number, and
+drops its comparison history so the sample after the manoeuvre is not
+differenced across it.
+
+There is no declination handling and there should not be. The vehicle has no
+map frame and no notion of true north, so what is needed from a heading source
+is that it be **stable**, not that it be correct. A constant offset from true
+north is harmless. An offset that changes as the vehicle swims past the pool's
+rebar is exactly what the cross-check is hunting.
+
 ### `auv_sensors/auv_sensors/depth_validation.py`
 
 The simplest file, guarding the most important sensor. The interesting part is
@@ -518,6 +574,22 @@ ros2 launch auv_sensors sensors.launch.py \
   pressure_raw_topic:=/pressure/raw
 ```
 
+`heading_gate` is off by default because the vehicle has no absolute heading
+source yet. Once one is fitted:
+
+```bash
+ros2 launch auv_sensors sensors.launch.py \
+  use_heading:=true \
+  heading_raw_topic:=/ahrs/imu \
+  magnetic_field_topic:=/ahrs/mag
+```
+
+Before trusting it, do the **swing test**: put the vehicle in the water, turn
+it slowly through a full 360° while recording, and compare
+`/heading_gate/yaw_deg` against the gyro. That is what sets
+`max_yaw_rate_mismatch_deg_s`, and until it is set the gate is either useless
+(too tight) or waved through (too loose).
+
 ### Pre-run checklist
 
 Do these in order, every single run. They take under a minute and each one
@@ -613,6 +685,10 @@ rejection would bury the one line that mattered under thousands of duplicates.
 | Depth: `"no surface zero taken"` | You skipped checklist step 1. |
 | Depth: `"pressure ... outside the plausible band"` | Sensor unplugged or failed. An unplugged sensor reads zero, which is not "very shallow". |
 | Depth: `"depth ... is above the surface reference"` | The zero was taken underwater, or atmospheric pressure has moved a lot since. |
+| Heading: `"disagrees with gyro by N deg/s"` | The source is being magnetically disturbed — or `max_yaw_rate_mismatch_deg_s` is too tight for its latency. Run the swing test before assuming the sensor is bad. |
+| Heading: `"tilt N deg beyond the limit"` | Normal during a roll or pitch manoeuvre. An absolute heading means nothing at that attitude. |
+| Heading: `"recovering from disturbance"` | Working as intended. Recovery is slow on purpose. |
+| Heading: `"field magnitude N% off expected"` | Something ferrous or electrical is near the magnetometer. Check `expected_field_magnitude_t` was measured at this venue. |
 | Everything looks fine but the vehicle moves wrong | Frames. Check the mount rotations in `vehicle.yaml` against the physical vehicle. See section 11. |
 
 ### Recording a run
@@ -624,6 +700,7 @@ ros2 bag record -o run_$(date +%F_%H%M) \
   /dvl_gate/velocity /dvl_gate/altitude /dvl_gate/health \
   /imu_gate/data /imu_gate/gyro_bias /imu_gate/health \
   /depth_gate/pose /depth_gate/depth /depth_gate/health \
+  /heading_gate/pose /heading_gate/yaw_deg /heading_gate/health \
   /tf /tf_static
 ```
 
@@ -712,18 +789,34 @@ exercised in simulation, every bug in it costs pool time.
 
 ## 11. Traps that will bite you
 
-**The magnetometer.** It is right there in the IMU and it solves yaw, which is
-our biggest problem, so the temptation is enormous. Do not. A competition pool
-is a steel box: reinforced concrete, metal gantries overhead, and the vehicle
-itself is full of thruster magnets and current-carrying wire whose field
-changes with throttle. The reported heading is wrong by an amount that varies
-with where you are and what the thrusters are doing, which is worse than being
-wrong by a constant. NTU Mecatron's 2026 report describes IMU data "jumping"
-underwater until they switched to a relative heading mode and recalibrated
-away from magnetic influence. NUS Bumblebee — who won that year — bolt a
-dedicated fibre-optic gyro to the vehicle rather than trust a magnetic
-heading at all. `imu_gate` drops orientation by default for this reason. The
-parameter to re-enable it exists and logs a warning; leave it alone.
+**Trusting a magnetic heading unconditionally.** Yaw is our biggest problem
+and a compass appears to solve it, so the temptation is enormous. The trap is
+not using one — the trap is believing it.
+
+A competition pool is a steel box: reinforced concrete, metal gantries
+overhead, and the vehicle itself is full of thruster magnets and
+current-carrying wire whose field changes with throttle. A disturbed compass
+does not get noisier, it gets **biased**: it reports a consistent wrong answer
+while still looking healthy. Handing that to a filter is worse than handing it
+nothing, because the filter has no way to tell.
+
+NTU Mecatron's 2026 report describes IMU data "jumping" underwater until they
+switched to a relative heading mode and recalibrated away from magnetic
+influence. NUS Bumblebee — who won that year — bolt a dedicated fibre-optic
+gyro to the vehicle rather than trust a magnetic heading at all.
+
+This stack's answer is `heading_gate`: use a heading source, but cross-check
+every sample against the gyro, which cannot be magnetically disturbed, and
+refuse it while the two disagree. Two rules follow:
+
+- **`imu_gate` still drops the driver's fused orientation.** Absolute heading
+  is `heading_gate`'s job; forwarding it from two nodes would fuse the same
+  measurement twice. The `use_orientation` parameter exists and logs a
+  warning — leave it alone.
+- **Never raise `max_yaw_rate_mismatch_deg_s` to make the warnings go away.**
+  That threshold is the whole defence. If the gate keeps rejecting, either the
+  source really is being disturbed, or the threshold was never set from a
+  swing test. Find out which.
 
 **Euler angles for anything but display.** Roll, pitch and yaw are fine for
 printing to a screen and for writing mount rotations in a config file. They
@@ -775,27 +868,50 @@ software architecture, it makes both the controller and the simulator better,
 and having a DVL makes it nearly free. Most student teams skip it and pay for
 it in control tuning later.
 
+### When the IMU arrives
+
+The part is not chosen yet, so every IMU number in `config/sensors.yaml` is a
+deliberately pessimistic placeholder. Filling them in is a ten minute job off
+the datasheet, and the file lists which specification maps to which parameter.
+
+The one specification to choose the part on does not appear as a parameter at
+all: **gyro bias instability**. With no absolute heading source, yaw is a gyro
+integral, and that number decides how fast it drifts. Roughly, over a fifteen
+minute run: a consumer IMU (tens of °/hr) drifts more than 10° and is
+unusable; a good tactical MEMS unit (5–10 °/hr) drifts 1–3°, which is
+workable; better than that and yaw stops being the limiting factor.
+
+That number is also what decides whether a separate heading source is a
+convenience or a requirement.
+
 ### The open item that matters
 
-**Yaw drift has no bound.** Section 3 explains why: heading comes from
-integrating a gyro, and nothing corrects it. Removing the turn-on bias makes
-the drift slow; it does not make it stop. Horizontal position error then grows
-as roughly `distance travelled × heading error`.
+**Yaw is still the only unbounded error.** Section 3 explains why. Depth is
+measured absolutely, roll and pitch are pinned by gravity, velocity comes
+straight from the DVL — but heading comes from integrating a gyro, and
+horizontal position error grows as roughly `distance travelled × heading
+error`. It is what decides whether the vehicle can navigate back to where it
+started.
 
-Depth does not drift and velocity is measured directly, so this is the *only*
-unbounded error in the estimate — and it is the one that decides whether the
-vehicle can navigate back to where it started at the end of a run.
+The plan is to close it in hardware with an absolute heading source, and
+`heading_gate` is the socket it plugs into. Two things still have to happen:
+pick the part, and tune the gyro cross-check from a pool swing test. Until
+both are done, missions should be short and relative rather than depending on
+a heading that holds for fifteen minutes.
 
-Fixing it needs an absolute heading reference from somewhere. Broadly:
+### The hydrodynamic model is placeholders, and that is fine
 
-- observe objects whose orientation is known and correct yaw against them
-  (needs a perception stack, which does not exist here yet);
-- use a gyro good enough that the drift over one run is tolerable;
-- accept the drift, and keep missions short and relative.
+`vehicle.yaml` carries drag and added-mass numbers that nobody has measured.
+Only the translational drag terms are realistically obtainable with the
+equipment on hand — constant thrust, wait for terminal velocity, read it off
+the DVL. Added mass and rotational damping would need CFD.
 
-This is a real decision with real cost, and it should be made before Layer 2
-is finished, because an estimator designed with a hook for global correction
-is much easier than one retrofitted with it.
+This is not blocking anything. Those numbers are used as **feedforward only**:
+a head start the controller gets for free. The feedback loop does the actual
+work and closes on the DVL's measured velocity, so a missing or wrong model
+costs some crispness and nothing else. Each entry records its own `source`
+field so nobody has to guess whether a number was measured or invented. Do not
+let anyone spend a month here.
 
 ---
 
@@ -820,6 +936,10 @@ section 5.
 **Dead reckoning** — computing position by integrating velocity and heading
 over time, with no external position fix.
 
+**Feedforward** — a control term computed from a model of the vehicle rather
+than from measured error. It gives the controller a head start; the feedback
+loop corrects whatever the model got wrong.
+
 **Degraded** — a gate's verdict meaning "usable, but trust it less". Distinct
 from rejected, which means "do not use at all".
 
@@ -838,11 +958,19 @@ frame axes. ROS uses FLU; autopilots and the DVL use FRD.
 **Hysteresis** — requiring several consecutive samples before changing state,
 so that a single outlier cannot flip a decision back and forth.
 
+**Magnetic disturbance** — nearby ferrous metal or current distorting the
+local magnetic field, so a compass reports a heading that is wrong by an
+amount that changes as the vehicle moves. Biased, not noisy, which is what
+makes it dangerous.
+
 **Odometry** — an estimate of motion derived from the vehicle's own sensors.
 Continuous, and it drifts.
 
 **REP-103 / REP-105** — the ROS standards defining units, axis conventions,
 and the `map` / `odom` / `base_link` frame hierarchy.
+
+**Swing test** — turning the vehicle slowly through a full 360 degrees in the
+water while recording, to characterise a heading source against the gyro.
 
 **TF** — the ROS system that tracks relationships between frames and
 transforms data between them.

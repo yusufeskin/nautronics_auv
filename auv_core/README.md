@@ -42,7 +42,17 @@ simulator URDF all have to agree with it. If a sensor moves on the vehicle,
 this file changes and nothing else does.
 
 Values marked `MEASURE` must come from the physical vehicle, not from CAD.
-Values marked `TUNE` or `IDENTIFY` come from pool measurements.
+Values marked `TUNE` come from pool measurements.
+
+The `frames` block declares **no map frame**, deliberately: this vehicle has
+no source of absolute position, so `odom` is the only world frame and it
+drifts. Every mission must be relative.
+
+The `hydrodynamics` block is placeholders, and each entry records its own
+`source` (`placeholder` / `measured` / `cfd`). Only the translational drag
+terms are realistically measurable here — constant thrust, terminal velocity,
+read it off the DVL. Nothing is blocked on the rest: these numbers are
+feedforward only, and the feedback loop closes on measured velocity.
 
 ## Tests
 

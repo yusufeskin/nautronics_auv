@@ -53,6 +53,10 @@ def generate_launch_description():
             # rolled by pi.
             'imu_raw_topic': '/imu0',
             'pressure_raw_topic': '/sim_pressure_source/raw',
+            # No absolute heading source exists in simulation or on the
+            # vehicle yet. When one is fitted, add a simulated equivalent
+            # here rather than testing it for the first time in the pool.
+            'use_heading': 'false',
         }.items(),
     )
 

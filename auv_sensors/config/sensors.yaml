@@ -39,39 +39,113 @@ dvl_gate:
     # available-but-biased one.
     allow_water_track: false
 
-    max_clock_skew_s: 0.5
+    # The DVL and the companion are synchronised by an NTP server, so real
+    # skew should be milliseconds. Keep this tight: a loose threshold turns
+    # "NTP has died" into a slow, invisible degradation of every velocity
+    # timestamp instead of a loud rejection.
+    max_clock_skew_s: 0.2
     beam_aperture_rad: 0.0366
     altitude_min_m: 0.05
     altitude_max_m: 50.0
 
+# ---------------------------------------------------------------------------
+# THE IMU IS NOT CHOSEN YET. Every value in this block is a placeholder, set
+# pessimistically so that a wrong guess makes the estimator cautious rather
+# than overconfident. When the part is picked, fill these in from its
+# datasheet - it is a ten minute job and it is worth doing properly, because
+# these numbers tell the filter how much to believe the sensor:
+#
+#   max_gyro_rad_s          <- gyro full-scale range (deg/s -> rad/s)
+#   max_accel_mps2          <- accelerometer full-scale range (g -> m/s^2)
+#   default_gyro_variance   <- (angular random walk / sqrt(sample period))^2
+#   default_accel_variance  <- (velocity random walk / sqrt(sample period))^2
+#   expected_rate_hz        <- the output rate you actually configure
+#   stale_timeout_s         <- roughly three sample periods
+#
+# The one specification worth choosing the part on is gyro bias instability,
+# because with no absolute heading source yaw is a gyro integral. It does not
+# appear as a parameter here; it decides how fast yaw drifts and therefore
+# whether a heading source is optional or mandatory.
+# ---------------------------------------------------------------------------
 imu_gate:
   ros__parameters:
     expected_rate_hz: 100.0
     stale_timeout_s: 0.1
 
-    # Magnetometer-aided orientation is not trusted in a steel pool; the
-    # estimator integrates the gyro instead. See the module docstring in
-    # imu_gate.py for why.
+    # The driver's fused orientation is dropped here even when an absolute
+    # heading source is fitted. Absolute heading is handled by heading_gate
+    # below, which cross-checks it against this gyro; forwarding it from two
+    # nodes would fuse the same measurement twice.
     use_orientation: false
     subtract_gyro_bias: true
 
-    # TUNE: set to the full-scale range of the IMU you actually buy.
+    # PLACEHOLDER: gyro full scale, ~460 deg/s.
     max_gyro_rad_s: 8.0
+    # PLACEHOLDER: accelerometer full scale, 6 g.
     max_accel_mps2: 58.8
     max_clock_skew_s: 0.2
 
-    # TUNE: from the IMU datasheet's noise density, integrated to the
-    # publishing rate.
+    # PLACEHOLDER: deliberately pessimistic. (0.002 rad/s)^2 and
+    # (0.02 m/s^2)^2 respectively.
     default_gyro_variance: 4.0e-6
     default_accel_variance: 4.0e-4
 
     # Turn-on bias calibration. The vehicle must be still for
     # bias_settle_time_s before this converges, which is the operational
     # reason to float it on the surface for half a minute before arming.
+    # These thresholds are sensor independent and can stay as they are.
     bias_still_gyro_threshold_rad_s: 0.02
     bias_still_accel_tolerance_mps2: 0.5
     bias_settle_time_s: 20.0
     bias_min_samples: 200
+
+# ---------------------------------------------------------------------------
+# Absolute heading source (compass / AHRS / gyrocompass). Optional: if none is
+# fitted, do not launch heading_gate and the estimator falls back to
+# integrating the gyro, with yaw drifting for the length of the run.
+#
+# Every heading is cross-checked against the gyro from imu_gate and refused
+# while the two disagree, because a magnetically disturbed heading is biased
+# rather than noisy - and a bias delivered with an honest-looking covariance
+# is worse than no measurement. TUNE the threshold in the pool.
+# ---------------------------------------------------------------------------
+heading_gate:
+  ros__parameters:
+    expected_rate_hz: 20.0
+    stale_timeout_s: 0.5
+    max_clock_skew_s: 0.2
+
+    # Past this tilt an absolute heading is not trustworthy, and past 90
+    # degrees of pitch it is not even well defined. The vehicle deliberately
+    # rolls through the gate for style points, so it will spend time outside
+    # this band; the gate goes quiet there rather than forwarding nonsense.
+    max_tilt_deg: 60.0
+
+    # TUNE, and do this before trusting the source: swing the vehicle through
+    # 360 degrees in the pool with everything logging, then set this above the
+    # honest disagreement (source latency, gyro noise) and below what you see
+    # next to a steel wall. Too tight and the source is never usable; too
+    # loose and a disturbance walks straight into the estimate.
+    max_yaw_rate_mismatch_deg_s: 8.0
+
+    max_compare_dt_s: 1.0
+    max_gyro_dt_s: 0.2
+
+    # Disturbance is declared fast and cleared slowly on purpose.
+    disturbed_streak: 3
+    recover_streak: 30
+
+    # Optional second check, only for magnetic sources that also publish the
+    # raw field vector. MEASURE: log the field magnitude in open air at the
+    # venue and put that here. 0 disables the check.
+    expected_field_magnitude_t: 0.0
+    field_magnitude_tolerance: 0.25
+
+    # TUNE: from the source's datasheet heading accuracy. This is the number
+    # that decides how hard the filter pulls yaw toward the compass, so an
+    # optimistic value here is how a bad heading takes over the estimate.
+    yaw_accuracy_deg: 5.0
+    degraded_variance_scale: 9.0
 
 depth_gate:
   ros__parameters:

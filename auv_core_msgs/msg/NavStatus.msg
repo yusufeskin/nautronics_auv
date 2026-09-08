@@ -14,6 +14,9 @@ uint8 mode
 
 bool dvl_fused
 bool depth_fused
+# True while an absolute heading source is being fused. When this is
+# false, yaw is a gyro integral and yaw_sigma_rad grows without bound.
+bool heading_fused
 
 # Seconds since the last velocity aiding update. Zero while aided. This is
 # the number that decides how far a DVL dropout may be coasted through.

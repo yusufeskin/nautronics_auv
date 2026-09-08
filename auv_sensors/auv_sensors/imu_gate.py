@@ -3,20 +3,25 @@
 Validates the IMU stream, estimates and removes the gyro turn-on bias, and -
 by default - strips the orientation field.
 
-Dropping orientation is a deliberate policy, not an oversight. A fused
-orientation from a consumer IMU is magnetometer-aided, and a competition pool
-is a steel box: NTU Mecatron's 2026 report describes IMU data "jumping"
-underwater until they moved to a relative heading mode and recalibrated away
-from magnetic influence, and NUS Bumblebee simply bolt a fibre-optic gyro to
-the vehicle rather than trust a magnetic heading. Feeding a mag-aided
-orientation into the estimator imports the pool's rebar into the yaw
-solution. The estimator integrates the (bias-corrected) gyro instead.
+Dropping orientation is a deliberate division of labour, not a rejection of
+absolute heading. Absolute heading belongs to ``heading_gate``, which takes
+it from a dedicated source and cross-checks every sample against this node's
+gyro before letting it through. Forwarding an orientation from here as well
+would fuse the same measurement twice, and would bypass that cross-check -
+which is the only thing standing between a magnetically disturbed heading and
+the estimator.
 
-That leaves yaw with no absolute reference, so it drifts - slowly if the
-turn-on bias below is removed, quickly if it is not. Nothing in the stack
-bounds that drift today; doing so needs an absolute heading observation from
-somewhere, and until then yaw error grows with run time. This is a known open
-item, recorded in docs/ARCHITECTURE.md rather than papered over here.
+A fused orientation from a consumer IMU is magnetometer-aided, and a
+competition pool is a steel box: NTU Mecatron's 2026 report describes IMU data
+"jumping" underwater until they moved to a relative heading mode and
+recalibrated away from magnetic influence, and NUS Bumblebee bolt a
+fibre-optic gyro to the vehicle rather than trust a magnetic heading at all.
+
+So what leaves this node is rates and specific force only. If ``heading_gate``
+is not running - no heading hardware fitted, or its source currently
+disturbed - yaw is a pure integral of the gyro below, and the turn-on bias
+this node removes is what decides how fast it drifts. See
+docs/ARCHITECTURE.md for the open item.
 """
 
 from __future__ import annotations

@@ -1,11 +1,16 @@
 """IMU sample validation and gyro bias estimation, free of ROS dependencies.
 
 Two jobs live here. The first is ordinary range checking. The second matters
-more: with the magnetometer out of the loop - which is the only defensible
-choice in a competition pool full of steel - yaw comes from integrating the
-gyro, so the gyro's turn-on bias is the single largest error source in the
-whole navigation stack. A bias of 0.5 deg/s left uncorrected is 7.5 degrees
-of heading error over a 15 minute run.
+more: whenever no absolute heading source is aiding the estimate - because
+none is fitted, or because heading_gate has judged the fitted one to be
+magnetically disturbed - yaw is a pure integral of this gyro. The turn-on
+bias is then the single largest error source in the whole navigation stack.
+A bias of 0.5 deg/s left uncorrected is 7.5 degrees of heading error over a
+15 minute run.
+
+The bias also matters when a heading source *is* working, because
+heading_gate cross-checks that source against this gyro. A biased gyro makes
+a healthy compass look like it is disagreeing.
 
 The fix is cheap and operational: hold the vehicle still on the surface
 before the run and average the gyro. This module implements that, and reports

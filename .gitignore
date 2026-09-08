@@ -34,3 +34,5 @@ __pycache__/
 
 # auto annotator script
 scripts/auto_annotator/auto_annotator.py
+# pytest
+.pytest_cache/

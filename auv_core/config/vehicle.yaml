@@ -1,0 +1,115 @@
+# Single source of truth for vehicle geometry and frames.
+#
+# Every layer reads its geometry from here: the static TF publisher builds the
+# frame tree from `sensors`, thrust allocation builds its configuration matrix
+# from `thrusters`, and the simulator's URDF must agree with both. When a
+# sensor is physically moved, this file changes and nothing else does.
+#
+# Conventions (see auv_core/frames.py):
+#   - All poses are in base_link, which is FLU: x forward, y left, z up.
+#   - Translations in metres, rotations in radians as roll/pitch/yaw
+#     (intrinsic Z-Y-X, the URDF convention).
+#
+# Values below are taken from
+# auv_description/models/prototype_vehicle/prototype.urdf.xacro. Anything
+# marked MEASURE must be re-measured on the physical vehicle before the first
+# pool test - CAD numbers are a starting point, not a calibration.
+
+/**:
+  ros__parameters:
+
+    frames:
+      # REP-105: map is the drift-free competition frame corrected by landmark
+      # observations, odom is the continuous frame the controller lives in,
+      # base_link is the vehicle body. Nothing in the control loop may consume
+      # a pose in map, and nothing in the mission layer should consume odom.
+      map: "map"
+      odom: "odom"
+      base_link: "base_link"
+
+    # Rigid-body properties. Mass and inertia mirror the URDF; the buoyancy
+    # figures come from the displaced-volume box in prototype.urdf.xacro.
+    body:
+      mass_kg: 12.8
+      # Centre of mass in base_link.
+      com_xyz: [0.0, 0.0, -0.0114]
+      # Diagonal inertia about the CoM [Ixx, Iyy, Izz], kg*m^2.
+      inertia_diag: [0.26, 0.23, 0.37]
+      # Centre of buoyancy in base_link. The CoB-CoM separation is what
+      # rights the vehicle in roll and pitch, so it sets how much torque a
+      # style manoeuvre has to fight.
+      cob_xyz: [0.0, 0.0, 0.0376]
+      displaced_volume_m3: 0.01313875
+      water_density_kg_m3: 1000.0
+
+    # Sensor mounts. Each entry becomes one static transform base_link->frame.
+    sensors:
+      imu:
+        frame: "imu_link"
+        xyz: [0.0, 0.0, 0.0]        # MEASURE: put the IMU as near the CoM as the hull allows
+        rpy: [0.0, 0.0, 0.0]        # MEASURE: mount rotation dominates yaw error, do not guess
+      dvl:
+        frame: "dvl_link"
+        xyz: [0.0, 0.0, -0.15]
+        # MEASURE: a yaw-rotated A50 mount is common and a 45 deg error here
+        # turns straight-line transit into a diagonal one.
+        rpy: [0.0, 0.0, 0.0]
+      depth:
+        frame: "depth_link"
+        xyz: [0.0, 0.0, 0.0]        # MEASURE: offset from CoM biases depth by a fixed amount
+        rpy: [0.0, 0.0, 0.0]
+      front_camera:
+        frame: "front_camera_link"
+        xyz: [0.177035, 0.0, 0.0]
+        rpy: [0.0, 0.0, 0.0]
+      bottom_camera:
+        frame: "bottom_camera_link"
+        xyz: [0.0, 0.0, -0.043071]
+        rpy: [0.0, 1.5707963, 0.0]
+      back_camera:
+        frame: "back_camera_link"
+        xyz: [-0.177035, 0.0, 0.0]
+        rpy: [0.0, 0.0, 3.1415927]
+      forward_sonar:
+        frame: "ping1d_link"
+        xyz: [0.188254, -0.038661, 0.09952]
+        rpy: [0.0, 0.0, 0.0]
+
+    # Thruster geometry. `xyz` is the thruster position in base_link and
+    # `rpy` rotates the thruster's local frame, whose thrust axis is
+    # `axis_local`. Layer 5 builds the 6xN configuration matrix from these:
+    # column i is [axis_i; position_i x axis_i].
+    #
+    # This geometry has rank 6 (verified in test/test_vehicle_config.py), so
+    # the vehicle is fully actuated and can hold an arbitrary attitude while
+    # translating - the prerequisite for the gate roll/pitch style points.
+    #
+    # `direction_sign` folds in propeller handedness and ESC wiring, which
+    # geometry alone cannot tell you. MEASURE: in the pool, command each
+    # thruster individually and record which way the vehicle actually moves.
+    thrusters:
+      axis_local: [0.0, 0.0, -1.0]
+      max_forward_n: 40.0    # MEASURE: T200 at the bus voltage you actually run
+      max_reverse_n: 32.0    # MEASURE: reverse thrust is weaker, do not assume symmetry
+      units:
+        - {id: 1, xyz: [ 0.2201, -0.1126, -0.0224], rpy: [-1.571, 1.571, -0.785], direction_sign:  1.0}
+        - {id: 2, xyz: [ 0.2201,  0.1126, -0.0224], rpy: [-1.571, 1.571, -2.356], direction_sign:  1.0}
+        - {id: 3, xyz: [-0.2201, -0.1126, -0.0224], rpy: [-1.571, 1.571,  0.785], direction_sign: -1.0}
+        - {id: 4, xyz: [-0.2201,  0.1126, -0.0224], rpy: [-1.571, 1.571,  2.356], direction_sign: -1.0}
+        - {id: 5, xyz: [ 0.0884, -0.2126,  0.0056], rpy: [0.0, 0.0, 0.0], direction_sign:  1.0}
+        - {id: 6, xyz: [ 0.0884,  0.2126,  0.0056], rpy: [0.0, 0.0, 0.0], direction_sign: -1.0}
+        - {id: 7, xyz: [-0.0884, -0.2126,  0.0056], rpy: [0.0, 0.0, 0.0], direction_sign: -1.0}
+        - {id: 8, xyz: [-0.0884,  0.2126,  0.0056], rpy: [0.0, 0.0, 0.0], direction_sign:  1.0}
+
+    # Hydrodynamic model, filled in by the system-identification step (build
+    # order item 3) and consumed as feedforward by Layer 5 and by the
+    # simulator so that both agree. Linear + quadratic drag per axis, in the
+    # order [surge, sway, heave, roll, pitch, yaw].
+    #
+    # The placeholders below mirror the Gazebo Hydrodynamics plugin in
+    # macros/plugins.xacro so sim and real start from the same numbers.
+    # IDENTIFY: replace with values fitted to DVL step-response logs.
+    hydrodynamics:
+      linear_damping: [-5.0, -5.0, -5.0, -5.0, -5.0, -5.0]
+      quadratic_damping: [-58.42, -55.137, -124.818, -4.0, -4.0, -4.0]
+      added_mass: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

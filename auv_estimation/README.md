@@ -29,13 +29,22 @@ sources we build ourselves.
 
 ## Running
 
+Normally you do not launch this package directly:
+
 ```bash
-ros2 launch auv_estimation navigation.launch.py            # layers 0+1+2, real vehicle
-ros2 launch auv_estimation navigation.launch.py sim:=true  # against the simulator
-ros2 launch auv_estimation estimation.launch.py            # layer 2 only, gates already up
+ros2 launch auv_bringup autonomy.launch.py sim:=true      # whole stack, simulator
+ros2 launch auv_bringup autonomy.launch.py autopilot:=true # whole stack, vehicle
 ```
 
-`use_heading:=true` adds the absolute heading source once the hardware exists.
+Launch it alone only to run Layer 2 on top of gates you already have up:
+
+```bash
+ros2 launch auv_estimation estimation.launch.py
+```
+
+`use_heading:=true` on the top-level launch adds the absolute heading source,
+which today is the autopilot's own fused attitude republished by
+`pixhawk_bridge2` on `/autopilot/attitude`. It needs `autopilot:=true`.
 
 ## The design in one sentence
 

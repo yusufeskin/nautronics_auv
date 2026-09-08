@@ -1,0 +1,4 @@
+# Intentionally empty. Default overlay for actuation.launch.py, so the real
+# vehicle needs no special case. Pass pilot_demand_sim.yaml for simulation.
+/**:
+  ros__parameters: {}

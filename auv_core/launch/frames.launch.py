@@ -21,6 +21,7 @@ def generate_launch_description():
 
     vehicle_config = LaunchConfiguration('vehicle_config')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    skip_frames = LaunchConfiguration('skip_frames')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -33,6 +34,15 @@ def generate_launch_description():
             default_value='false',
             description='Follow /clock instead of the wall clock.',
         ),
+        DeclareLaunchArgument(
+            'skip_frames',
+            default_value='',
+            description=(
+                'Virgulle ayrilmis, baskasinin yayinladigi cerceveler. '
+                'Simulasyonda robot_state_publisher URDF linklerini yayinlar; '
+                'ayni transformu iki yerden yayinlamak sessiz bir tutarsizliktir.'
+            ),
+        ),
         Node(
             package='auv_core',
             executable='static_frames',
@@ -41,6 +51,7 @@ def generate_launch_description():
             parameters=[{
                 'vehicle_config': vehicle_config,
                 'use_sim_time': use_sim_time,
+                'skip_frames': skip_frames,
             }],
         ),
     ])

@@ -1,0 +1,25 @@
+# Simulation overlay for the pilot demand mapping.
+#
+# Loaded AFTER pilot_demand.yaml. Only the newton-to-stick calibration
+# differs, because the simulated thrusters are not the real ones: their thrust
+# coefficients come from macros/thruster_macro.xacro and the hydrodynamic drag
+# from macros/plugins.xacro, neither of which has been matched to the vehicle.
+#
+# So there are two separate calibrations to do, and neither substitutes for
+# the other:
+#
+#   this file            measure in simulation, so the controller can be
+#                        developed and tuned without pool time
+#   pilot_demand.yaml    MEASURE IN THE POOL before anything runs for real
+#
+# The procedure is identical and is written out in pilot_demand.yaml: fixed
+# demand on one axis, wait for terminal velocity, read it off the DVL.
+#
+# PLACEHOLDER values below - nobody has run the procedure in simulation either.
+
+pilot_demand:
+  ros__parameters:
+    surge_full_scale_n: 40.0
+    sway_full_scale_n: 30.0
+    heave_full_scale_n: 40.0
+    yaw_full_scale_nm: 8.0

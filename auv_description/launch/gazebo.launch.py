@@ -15,7 +15,7 @@ def generate_launch_description():
     # 1. Dosya Yolları
     xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'prototype.urdf.xacro')
     worlds_dir = os.path.join(pkg_share, 'worlds')
-    bridge_config_path = os.path.join(pkg_share, 'config', 'bridge.yaml')
+    default_bridge_config = os.path.join(pkg_share, 'config', 'bridge.yaml')
     rviz_config_path = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
     torpedo_xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'macros', 'torpedo.xacro')
     torpedo_desc_1 = Command(['xacro ', torpedo_xacro_file, ' torp_id:=1'])
@@ -36,12 +36,23 @@ def generate_launch_description():
         description='Gazebo time'
     )
 
+    # The new autonomy stack needs a different bridge: robot_localization owns
+    # odom -> base_link, so Gazebo's ground-truth TF must not also be
+    # published. Pass bridge_newarch.yaml for that stack; the default keeps
+    # the legacy behaviour unchanged.
+    bridge_config_arg = DeclareLaunchArgument(
+        'bridge_config',
+        default_value=default_bridge_config,
+        description='ros_gz_bridge yapilandirmasi (bridge.yaml veya bridge_newarch.yaml)'
+    )
+
     world_arg = DeclareLaunchArgument(
         'world',
         default_value='teknofest_pool.world',
         description='worlds/ altindaki dosya adi (orn. teknofest_pool.world, open_water.world)'
     )
 
+    bridge_config_path = LaunchConfiguration('bridge_config')
     use_rviz = LaunchConfiguration('rviz')
     use_sim_time = LaunchConfiguration('use_sim_time')
     world_file = PathJoinSubstitution([worlds_dir, LaunchConfiguration('world')])
@@ -54,7 +65,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'robot_description': robot_desc_content,
-            'use_sim_time': True
+            'use_sim_time': use_sim_time
         }]
     )
 
@@ -121,6 +132,7 @@ def generate_launch_description():
         rviz_arg,
         sim_time_arg,
         world_arg,
+        bridge_config_arg,
         robot_state_publisher,
         ros_gz_bridge,
         gz_sim,

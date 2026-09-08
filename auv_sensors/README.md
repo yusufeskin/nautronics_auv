@@ -33,14 +33,28 @@ testable without a running graph.
 
 ## Running
 
+Normally through the top-level launch, which wires the right sources for you:
+
 ```bash
-ros2 launch auv_sensors sensors_sim.launch.py    # simulator
-ros2 launch auv_sensors sensors.launch.py        # vehicle
+ros2 launch auv_bringup autonomy.launch.py sim:=true       # simulator
+ros2 launch auv_bringup autonomy.launch.py autopilot:=true # vehicle
 ```
 
-`heading_gate` is off by default — the vehicle has no absolute heading source
-yet. Enable it with `use_heading:=true` and point `heading_raw_topic` at the
-device.
+This package's own launch runs the gates alone, with topics as arguments:
+
+```bash
+ros2 launch auv_sensors sensors.launch.py \
+  dvl_raw_topic:=/sim/dvl/raw imu_raw_topic:=/imu0 \
+  sensors_overlay:=<share>/config/sensors_sim.yaml
+```
+
+`heading_gate` is off by default. `use_heading:=true` turns it on; its source
+today is the autopilot's fused attitude on `/autopilot/attitude`, republished
+in ENU/FLU by `pixhawk_bridge2`.
+
+`config/sensors_sim.yaml` is a small overlay loaded on top of `sensors.yaml`
+carrying only the values that genuinely differ in simulation. Keep it short —
+every entry is a way for simulation to stop testing what the vehicle runs.
 
 Raw topics are launch arguments (`dvl_raw_topic`, `imu_raw_topic`,
 `pressure_raw_topic`), which is what makes simulation and hardware

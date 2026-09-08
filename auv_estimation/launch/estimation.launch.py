@@ -9,9 +9,10 @@ Three nodes:
                        publishes odom -> base_link
   nav_status           says whether that estimate is aided or coasting
 
-Layer 1 must already be running; this launch file does not start it. Use
-auv_sensors/sensors.launch.py or sensors_sim.launch.py first, or
-navigation.launch.py to get both at once.
+Layer 1 must already be running; this launch file does not start it. Normally
+you do not launch this directly - auv_bringup/autonomy.launch.py brings up the
+whole stack. Use this one when you want Layer 2 alone, on top of gates you are
+already running.
 """
 
 import os

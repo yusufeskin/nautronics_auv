@@ -54,13 +54,21 @@
         frame: "imu_link"
         xyz: [0.0, 0.0, 0.0]        # MEASURE: put the IMU as near the CoM as the hull allows
         rpy: [0.0, 0.0, 0.0]        # MEASURE: mount rotation dominates yaw error, do not guess
-      # Absolute heading source (compass / AHRS / gyrocompass). If it is the
-      # same physical device as `imu` above, repeat that device's xyz and rpy
-      # here - the gates are separate nodes but the mount is one object.
+      # Absolute heading source. Today this is the autopilot's own attitude,
+      # published by auv_hardware's attitude_imu handler.
+      #
+      # The mount is identity on purpose and should stay that way: ArduPilot
+      # already corrects for however the Pixhawk is bolted in (AHRS_ORIENTATION),
+      # so its ATTITUDE message is the *vehicle's* attitude, not the board's.
+      # Applying a mount rotation here as well would double-count it.
+      #
+      # Change this only if the heading source becomes a separate device with
+      # its own mounting - then MEASURE it, because a yaw error here is a
+      # constant heading bias.
       heading:
         frame: "heading_link"
-        xyz: [0.0, 0.0, 0.0]        # MEASURE
-        rpy: [0.0, 0.0, 0.0]        # MEASURE: a yaw error here is a constant heading bias
+        xyz: [0.0, 0.0, 0.0]
+        rpy: [0.0, 0.0, 0.0]
       dvl:
         frame: "dvl_link"
         xyz: [0.0, 0.0, -0.15]
@@ -84,7 +92,10 @@
         xyz: [-0.177035, 0.0, 0.0]
         rpy: [0.0, 0.0, 3.1415927]
       forward_sonar:
-        frame: "ping1d_link"
+        # Name matches the link prototype.urdf.xacro creates, so the simulator
+        # and this file describe the same frame rather than two frames that
+        # happen to sit in the same place.
+        frame: "ping1d_sonar_link"
         xyz: [0.188254, -0.038661, 0.09952]
         rpy: [0.0, 0.0, 0.0]
 

@@ -33,9 +33,15 @@ def generate_launch_description():
     controller_config = os.path.join(share, 'config', 'pose_controller.yaml')
 
     use_sim_time = LaunchConfiguration('use_sim_time')
+    overlay = LaunchConfiguration('actuation_overlay')
 
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='false'),
+        DeclareLaunchArgument(
+            'actuation_overlay',
+            default_value=os.path.join(share, 'config', 'actuation_empty.yaml'),
+            description='Ek parametre dosyasi (orn. pilot_demand_sim.yaml).',
+        ),
 
         # Publishes auv_core_msgs/PilotDemand. It does not talk to the
         # autopilot - auv_hardware/pixhawk_bridge2 owns the MAVLink link and
@@ -45,7 +51,7 @@ def generate_launch_description():
             executable='pilot_demand',
             name='pilot_demand',
             output='screen',
-            parameters=[demand_config, {'use_sim_time': use_sim_time}],
+            parameters=[demand_config, overlay, {'use_sim_time': use_sim_time}],
             remappings=[('~/demand', '/pilot_demand')],
         ),
         Node(
@@ -53,7 +59,7 @@ def generate_launch_description():
             executable='pose_controller',
             name='pose_controller',
             output='screen',
-            parameters=[controller_config, {'use_sim_time': use_sim_time}],
+            parameters=[controller_config, overlay, {'use_sim_time': use_sim_time}],
             remappings=[
                 ('~/odom', '/odom/filtered'),
                 ('~/cmd_wrench', '/pilot_demand/cmd_wrench'),

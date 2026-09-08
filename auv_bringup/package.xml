@@ -12,6 +12,15 @@
 
   <exec_depend>ros2launch</exec_depend>
 
+  <!-- autonomy.launch.py bu paketlerin launch dosyalarini ve node'larini
+       calistiriyor. Derleme bagimliligi yok, sadece calisma zamani. -->
+  <exec_depend>auv_core</exec_depend>
+  <exec_depend>auv_sensors</exec_depend>
+  <exec_depend>auv_estimation</exec_depend>
+  <exec_depend>auv_actuation</exec_depend>
+  <exec_depend>auv_hardware</exec_depend>
+  <exec_depend>auv_description</exec_depend>
+
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

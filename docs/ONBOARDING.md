@@ -537,12 +537,15 @@ this case. Tests that need generated messages still need a build.)
 
 ### Run against the simulator
 
-Start the simulator the way you normally do, then:
+One command brings up Gazebo, the simulated sensor sources and the whole
+stack:
 
 ```bash
-ros2 launch auv_estimation navigation.launch.py sim:=true   # layers 0+1+2
-ros2 launch auv_sensors    sensors_sim.launch.py            # layers 0+1 only
+ros2 launch auv_bringup autonomy.launch.py sim:=true
 ```
+
+To also drive the vehicle, start ArduSub SITL first (`sim_vehicle.py -v ArduSub
+-f JSON --model JSON --console`), then add `autopilot:=true`.
 
 That brings up the static frames, all three gates wired to simulator topics,
 and the synthetic pressure source. It assumes `sim_dvl_bridge` from
@@ -566,16 +569,13 @@ ros2 topic echo /nav_status           # mode 1 = AIDED
 ### Run on the vehicle
 
 ```bash
-ros2 launch auv_estimation navigation.launch.py   # layers 0+1+2
+ros2 launch auv_bringup autonomy.launch.py autopilot:=true
 ```
 
-or, to bring up the layers separately:
-
-```bash
-ros2 launch auv_core       frames.launch.py
-ros2 launch auv_sensors    sensors.launch.py
-ros2 launch auv_estimation estimation.launch.py
-```
+Same command as the simulator minus `sim:=true`. The layers can still be
+brought up one at a time (`auv_core/frames.launch.py`,
+`auv_sensors/sensors.launch.py`, `auv_estimation/estimation.launch.py`,
+`auv_actuation/actuation.launch.py`) when you want to debug one in isolation.
 
 Raw topic names default to the real drivers and can be overridden:
 

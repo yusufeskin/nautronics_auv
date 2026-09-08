@@ -1,0 +1,40 @@
+# Simulation overlay for the Layer 1 gates.
+#
+# Loaded AFTER sensors.yaml, so it only needs to carry the values that
+# genuinely differ in simulation. Everything not mentioned here keeps its real
+# vehicle value, which is the point: a change to a threshold has to be made
+# once, and sim and vehicle cannot quietly drift apart.
+#
+# Keep this file SHORT. Every entry added here is a way for simulation to stop
+# testing what the vehicle actually runs. Each one below carries the reason it
+# has to exist.
+
+imu_gate:
+  ros__parameters:
+    # The vio_imu in prototype.urdf.xacro is declared at 50 Hz, not the 100 Hz
+    # the real unit will be configured for. Leaving the real rate here would
+    # make the gate report DEGRADED for the whole run.
+    expected_rate_hz: 50.0
+    stale_timeout_s: 0.2
+
+    # The simulated gyro has no turn-on bias to find, and the vehicle is never
+    # perfectly still in the water, so the full 20 s window would rarely close.
+    # Shortened so the health topic reaches OK; the code path is unchanged.
+    bias_settle_time_s: 5.0
+    bias_min_samples: 50
+
+depth_gate:
+  ros__parameters:
+    # THE ONE PLACE THIS OVERLAY WEAKENS A SAFETY RULE, and it is unavoidable.
+    #
+    # On the vehicle the surface zero is taken with the hull floating, and the
+    # gate refuses to publish until it is. In simulation the model is spawned
+    # already 1 m under, so there is no floating moment to capture: calling the
+    # service would record a submerged pressure as "the surface" and bias every
+    # depth by a metre - worse than not calling it.
+    #
+    # sim_pressure_source synthesises pressure around the nominal atmosphere,
+    # so the nominal reference is exactly right here.
+    #
+    # Do NOT copy this into sensors.yaml. On the vehicle the ritual is real.
+    require_surface_zero: false

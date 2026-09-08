@@ -27,7 +27,19 @@ class StaticFramesNode(Node):
         super().__init__("static_frames")
 
         self.declare_parameter("vehicle_config", default_config_path())
+        # Frames somebody else already publishes, comma separated. In
+        # simulation robot_state_publisher emits the URDF's own links, and two
+        # publishers of the same transform is a silent inconsistency waiting
+        # for someone to edit one file and not the other.
+        #
+        # A plain string rather than a string array because launch
+        # substitutions produce strings, and a mismatched parameter type there
+        # fails at startup for a reason nobody enjoys tracking down.
+        self.declare_parameter("skip_frames", "")
+
         path = self.get_parameter("vehicle_config").value
+        raw = self.get_parameter("skip_frames").value or ""
+        skip = {name.strip() for name in raw.split(",") if name.strip()}
 
         config = load_vehicle_config(path)
         base = config.frames["base_link"]
@@ -37,6 +49,11 @@ class StaticFramesNode(Node):
 
         transforms = []
         for name, mount in sorted(config.sensors.items()):
+            if mount.frame in skip:
+                self.get_logger().info(
+                    f"{mount.frame} ({name}) atlandi - baska bir yayinci sagliyor"
+                )
+                continue
             tf = TransformStamped()
             tf.header.stamp = stamp
             tf.header.frame_id = base

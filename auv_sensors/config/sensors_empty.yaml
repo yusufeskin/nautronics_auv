@@ -1,0 +1,7 @@
+# Intentionally empty. It is the default overlay for sensors.launch.py, so
+# that the real vehicle needs no special case and the launch file has one code
+# path instead of two.
+#
+# Pass sensors_sim.yaml here to run in simulation.
+/**:
+  ros__parameters: {}

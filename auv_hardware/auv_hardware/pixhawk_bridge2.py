@@ -20,6 +20,7 @@ from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.msg import VehicleStatus, PositionYawTarget
 from auv_core_msgs.msg import PilotDemand
 from std_msgs.msg import Float64, UInt16MultiArray
+from sensor_msgs.msg import Imu
 from .set_depth_handler import SetDepthHandler
 from .set_attitude_handler import SetAttitudeHandler
 from .attitude_handler import AttitudeHandler
@@ -32,6 +33,7 @@ from .set_position_target_handler import SetPositionTargetHandler
 from .local_position_handler import LocalPositionHandler
 from .set_speed_handler import SetSpeedHandler
 from .manual_control_handler import ManualControlHandler
+from .attitude_imu_handler import AttitudeImuHandler
 from geometry_msgs.msg import Point
 
 POOL_ORIGIN_LAT_DEG = 40.72304
@@ -63,6 +65,9 @@ class PixhawkBridge(Node):
         self.baro_publisher2    = self.create_publisher(Float64, 'baro_data2', 10)
         self.attitude_publisher = self.create_publisher(Vector3, 'current_attitude', 10)
         self.local_position_publisher = self.create_publisher(Point, 'vehicle/local_position', 10)
+        # The autopilot's fused attitude, in this stack's ENU/FLU convention.
+        # heading_gate consumes it as the absolute heading source.
+        self.attitude_imu_publisher = self.create_publisher(Imu, 'autopilot/attitude', 10)
 
         # self.pwm_module            = PwmHandler(self.master, self.get_logger())
         self.mode_module           = ModeHandler(self.master, self.get_logger())
@@ -77,12 +82,16 @@ class PixhawkBridge(Node):
         self.set_position_module   = SetPositionTargetHandler(self.master, self.get_logger())
         self.local_position_module = LocalPositionHandler(self, self.local_position_publisher)
         self.set_speed_module      = SetSpeedHandler(self.master, self.get_logger())
+        self.manual_control_module = ManualControlHandler(self.master, self.get_logger())
+        self.attitude_imu_module   = AttitudeImuHandler(self, self.attitude_imu_publisher)
         
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
             #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
             'GLOBAL_POSITION_INT':   [self.baro_module.handle_message],
-            'ATTITUDE': [self.attitude_module.handle_message, self.dvl_module.handle_attitude],
+            'ATTITUDE': [self.attitude_module.handle_message,
+                         self.attitude_imu_module.handle_message,
+                         self.dvl_module.handle_attitude],
             'SCALED_PRESSURE2': [self.baro_module2.handle_message],
             'LOCAL_POSITION_NED': [self.local_position_module.handle_message]
         }

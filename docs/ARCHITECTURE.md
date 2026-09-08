@@ -139,20 +139,25 @@ pressure, roll and pitch from gravity, velocity from the DVL, yaw integrated
 from the gyro with an absolute correction when available — lives in
 `auv_estimation/config/ekf.yaml`, which is commented at length.
 
-Run it against the simulator:
+There is one entry point for the whole stack, and the only thing that
+changes between the simulator and the vehicle is which sensor sources feed it:
 
 ```bash
-ros2 launch auv_sensors sensors_sim.launch.py
+ros2 launch auv_bringup autonomy.launch.py sim:=true                     # simulator
+ros2 launch auv_bringup autonomy.launch.py sim:=true autopilot:=true     # + SITL control
+ros2 launch auv_bringup autonomy.launch.py autopilot:=true               # vehicle
 ```
 
-That starts the static frames plus all three gates with simulator topics and a
-synthetic pressure source, because the Gazebo model carries no barometer. On
-the real vehicle:
+ArduSub is a separate process this launch does not start — `sim_vehicle.py -v
+ArduSub -f JSON --model JSON` in simulation, already running on the Pixhawk for
+real. Without it the stack still runs: sensors flow and the estimator produces
+a pose, the vehicle just cannot move and has no absolute heading.
 
-```bash
-ros2 launch auv_core    frames.launch.py
-ros2 launch auv_sensors sensors.launch.py
-```
+Everything from Layer 0 upward is identical in both cases — same code, same
+thresholds, same message flow. Values that genuinely differ live in small
+overlay files (`sensors_sim.yaml`, `pilot_demand_sim.yaml`) loaded on top of
+the real configuration, so a threshold is changed in one place and simulation
+cannot quietly drift away from the vehicle.
 
 The pre-run checklist and the debugging walkthrough are in
 [ONBOARDING.md](ONBOARDING.md).

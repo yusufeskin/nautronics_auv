@@ -2,8 +2,8 @@
 
 Raw topics are launch arguments rather than hard-coded, because the whole
 point of the gate layer is that the stack above it cannot tell a simulated
-sensor from a real one. sensors_sim.launch.py passes simulator topics; the
-defaults here are the real vehicle's.
+sensor from a real one. auv_bringup/autonomy.launch.py passes simulator topics
+and the sim overlay; the defaults here are the real vehicle's.
 
 heading_gate is off by default. It needs an absolute heading source that the
 vehicle does not have yet; without one the estimator integrates the gyro and
@@ -28,6 +28,7 @@ def generate_launch_description():
     default_vehicle_config = os.path.join(core_share, 'config', 'vehicle.yaml')
 
     sensors_config = LaunchConfiguration('sensors_config')
+    sensors_overlay = LaunchConfiguration('sensors_overlay')
     vehicle_config = LaunchConfiguration('vehicle_config')
     use_sim_time = LaunchConfiguration('use_sim_time')
     dvl_raw_topic = LaunchConfiguration('dvl_raw_topic')
@@ -37,10 +38,22 @@ def generate_launch_description():
     heading_raw_topic = LaunchConfiguration('heading_raw_topic')
     magnetic_field_topic = LaunchConfiguration('magnetic_field_topic')
 
-    common = [sensors_config, {'use_sim_time': use_sim_time, 'vehicle_config': vehicle_config}]
+    # Order matters: the overlay is loaded second so its entries win. An
+    # empty overlay path is ignored by rclcpp, so the real vehicle needs no
+    # special case.
+    common = [
+        sensors_config,
+        sensors_overlay,
+        {'use_sim_time': use_sim_time, 'vehicle_config': vehicle_config},
+    ]
 
     return LaunchDescription([
         DeclareLaunchArgument('sensors_config', default_value=default_sensors_config),
+        DeclareLaunchArgument(
+            'sensors_overlay',
+            default_value=os.path.join(sensors_share, 'config', 'sensors_empty.yaml'),
+            description='Ek parametre dosyasi; sensors.yaml uzerine yazar (orn. sensors_sim.yaml).',
+        ),
         DeclareLaunchArgument('vehicle_config', default_value=default_vehicle_config),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument(

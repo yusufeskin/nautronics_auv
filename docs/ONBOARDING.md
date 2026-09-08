@@ -308,8 +308,8 @@ fixed message type on a fixed topic. That fixed message type is called a
 Layer 0   frames, geometry, contracts          auv_core, auv_core_msgs   ← built
 Layer 1   sensor gates                         auv_sensors               ← built
 Layer 2   state estimation                     auv_estimation            ← built, untuned
-Layer 3   guidance and trajectory              —
-Layer 4   control + boundary to ArduSub        auv_actuation             ← boundary built
+Layer 3   guidance and trajectory              —                         ← next
+Layer 4   control + boundary to ArduSub        auv_actuation             ← built, untuned
 Layer 5   mission behaviour tree               —
 ```
 

@@ -38,7 +38,7 @@ time to sensors that degraded silently.
 | 1 | Sensor gates | `auv_sensors` | built |
 | 2 | State estimation (`odom`) | `auv_estimation` | built, untuned |
 | 3 | Guidance and trajectory | — | not started |
-| 4 | Control, and the boundary to ArduSub | `auv_actuation` | boundary built, controller next |
+| 4 | Control, and the boundary to ArduSub | `auv_actuation` | built, untuned |
 | 5 | Mission (behaviour tree) | — | not started |
 | — | Simulation harness | `auv_description` | inherited |
 
@@ -197,8 +197,12 @@ the contract between them is already fixed.
 5. ~~Wrench interface to ArduSub~~ — built as `auv_actuation`. The full-scale
    calibration in its config is **not measured**; every gain above it is
    meaningless until it is.
-6. **Velocity control loop** (needs 4 and 5).
-7. **Position/attitude loop**, trajectory generation, LOS guidance.
+6. ~~Velocity and position control loops~~ — built as `pose_controller`. Gains
+   are a starting point sized off placeholder forces; nothing has run on a
+   vehicle. Tune in the order given in its config: bridge calibration, then
+   inner loop, then outer loop.
+7. **Guidance**: trajectory generation and LOS, publishing `cmd_vel` into the
+   socket the controller already exposes.
 8. **Mission behaviour tree.**
 
 ## Known open items
@@ -255,11 +259,13 @@ Two consequences are permanent features of this choice rather than bugs:
 - **No roll or pitch torque.** Those axes take a lean angle inside ArduSub's
   limit, not a torque, so RoboSub's 90° gate style points need a temporary
   switch to ACRO or MANUAL.
-- **Absolute heading stays ours.** ArduSub's heading hold uses its own
-  magnetometer-aided yaw, which is not the yaw this stack estimates. Only yaw
-  *rates* are ever commanded; the outer loop measures the result with our own
-  estimate and closes the loop itself, which demotes ArduSub's heading drift to
-  an ordinary disturbance.
+- **Absolute heading stays ours.** Only yaw *rates* are ever commanded. The
+  autopilot's job on that axis is to hold still when left alone; its own idea
+  of where north is never gets read by anything in this stack, so the two
+  numbers do not have to agree and there is no "two yaws" problem to
+  reconcile. The outer loop closes on our estimate: error becomes a rate, the
+  vehicle turns, the error reaches zero, the command stops. Pixhawk
+  stabilises, the external sensors navigate.
 
 If either becomes intolerable, the escape is already designed: replace
 `ardusub_bridge` with a thrust allocator driving the thrusters directly. The

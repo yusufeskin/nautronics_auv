@@ -1,0 +1,82 @@
+# Cascaded pose controller gains.
+#
+# Two nested loops:
+#   outer (P only)   position error -> desired approach speed, saturated
+#   inner (PID)      speed error vs the DVL -> body wrench
+#
+# The outer loop is proportional on purpose. Its job is to pick a sensible
+# speed to approach at, and it saturates; an integral there would fight the
+# saturation and wind up on every long transit. The steady-state errors -
+# buoyancy trim, a standing current, one thruster pushing harder - belong to
+# the inner loop, which closes on measured velocity.
+#
+# TUNING ORDER. Do not skip ahead; each step depends on the one before.
+#   1. Measure the bridge's full-scale forces (config/ardusub_bridge.yaml).
+#      Until then the controller asks for newtons and the vehicle receives
+#      stick deflections through an unknown conversion, and no gain here
+#      means anything.
+#   2. Tune the inner loop alone. Publish a constant ~/cmd_vel and watch the
+#      DVL: raise kp until the velocity settles quickly without oscillating,
+#      then add just enough ki to remove the steady offset.
+#   3. Tune the outer loop. Send a ~/target_pose a few metres away and watch
+#      the approach. Raise kp_position until it arrives briskly without
+#      overshooting; the speed caps below decide the cruise.
+#
+# The gains below are a starting point sized off the placeholder full-scale
+# forces. They are NOT tuned and nobody has run this on a vehicle.
+
+pose_controller:
+  ros__parameters:
+
+    rate_hz: 20.0
+    odom_timeout_s: 0.5
+    cmd_vel_timeout_s: 0.5
+
+    # Output is gated off until the ~/enable service is called, the same as
+    # the bridge. Two independent gates on the path to the thrusters is
+    # deliberate.
+    start_enabled: false
+
+    # --- outer loop ---------------------------------------------------
+    kp_position: 0.8          # m/s of approach speed per metre of error
+    kp_yaw: 1.2               # rad/s of turn rate per radian of error
+
+    # The cruise speeds. These are what stop the vehicle lunging at a distant
+    # target, and they are the first thing to lower if a manoeuvre looks
+    # violent in the pool.
+    max_speed_xy: 0.5         # m/s
+    max_speed_z: 0.3          # m/s
+    max_yaw_rate: 0.6         # rad/s, about 35 deg/s
+
+    # "Arrived" thresholds, published on ~/at_target for the mission layer.
+    position_tolerance_m: 0.1
+    yaw_tolerance_deg: 5.0
+
+    # --- inner loop ---------------------------------------------------
+    # output_limit must not exceed the matching full-scale force in
+    # ardusub_bridge.yaml: asking for more than the bridge can express only
+    # produces saturation, and saturation freezes the integrators.
+    surge:
+      kp: 20.0
+      ki: 2.0
+      kd: 0.0
+      output_limit: 40.0
+      integral_limit: 20.0
+    sway:
+      kp: 20.0
+      ki: 2.0
+      kd: 0.0
+      output_limit: 30.0
+      integral_limit: 15.0
+    heave:
+      kp: 20.0
+      ki: 4.0                 # higher: this axis fights constant buoyancy
+      kd: 0.0
+      output_limit: 40.0
+      integral_limit: 20.0
+    yaw_rate:
+      kp: 5.0
+      ki: 0.5
+      kd: 0.0
+      output_limit: 8.0
+      integral_limit: 4.0

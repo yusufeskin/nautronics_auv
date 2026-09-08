@@ -1,0 +1,52 @@
+# ArduSub bridge tuning.
+#
+# The full-scale values are the calibration between this stack's units
+# (newtons and newton-metres) and ArduSub's pilot-input counts. Every control
+# gain above this node is meaningless until they are measured, because the
+# controller is asking for forces and the vehicle is receiving stick
+# deflections.
+#
+# HOW TO MEASURE. One axis at a time, in the pool, in ALT_HOLD:
+#   1. Command a fixed demand on the axis - say half scale.
+#   2. Wait until the DVL shows the velocity has stopped rising. At terminal
+#      velocity thrust equals drag, so the force is known once the drag
+#      coefficient is (see the hydrodynamics block in vehicle.yaml, which the
+#      same experiment fills in).
+#   3. Repeat at two or three levels and fit.
+# Half an hour per axis. Until then these are placeholders from the T200
+# datasheet and the thruster geometry, not measurements.
+
+ardusub_bridge:
+  ros__parameters:
+
+    connection: "udp:127.0.0.1:14551"
+    send_rate_hz: 20.0
+
+    # Longer than a couple of controller periods, short enough that a dead
+    # controller cannot keep the vehicle driving into a wall. On timeout the
+    # bridge sends neutral, which in ALT_HOLD means hold depth and stop
+    # translating - not cut thrust, which on a positively buoyant vehicle
+    # would mean surfacing.
+    command_timeout_s: 0.5
+
+    # Output is gated off at startup and has to be turned on deliberately with
+    # the ~/enable service. A bridge that starts driving thrusters the moment
+    # it is launched is a bridge that will do it in the lab.
+    start_enabled: false
+
+    # MEASURE. Force produced at full stick deflection on each axis.
+    surge_full_scale_n: 40.0
+    sway_full_scale_n: 30.0     # weaker than surge: the vectored thrusters
+                                # are angled and the hull is broader side-on
+    heave_full_scale_n: 40.0
+    yaw_full_scale_nm: 8.0
+
+    # In ALT_HOLD the vertical axis is a climb-rate demand around this neutral
+    # point, and neutral means "hold this depth". In STABILIZE it is raw
+    # throttle and neutral means "no vertical thrust", which is not the same
+    # thing - check which mode you are in before changing this.
+    neutral_z: 500
+
+    # ArduSub applies its own stick deadband; demands below it produce nothing
+    # but traffic on the link. TUNE from the vehicle's RCn_DZ parameters.
+    deadband_counts: 0

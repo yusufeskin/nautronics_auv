@@ -37,8 +37,8 @@ time to sensors that degraded silently.
 | 0 | Frames, geometry, contracts | `auv_core`, `auv_core_msgs` | built |
 | 1 | Sensor gates | `auv_sensors` | built |
 | 2 | State estimation (`odom`) | `auv_estimation` | built, untuned |
-| 3 | Guidance and trajectory | — | next |
-| 4 | Control and thrust allocation | — | not started |
+| 3 | Guidance and trajectory | — | not started |
+| 4 | Control, and the boundary to ArduSub | `auv_actuation` | boundary built, controller next |
 | 5 | Mission (behaviour tree) | — | not started |
 | — | Simulation harness | `auv_description` | inherited |
 
@@ -57,8 +57,8 @@ nothing to correct against. See [Frame conventions](#frame-conventions) and
 | estimator → control | `nav_msgs/Odometry` on `/odom/filtered` | `odom` |
 | estimator → mission | `auv_core_msgs/NavStatus` | — |
 | guidance → control | `geometry_msgs/TwistStamped` | `base_link` |
-| control → allocation | `geometry_msgs/WrenchStamped` | `base_link` |
-| allocation → hardware | `auv_core_msgs/ThrusterCommand` | — |
+| control → hardware | `geometry_msgs/WrenchStamped` | `base_link` |
+| hardware → control | `geometry_msgs/WrenchStamped` (realised) | `base_link` |
 
 Fixing these now is what lets Layer 2 and Layer 4 be built in parallel: the
 estimator author and the allocation author never have to agree on anything
@@ -194,7 +194,9 @@ the contract between them is already fixed.
    placeholders if you do not. Nothing downstream is blocked either way,
    because the model is only feedforward and the feedback loop closes on
    measured DVL velocity.
-5. **Thrust allocation** and the wrench interface.
+5. ~~Wrench interface to ArduSub~~ — built as `auv_actuation`. The full-scale
+   calibration in its config is **not measured**; every gain above it is
+   meaningless until it is.
 6. **Velocity control loop** (needs 4 and 5).
 7. **Position/attitude loop**, trajectory generation, LOS guidance.
 8. **Mission behaviour tree.**
@@ -235,6 +237,34 @@ rotational damping would need CFD. This is not blocking: the model is used as
 feedforward only, and the feedback loop closes on the DVL's measured velocity.
 A missing model costs some crispness in the controller, not correctness. Do
 not let anyone spend a month here.
+
+## Inner loop: why ArduSub keeps it
+
+ArduSub's STABILIZE and ALT_HOLD run at 400 Hz on real-time hardware, with
+arming logic and failsafes that are already proven on this vehicle. Rewriting
+that on a companion computer over a non-real-time link is what NUS Bumblebee
+do — with 54 people and 300 hours of in-water testing. Replacing something
+that works is the wrong place to spend a one-year budget.
+
+So the split is: ArduSub owns attitude and depth, this stack owns position and
+velocity. `auv_actuation` is the boundary, and it converts a commanded wrench
+into pilot-input axes.
+
+Two consequences are permanent features of this choice rather than bugs:
+
+- **No roll or pitch torque.** Those axes take a lean angle inside ArduSub's
+  limit, not a torque, so RoboSub's 90° gate style points need a temporary
+  switch to ACRO or MANUAL.
+- **Absolute heading stays ours.** ArduSub's heading hold uses its own
+  magnetometer-aided yaw, which is not the yaw this stack estimates. Only yaw
+  *rates* are ever commanded; the outer loop measures the result with our own
+  estimate and closes the loop itself, which demotes ArduSub's heading drift to
+  an ordinary disturbance.
+
+If either becomes intolerable, the escape is already designed: replace
+`ardusub_bridge` with a thrust allocator driving the thrusters directly. The
+`WrenchStamped` contract above it does not move, and `vehicle.yaml` already
+carries the rank-6 configuration matrix that allocation needs.
 
 ## Where the design decisions came from
 

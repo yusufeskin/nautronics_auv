@@ -145,7 +145,13 @@ class DvlOdomHandler:
         time_usec = int(t * 1.0e6)
         time_delta_usec = int(dt * 1.0e6)
 
-        pipeline_latency_ms = (time.time() - t) * 1000.0
+        # Compare against the NODE's clock, not time.time(). Both must be on the
+        # same time base as msg.header.stamp: on hardware that is system time,
+        # but in sim with use_sim_time the stamps are Gazebo sim time, which
+        # starts at zero. Using time.time() there subtracts a sim timestamp from
+        # a Unix epoch one and reports ~1.8e12 ms of "latency".
+        now_s = self.node.get_clock().now().nanoseconds * 1.0e-9
+        pipeline_latency_ms = (now_s - t) * 1000.0
         if pipeline_latency_ms < 0.0:
             self.logger.warn(
                 f"Negatif gecikme olculdu ({pipeline_latency_ms:.1f} ms): bu gercek degil, "

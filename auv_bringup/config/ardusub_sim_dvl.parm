@@ -1,0 +1,54 @@
+# ArduSub SITL parameters: fuse the simulated DVL as the EKF3 horizontal
+# velocity source, while the simulated GPS still supplies absolute position.
+#
+# Load with:  sim_vehicle.py ... --add-param-file=<this file>
+#
+# WHY GPS STAYS ON
+# ----------------
+# The DVL reaches ArduPilot as VISION_POSITION_DELTA, which AP_VisualOdom turns
+# into a body-frame velocity (AP_VisualOdom_Backend.cpp -> writeBodyFrameOdom).
+# That is a VELOCITY aid only - it carries no absolute position. In EKF3,
+#
+#   status.flags.horiz_pos_abs = doingNormalGpsNav && filterHealthy
+#   doingNormalGpsNav = !posTimeout && (PV_AidingMode == AID_ABSOLUTE)
+#     (AP_NavEKF3_Control.cpp:767,787)
+#
+# so body-frame velocity alone sets horiz_pos_REL but never horiz_pos_ABS. And
+# ArduSub refuses every position-controlled mode without the ABS flag:
+#
+#   Sub::ekf_position_ok() -> once armed, returns
+#       ahrs.has_status(AP_AHRS::Status::HORIZ_POS_ABS)   (ArduSub/system.cpp)
+#   ModeGuided::init()     -> if (!sub.position_ok()) return false;
+#
+# i.e. with the DVL as the ONLY horizontal aid, GUIDED/AUTO/POSHOLD cannot be
+# entered at all. Keeping the SITL GPS as the position source preserves those
+# modes while the DVL still does the velocity fusion we want to exercise.
+#
+# To test the DVL in isolation (no GPS), use ardusub_sim_dvl_only.parm instead.
+
+# --- Visual odometry front end: accept VISION_POSITION_DELTA over MAVLink ---
+# VISO_TYPE 1 = MAV (AP_VisualOdom.h: VisualOdom_Type::MAV)
+VISO_TYPE        1
+# DVL mount offset in body frame, metres, matching add_dvl in
+# prototype.urdf.xacro (x=0 y=0 z=-0.15). AP uses Z-DOWN, the xacro Z-UP,
+# so the sign flips: -0.15 m up  ->  +0.15 m down.
+VISO_POS_X       0.0
+VISO_POS_Y       0.0
+VISO_POS_Z       0.15
+# Transport + processing lag of the ROS chain. Measure yours before trusting
+# this: sim_dvl_bridge logs the observed latency every 5 s.
+VISO_DELAY_MS    30
+
+# --- EKF3 source set 1 ---
+AHRS_EKF_TYPE    3
+EK3_ENABLE       1
+# Horizontal position: GPS (3). See the note above - the DVL cannot supply it.
+EK3_SRC1_POSXY   3
+# Horizontal velocity: EXTNAV (6). THIS is the switch that actually turns on
+# DVL fusion - SelectBodyOdomFusion() fuses body odometry only when
+# useVelXYSource(EXTNAV) is true (AP_NavEKF3_PosVelFusion.cpp:2085).
+EK3_SRC1_VELXY   6
+# Depth from the barometer, as on the real vehicle.
+EK3_SRC1_POSZ    1
+EK3_SRC1_VELZ    0
+EK3_SRC1_YAW     1

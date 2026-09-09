@@ -42,12 +42,15 @@
     </collision>
   </link>
 
-  <!-- Flight IMU. ArduPilotPlugin binds to it by sensor NAME (<imuName>), not
-       by topic; the explicit topic is only so bridge.yaml can expose it to ROS
-       for debugging. Without it gz publishes on the fully-scoped sensor path
-       and the bridge entry matches nothing. -->
+  <!-- Flight IMU. MUST NOT set an explicit topic. ArduPilotPlugin finds the
+       sensor by name (<imuName>) but then computes the topic itself as
+       scopedName(sensor) + "/imu" and subscribes to that - it never reads the
+       sensor's own topic (see ArduPilotPlugin.cc:1158). An explicit topic moves
+       where gz publishes, the plugin's subscription gets nothing, so it never
+       replies to SITL and sim_vehicle.py sits on "No JSON sensor message
+       received, resending servos". bridge.yaml reaches it at the scoped path
+       instead. -->
   <xacro:add_imu name="imu_sensor" parent_link="base_link" update_rate="400.0"
-                 topic="/model/prototype_vehicle/imu"
                  x="0" y="0" z="0" r="${pi}" p="0" yaw="0" />
                  
   <xacro:add_imu name="vio_imu" parent_link="base_link" update_rate="50.0" topic="/imu0" 
@@ -73,14 +76,6 @@
     topic="/camera/bottom"
     x="0.0" y="0.0" z="-0.043071"
     r="0.0" p="1.57" yaw="0.0"
-    color="Green" />
-
-    <xacro:add_camera
-    name="back_camera"
-    parent_link="base_link"
-    topic="/camera/back"
-    x="-0.177035" y="0.0" z="0.0"
-    r="0.0" p="0.0" yaw="3.14"
     color="Green" />
 
   <xacro:add_dvl

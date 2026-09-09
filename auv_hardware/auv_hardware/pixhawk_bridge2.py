@@ -38,7 +38,16 @@ class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')
 
-        self.master = mavutil.mavlink_connection('udp:127.0.0.1:14551', baud=57600)
+        # Overridable so the same node serves the real Pixhawk and SITL. Note
+        # that sim_vehicle.py only opens 14550 by default (Tools/autotest/
+        # sim_vehicle.py: ports = [14550 + 10 * i]), so a SITL run needs an
+        # explicit --out=udp:127.0.0.1:14551 or this connection never gets a
+        # heartbeat and the node blocks in wait_heartbeat() forever.
+        self.declare_parameter('mavlink_url', 'udp:127.0.0.1:14551')
+        mavlink_url = self.get_parameter('mavlink_url').value
+
+        self.master = mavutil.mavlink_connection(mavlink_url, baud=57600)
+        self.get_logger().info(f"MAVLink baglantisi bekleniyor: {mavlink_url}")
         self.master.wait_heartbeat()
         self.get_logger().info("Pixhawk'a bağlanıldı!")
 

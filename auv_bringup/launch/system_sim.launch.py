@@ -8,6 +8,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     description_dir = get_package_share_directory('auv_description')
+    hardware_dir = get_package_share_directory('auv_hardware')
 
     gazebo_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -51,19 +52,21 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}],
     )
 
-    pixhawk_bridge = Node(
-        package='auv_hardware',
-        executable='pixhawk_bridge',
-        name='pixhawk_bridge_node',
-        output='screen',
-        parameters=[{'use_sim_time': True}],
+    # DVL chain + pixhawk_bridge2, defined once in auv_hardware so that running
+    # the DVL on its own and running it as part of the full sim cannot drift
+    # apart. See that file for the topic chain and the SITL --out requirement.
+    sim_dvl_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(hardware_dir, 'launch', 'sim_dvl.launch.py')
+        ),
+        launch_arguments={'use_sim_time': 'true'}.items()
     )
 
     return LaunchDescription([
         # t=0s: Gazebo
         LogInfo(msg='[system_sim]1 '),
         gazebo_launch,
-        pixhawk_bridge,
+        sim_dvl_launch,
 
         # t=8s:
         TimerAction(

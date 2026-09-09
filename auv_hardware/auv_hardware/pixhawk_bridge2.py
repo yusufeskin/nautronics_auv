@@ -19,7 +19,13 @@ from .baro_handler2 import BaroHandler2
 from geometry_msgs.msg import Vector3
 from std_msgs.msg import UInt16
 from .led_handler import LedHandler
-from .dvl_odom_handler import DvlOdomHandler
+# DVL -> Pixhawk path, disabled. Written under competition time pressure to
+# push DVL velocity into the autopilot's EKF as VISION_POSITION_DELTA; the DVL
+# is now treated as a plain ROS sensor, independent of the flight controller,
+# exactly like the real WaterLinked A50 + waterlinked_dvl_driver. Kept (not
+# deleted) so it can be switched back on if the EKF ever needs an external
+# velocity aid again - re-enable the three lines marked "DVL-to-EKF" below.
+# from .dvl_odom_handler import DvlOdomHandler
 from .set_position_target_handler import SetPositionTargetHandler
 from .local_position_handler import LocalPositionHandler
 from .set_speed_handler import SetSpeedHandler
@@ -73,7 +79,7 @@ class PixhawkBridge(Node):
         self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
         self.attitude_module       = AttitudeHandler(self, self.attitude_publisher)
         self.led_module            = LedHandler(self.master, self.get_logger())
-        self.dvl_module            = DvlOdomHandler(self, self.master, self.get_logger())
+        # DVL-to-EKF: self.dvl_module = DvlOdomHandler(self, self.master, self.get_logger())
         self.set_position_module   = SetPositionTargetHandler(self.master, self.get_logger())
         self.local_position_module = LocalPositionHandler(self, self.local_position_publisher)
         self.set_speed_module      = SetSpeedHandler(self.master, self.get_logger())
@@ -82,7 +88,8 @@ class PixhawkBridge(Node):
             'HEARTBEAT': [self.telemetry_module.handle_message],
             #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
             'GLOBAL_POSITION_INT':   [self.baro_module.handle_message],
-            'ATTITUDE': [self.attitude_module.handle_message, self.dvl_module.handle_attitude],
+            # DVL-to-EKF: add self.dvl_module.handle_attitude to this list.
+            'ATTITUDE': [self.attitude_module.handle_message],
             'SCALED_PRESSURE2': [self.baro_module2.handle_message],
             'LOCAL_POSITION_NED': [self.local_position_module.handle_message]
         }

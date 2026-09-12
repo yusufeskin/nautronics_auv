@@ -1,0 +1,52 @@
+Nautronics AUV - third-party assets
+===================================
+
+This repository redistributes simulation assets written by other people.  They
+remain the work of their original authors and are used under their own
+licences, listed below.  Nothing here is claimed as Nautronics' own work.
+
+
+1. RoboSub task models and course layout - ITU AUV Team
+------------------------------------------------------
+
+Source:  https://github.com/itu-auv/auv-software
+         auv_sim/auv_sim_description/auv_sim_description/
+Licence: BSD 3-Clause, Copyright (c) 2024 ITU AUV Team
+Authors: credited per model in each model.config (Levent Emre Nalici,
+         Melih Okur and others)
+
+Models under auv_description/models/:
+
+    robosub_gate              robosub_octagon_animals   nutbolt
+    robosub_slalom            robosub_buoy              pill
+    robosub_path              robosub_bottle            electric
+    robosub_bin               robosub_ladle             bandaid
+    robosub_torpedo           water_bottle
+    robosub_octagon
+
+The course layout in auv_description/worlds/robosub_2026.world is also
+theirs, taken from their semi_final_pool.world and start_pool_world.launch.
+
+Our modifications are described in auv_description/models/ITU_AUV_NOTICE,
+which also carries the full BSD 3-Clause licence text.
+
+
+2. Pool textures - HonuRobotics
+-------------------------------
+
+Source:  https://github.com/HonuRobotics/bluerobotics_models
+         bluerobotics_common/models/pool
+Licence: Apache-2.0
+
+Textures under auv_description/models/pool/materials/textures/.
+See auv_description/models/pool/NOTICE.
+
+
+3. Pool world geometry - ITU AUV Team
+-------------------------------------
+
+Source:  https://github.com/itu-auv/auv-software
+Licence: BSD 3-Clause, Copyright (c) 2024 ITU AUV Team
+
+auv_description/worlds/teknofest_pool.world derives from their pool.world;
+the header of that file records this.

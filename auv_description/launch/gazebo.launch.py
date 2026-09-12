@@ -39,8 +39,9 @@ def generate_launch_description():
 
     world_arg = DeclareLaunchArgument(
         'world',
-        default_value='teknofest_pool.world',
-        description='worlds/ altindaki dosya adi (orn. teknofest_pool.world, open_water.world)'
+        default_value='robosub_2026.world',
+        description=('worlds/ altindaki dosya adi: robosub_2026.world (RoboSub 2026 '
+                     'parkuru), teknofest_pool.world, open_water.world')
     )
 
     use_rviz = LaunchConfiguration('rviz')

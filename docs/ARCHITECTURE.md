@@ -234,7 +234,8 @@ the real configuration, so a threshold is changed in one place and simulation
 cannot quietly drift away from the vehicle.
 
 The pre-run checklist and the debugging walkthrough are in
-[ONBOARDING.md](ONBOARDING.md).
+[ONBOARDING.md](ONBOARDING.md). The first end-to-end test of control in
+simulation, step by step, is [TESTING.md](TESTING.md).
 
 ## Control: ArduSub in ALT_HOLD, driven like a joystick
 

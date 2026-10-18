@@ -9,8 +9,8 @@ changed, and both nodes start with their output gated off. Four deliberate
 steps, in this order:
 
     ros2 service call /change_mode  auv_interfaces/srv/SetVehicleMode "{mode_name: 'ALT_HOLD'}"
-    ros2 service call /arm          std_srvs/srv/SetBool "{data: true}"
     ros2 service call /pilot_demand/enable    std_srvs/srv/SetBool "{data: true}"
+    ros2 service call /arm          std_srvs/srv/SetBool "{data: true}"
     ros2 service call /pose_controller/enable std_srvs/srv/SetBool "{data: true}"
 
 Enabling the controller holds the vehicle where it is. Then send a target:

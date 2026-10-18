@@ -77,6 +77,8 @@ source ~/.bashrc
   code from zero.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — the layer split, the contract
   table, and the remaining build order.
+- **[docs/TESTING.md](docs/TESTING.md)** — first test of the stack in simulation,
+  step by step, for someone who has never run it (Turkish).
 
 ## Packages
 
@@ -86,7 +88,7 @@ This repository consists of several ROS 2 packages:
 - **[auv_core_msgs](auv_core_msgs/README.md)**: Layer boundary contracts.
 - **[auv_sensors](auv_sensors/README.md)**: Layer 1 — DVL, IMU, depth and heading sensor gates.
 - **[auv_estimation](auv_estimation/README.md)**: Layer 2 — state estimation and navigation status.
-- **[auv_actuation](auv_actuation/README.md)**: Layer 4 — commanded wrench to ArduSub pilot input.
+- **[auv_actuation](auv_actuation/README.md)**: Layer 4 — pose control and position hold, driving ArduSub ALT_HOLD by RC override.
 - **[auv_bt](auv_bt/README.md)**: Behavior Tree implementations for mission planning.
 - **[auv_cam](auv_cam/README.md)**: Camera handling and image collection nodes.
 - **[auv_control](auv_control/README.md)**: Control algorithms, including thruster mixing and visual servoing.

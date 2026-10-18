@@ -69,12 +69,13 @@ their own:
 
 ```bash
 ros2 service call /change_mode  auv_interfaces/srv/SetVehicleMode "{mode_name: 'ALT_HOLD'}"
-ros2 service call /arm          std_srvs/srv/SetBool "{data: true}"
 ros2 service call /pilot_demand/enable     std_srvs/srv/SetBool "{data: true}"
+ros2 service call /arm          std_srvs/srv/SetBool "{data: true}"
 ros2 service call /pose_controller/enable std_srvs/srv/SetBool "{data: true}"
 ```
 
-Enabling the controller **holds the vehicle where it is**. Then give it
+The output stage is enabled before arming so ArduSub sees centred sticks from
+the moment it arms. Enabling the controller **holds the vehicle where it is**. Then give it
 somewhere to be:
 
 ```bash
@@ -115,6 +116,9 @@ not cut thrust, which on a positively buoyant vehicle means surfacing.
 
 Set `RC_OVERRIDE_TIME` on the vehicle to about a second. It is what returns
 the sticks to neutral if this whole computer goes quiet.
+
+A step-by-step first test in simulation, written for someone who has never
+run the stack: [docs/TESTING.md](../docs/TESTING.md).
 
 ## Tuning order, which cannot be skipped
 

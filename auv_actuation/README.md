@@ -1,94 +1,67 @@
 # auv_actuation
 
-Layer 4 of the autonomy stack: the boundary between our control loop and
-ArduSub.
+Layer 4 of the autonomy stack: the control loop, and the boundary between it
+and ArduSub.
 
 New to the project? Start with [docs/ONBOARDING.md](../docs/ONBOARDING.md).
+The reasoning behind the split is in
+[docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md#control-ardusub-in-alt_hold-driven-like-a-joystick).
 
 ## The split
 
-ArduSub keeps the **inner loop** — attitude stabilisation and depth hold,
-running at 400 Hz on real-time hardware, with arming logic and failsafes that
-already work. This stack owns the **outer loop** — where the vehicle is, where
-it should be, and how fast it should get there.
+ArduSub stays in **ALT_HOLD** and is driven the way a pilot with a joystick
+would drive it: one PWM value per axis, as RC channel overrides. ArduSub does
+the motor mixing, holds roll and pitch level, holds depth while the throttle
+is centred and holds heading while yaw is centred. This stack decides where
+the vehicle should be and moves the sticks to get it there.
 
 ```
-Layer 2   /odom/filtered ──┐
-                           ▼
-Layer 4   pose_controller ──▶ WrenchStamped ──▶ pilot_demand ──▶ PilotDemand
-             ▲       ▲                                                │
-   target_pose    cmd_vel (Layer 3, later)                            ▼
-                                              auv_hardware/pixhawk_bridge2
-                                                    (owns the MAVLink link)
-                                                          │ MANUAL_CONTROL
-                                                          ▼
-                                          ArduSub STABILIZE / ALT_HOLD
-                                                    └─▶ mixer ─▶ PWM
+Layer 2   /odom/filtered, /nav_status ──┐
+                                        ▼
+Layer 4   pose_controller ──▶ AxisDemand ──▶ pilot_demand ──▶ PilotDemand (RC PWM)
+             ▲      ▲     ▲                                          │
+     reference  target_pose  hold                                    ▼
+   (guidance)   (by hand)  (service)            auv_hardware/pixhawk_bridge2
+                                             (owns the MAVLink link, rc_override)
+                                                         │ RC_CHANNELS_OVERRIDE
+                                                         ▼
+                                             ArduSub ALT_HOLD ─▶ mixer ─▶ motors
 ```
 
 **Nothing in this package speaks MAVLink.** Only one process may hold the link
-to the autopilot — a second cannot bind the same endpoint, and even if it
-could, two independent sources of command authority over one vehicle is a
-worse problem than a port conflict. `pixhawk_bridge2` owns it; this package
-publishes `auv_core_msgs/PilotDemand` and that bridge forwards it.
+to the autopilot. `pixhawk_bridge2` owns it and must run with
+`command_mode:=rc_override` — `autonomy.launch.py` does that. In that mode the
+bridge gives ArduSub no DVL and accepts none of the legacy target topics, so
+this package is the only thing commanding the vehicle.
 
-One consequence to watch: `pilot_demand` and `pixhawk_bridge2`'s existing
-`pwm_router` path are both pilot input by another name. Run one at a time —
-the autopilot acts on whichever arrived last.
+## What each channel means, and what the controller sends
 
-`pose_controller` runs two nested loops. The outer one turns a position or
-heading error into a **sensible speed to approach at**, saturated so the
-vehicle never lunges. The inner one tracks that speed against what the DVL
-actually measures and produces a wrench. Having a DVL is what makes the inner
-loop possible, and it is where the integral lives — buoyancy trim, a standing
-current, one thruster pushing harder.
+| Ch | Axis | In ALT_HOLD | Controller |
+|---|---|---|---|
+| 5 | forward | thrust fraction | position → speed (P, capped) → speed vs DVL (PID) |
+| 6 | lateral | thrust fraction | same |
+| 3 | throttle | climb rate | depth error × `kp_depth`, capped. No PID |
+| 4 | yaw | turn rate | yaw error × `kp_yaw`, capped. No PID |
+| 1, 2 | pitch, roll | lean angle | always 1500 |
 
-Turning to a heading is not a special case: heading error produces a yaw rate,
-the rate is tracked, and when the error reaches zero the command stops. The
-autopilot underneath then holds whatever attitude it is at.
+ArduSub already closes the climb-rate and turn-rate loops, so a PID on those
+axes here would close the same loop twice. When their error reaches zero the
+stick centres and ArduSub holds.
 
-The contract into this package is `WrenchStamped` — forces and torques, not
-stick counts. That is deliberate: the controller stays in physical units so a
-model-based feedforward term can be added later, and if ArduSub's mixer is
-ever replaced by our own thrust allocation, only this node is swapped and
-nothing above it moves.
+Forward and lateral are the only axes nobody else closes, so the integral
+lives there — buoyancy trim pushing the vehicle along, a thruster that is
+slightly stronger one way. It has clamping anti-windup: while an output is
+pinned at full stick it stops integrating in that direction.
 
-## Two things this architecture cannot do
-
-**Roll and pitch torque.** In STABILIZE and ALT_HOLD those axes are ArduSub's:
-the sticks command a lean angle inside a configured limit, not a torque. The
-mapper reports such a request as undelivered rather than dropping it silently,
-so the controller above can stop integrating against a wrench it will never
-get. RoboSub's 90° gate style points need a temporary switch to ACRO or
-MANUAL.
-
-**Absolute heading, sent to ArduSub.** Nothing here ever commands a heading —
-only a yaw **rate**. That is not caution, it is the design: ArduSub's job on
-this axis is to *hold still when left alone*, and its own idea of which way
-north is never gets read by anything in this stack. So the number in the
-autopilot does not have to agree with the number in the estimator, and there
-is no "two yaws" problem to reconcile.
-
-The loop is the ordinary cascade: our estimate says the heading is off by 15°,
-we command a proportional yaw rate, the vehicle turns, our estimate says the
-error is zero, we stop asking. If the autopilot's hold then wanders a degree,
-our estimate sees it and a small correction follows. Pixhawk stabilises; the
-external sensors navigate.
-
-One thing worth watching for in the pool: if the autopilot's compass is yanked
-by a magnetic disturbance, its heading hold will actively rotate the vehicle to
-chase it, and this loop will rotate it back. This loop wins — it commands rate
-directly — so the net effect is a slow disturbance it rejects. If it ever
-becomes large enough to be annoying, `EK3_SRC1_YAW` makes ArduSub's hold a
-pure gyro hold instead. Only worth doing if you actually see it.
+`AxisDemand` carries surge and sway as fractions in [-1, 1] and climb and yaw
+as m/s and rad/s, all FLU. `pilot_demand` turns that into PWM, flipping
+lateral and yaw into ArduSub's directions and skipping over ArduSub's stick
+deadzones.
 
 ## Running
 
-`pixhawk_bridge2` must already be running — it is what actually reaches the
-autopilot.
-
 ```bash
-ros2 launch auv_actuation actuation.launch.py
+ros2 launch auv_bringup autonomy.launch.py sim:=true autopilot:=true
 ```
 
 Nothing moves until four deliberate steps, none of which these nodes take on
@@ -101,68 +74,68 @@ ros2 service call /pilot_demand/enable     std_srvs/srv/SetBool "{data: true}"
 ros2 service call /pose_controller/enable std_srvs/srv/SetBool "{data: true}"
 ```
 
-A node that can arm the vehicle is a node that will arm it in the lab. Two
-independent gates on the path to the thrusters is also deliberate.
-
-Then give it somewhere to be:
+Enabling the controller **holds the vehicle where it is**. Then give it
+somewhere to be:
 
 ```bash
 ros2 topic pub --once /pose_controller/target_pose geometry_msgs/msg/PoseStamped \
   "{header: {frame_id: odom}, pose: {position: {x: 2.0, y: 0.0, z: -1.5}}}"
+
+ros2 service call /pose_controller/hold std_srvs/srv/Trigger    # stop here
 ```
 
 Watch `/pose_controller/pose_error` shrink and `/pose_controller/at_target` go
-true. A zero quaternion in the target means "hold whatever heading you have";
-send a real orientation to command one.
+true. A zero quaternion in the target means "keep whatever heading you have".
+Targets must be in `odom`; anything else is refused.
 
-`~/cmd_vel` bypasses the outer loop and commands a body velocity directly.
-That is the socket the guidance layer plugs into later, and it takes priority
-over a pose target while it is fresh.
+`~/reference` (`nav_msgs/Odometry`) is the socket guidance plugs into: the
+pose to be at now, plus the reference's own velocity as feedforward. If that
+stream stops for `reference_timeout_s`, the controller holds at the last
+reference.
+
+## Position hold
+
+There is no hold mode. Holding is this controller with a reference that does
+not move — on enable, on `~/hold`, and at the end of a guidance trajectory.
+ArduSub's own POS_HOLD is not used: it would hold against EKF3's position,
+which needs the DVL fed into the autopilot, and it would fight this loop.
 
 ## Safety behaviour
 
 | Situation | What happens |
 |---|---|
-| Not enabled | neutral |
-| No wrench received yet | neutral |
-| Wrench older than `command_timeout_s` | neutral, warned once |
-| Normal | mapped demand, sent at a fixed rate |
+| `pilot_demand` disabled | nothing sent; ArduSub's override times out |
+| Enabled, no demand yet, or older than `command_timeout_s` | every stick centred |
+| No odometry for `odom_timeout_s` | controller stops publishing → sticks centred |
+| DVL out longer than `dvl_coast_s`, or no `/nav_status` | forward and lateral centred; depth and yaw carry on |
+| Normal | mapped demand at a fixed rate |
 
-Neutral means **hold depth and stop translating**, not cut thrust. On a
-positively buoyant vehicle, cutting thrust means surfacing.
+Centred sticks in ALT_HOLD mean **hold depth, hold heading, stop pushing** —
+not cut thrust, which on a positively buoyant vehicle means surfacing.
 
-Commands are sent continuously even when neutral. A gap in pilot input is
-something ArduSub has to interpret; a steady neutral is unambiguous.
+Set `RC_OVERRIDE_TIME` on the vehicle to about a second. It is what returns
+the sticks to neutral if this whole computer goes quiet.
 
 ## Tuning order, which cannot be skipped
 
-1. **Measure the full-scale forces** in `config/pilot_demand.yaml`. Until then the controller asks
-   for newtons and the vehicle receives stick deflections through an unknown
-   conversion, and no gain means anything.
-2. **Inner loop alone.** Publish a constant `~/cmd_vel`, watch the DVL. Raise
-   `kp` until velocity settles quickly without oscillating, then add just
-   enough `ki` to remove the steady offset.
-3. **Outer loop.** Send a target a few metres out and watch the approach.
-   `kp_position` sets how briskly it arrives; the `max_speed_*` caps set the
-   cruise and are the first thing to lower if a manoeuvre looks violent.
+1. **Check `config/pilot_demand.yaml` against the vehicle.** The climb and
+   turn rate at full stick (`PILOT_SPEED_UP`, `PILOT_SPEED_DN`, yaw scaling)
+   and the deadzones (`THR_DZ`, `RCn_DZ`). Confirm both rates by measurement.
+   `pilot_demand_sim.yaml` restates them for SITL, whose defaults may differ.
+2. **Depth and yaw.** Target a depth, then a heading; raise `kp_depth` /
+   `kp_yaw` until it arrives briskly without overshoot.
+3. **Surge and sway.** Hold, push the vehicle off station, raise `kp` until it
+   returns without oscillating, then add just enough `ki` to remove the
+   standing offset.
+4. **Position.** Target a few metres out. `kp_position` sets how briskly it
+   arrives; `max_speed_xy` sets the cruise and is the first thing to lower if
+   a manoeuvre looks violent.
 
-## Calibration is not optional
+## What this cannot do
 
-`config/pilot_demand.yaml` holds the full-scale force per axis — the
-conversion between newtons and stick counts. Until those are measured, every
-control gain above this node is meaningless, because the controller is asking
-for forces and the vehicle is receiving stick deflections.
-
-The file explains the procedure: one axis at a time, fixed demand, wait for
-terminal velocity on the DVL. The same runs fill in the drag coefficients in
-`vehicle.yaml`.
-
-## Anti-windup
-
-`~/realised_wrench` publishes what the vehicle will **actually** feel, after
-clipping and after the roll/pitch axes are dropped. The controller compares it
-against what it asked for and holds its integrators on the difference.
-`~/saturated` carries the same information as a flag.
+**Roll and pitch manoeuvres.** In ALT_HOLD those sticks command a lean angle
+and the controller always leaves them level. RoboSub's 90° gate style points
+need a temporary switch to MANUAL.
 
 ## Tests
 
@@ -170,8 +143,7 @@ against what it asked for and holds its integrators on the difference.
 colcon test --packages-select auv_actuation
 ```
 
-Sign conventions for the mapping, and loop behaviour for the controller. They
-earn their place: the first run caught the vertical axis being flipped.
-ArduSub's pilot axes are not one consistent frame — lateral and yaw invert
-against our FLU convention, the throttle stick does not — so each is spelled
-out and tested rather than derived from a frame rule.
+The control law and the mapping are plain Python with no ROS dependency.
+ArduSub's sticks are not one consistent frame — lateral and yaw invert
+against our FLU convention, the throttle stick does not — so each direction is
+spelled out and tested rather than derived from a frame rule.

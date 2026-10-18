@@ -1,25 +1,16 @@
-# Pilot demand tuning.
+# Output stage: axis demand to ArduSub RC channels, for ALT_HOLD.
 #
-# This node converts the controller's wrench into ArduSub's pilot-input axes
-# and publishes it. It does not talk to the autopilot: pixhawk_bridge2 owns
-# the MAVLink link and forwards what this publishes, because only one process
-# may hold that connection and only one thing may command the vehicle.
+# This node converts the controller's demand into RC channel PWM and
+# publishes it. It does not talk to the autopilot: pixhawk_bridge2 owns the
+# MAVLink link and forwards what this publishes as RC_CHANNELS_OVERRIDE.
 #
-# The full-scale values are the calibration between this stack's units
-# (newtons and newton-metres) and ArduSub's pilot-input counts. Every control
-# gain above this node is meaningless until they are measured, because the
-# controller is asking for forces and the vehicle is receiving stick
-# deflections.
+# Everything here describes ArduSub, not this stack. READ THE VALUES OFF THE
+# VEHICLE'S PARAMETERS, then confirm the two rates by measurement: command a
+# fixed throttle or yaw stick, read the climb or turn rate off the estimator.
 #
-# HOW TO MEASURE. One axis at a time, in the pool, in ALT_HOLD:
-#   1. Command a fixed demand on the axis - say half scale.
-#   2. Wait until the DVL shows the velocity has stopped rising. At terminal
-#      velocity thrust equals drag, so the force is known once the drag
-#      coefficient is (see the hydrodynamics block in vehicle.yaml, which the
-#      same experiment fills in).
-#   3. Repeat at two or three levels and fit.
-# Half an hour per axis. Until then these are placeholders from the T200
-# datasheet and the thruster geometry, not measurements.
+# Also set on the vehicle, not here: RC_OVERRIDE_TIME. When this stack stops
+# sending, that is how long ArduSub keeps the last override before returning
+# the sticks to neutral. Keep it short - around a second.
 
 pilot_demand:
   ros__parameters:
@@ -27,30 +18,24 @@ pilot_demand:
     send_rate_hz: 20.0
 
     # Longer than a couple of controller periods, short enough that a dead
-    # controller cannot keep the vehicle driving into a wall. On timeout the
-    # bridge sends neutral, which in ALT_HOLD means hold depth and stop
-    # translating - not cut thrust, which on a positively buoyant vehicle
-    # would mean surfacing.
+    # controller cannot keep the vehicle driving into a wall. On timeout every
+    # stick is centred, which in ALT_HOLD means hold depth, hold heading.
     command_timeout_s: 0.5
 
     # Output is gated off at startup and has to be turned on deliberately with
-    # the ~/enable service. A bridge that starts driving thrusters the moment
-    # it is launched is a bridge that will do it in the lab.
+    # the ~/enable service. While disabled nothing is sent at all.
     start_enabled: false
 
-    # MEASURE. Force produced at full stick deflection on each axis.
-    surge_full_scale_n: 40.0
-    sway_full_scale_n: 30.0     # weaker than surge: the vectored thrusters
-                                # are angled and the hull is broader side-on
-    heave_full_scale_n: 40.0
-    yaw_full_scale_nm: 8.0
+    neutral_pwm: 1500
+    span_pwm: 400               # full stick at 1100 / 1900
 
-    # In ALT_HOLD the vertical axis is a climb-rate demand around this neutral
-    # point, and neutral means "hold this depth". In STABILIZE it is raw
-    # throttle and neutral means "no vertical thrust", which is not the same
-    # thing - check which mode you are in before changing this.
-    neutral_z: 500
+    # Rates at full stick. MEASURE / READ OFF THE VEHICLE.
+    max_climb_rate_up: 0.5      # m/s, PILOT_SPEED_UP / 100
+    max_climb_rate_down: 0.5    # m/s, PILOT_SPEED_DN / 100 (0 there means = UP)
+    max_yaw_rate: 1.0           # rad/s - PLACEHOLDER, verify by measurement
 
-    # ArduSub applies its own stick deadband; demands below it produce nothing
-    # but traffic on the link. TUNE from the vehicle's RCn_DZ parameters.
-    deadband_counts: 0
+    # ArduSub's stick deadzones, PWM either side of neutral. READ OFF THE VEHICLE.
+    throttle_deadzone_pwm: 100  # THR_DZ
+    yaw_deadzone_pwm: 0         # RC4_DZ
+    forward_deadzone_pwm: 0     # RC5_DZ
+    lateral_deadzone_pwm: 0     # RC6_DZ

@@ -1,4 +1,4 @@
-"""Layer 4 output stage: commanded wrench to an ArduSub pilot demand.
+"""Layer 4 output stage: axis demand to ArduSub RC channels.
 
 This node does the unit conversion and the safety gating, and then stops.
 It does **not** speak MAVLink.
@@ -8,25 +8,30 @@ autopilot - a second one cannot bind the same endpoint, and even if it could,
 two independent sources of command authority over one vehicle is a worse
 problem than a port conflict. auv_hardware/pixhawk_bridge2 owns the link; this
 node publishes auv_core_msgs/PilotDemand and that bridge forwards it as
-MANUAL_CONTROL without thinking about it.
+RC_CHANNELS_OVERRIDE without thinking about it.
 
-Everything above works in newtons and knows nothing about stick counts;
-everything below works in stick counts and knows nothing about forces. The
-conversion, its calibration, and the decision to send nothing at all live
+Everything above works in thrust fractions and rates and knows nothing about
+sticks; everything below works in PWM and knows nothing about the vehicle.
+The conversion, its calibration, and the decision to send nothing at all live
 here.
+
+Gating:
+  disabled          publishes nothing. ArduSub's override times out and the
+                    pilot's own input applies again.
+  enabled, stale    publishes neutral on every channel: hold depth, hold
+                    heading, stop pushing.
+  enabled, fresh    publishes the mapped demand.
 """
 
 from __future__ import annotations
 
-import numpy as np
 import rclpy
-from geometry_msgs.msg import WrenchStamped
 from rclpy.node import Node
 from std_msgs.msg import Bool
 from std_srvs.srv import SetBool
 
-from auv_actuation.demand_mapping import DemandLimits, WrenchDemandMapper
-from auv_core_msgs.msg import PilotDemand
+from auv_actuation.demand_mapping import AxisDemandMapper, ChannelLimits
+from auv_core_msgs.msg import AxisDemand, PilotDemand
 
 LOG_THROTTLE_S = 5.0
 
@@ -41,23 +46,24 @@ class PilotDemandNode(Node):
         self.declare_parameter("command_timeout_s", 0.5)
         self.declare_parameter("start_enabled", False)
 
-        self.declare_parameter("surge_full_scale_n", 40.0)
-        self.declare_parameter("sway_full_scale_n", 30.0)
-        self.declare_parameter("heave_full_scale_n", 40.0)
-        self.declare_parameter("yaw_full_scale_nm", 8.0)
-        self.declare_parameter("neutral_z", 500)
-        self.declare_parameter("deadband_counts", 0)
+        defaults = ChannelLimits()
+        for name in ("neutral_pwm", "span_pwm", "throttle_deadzone_pwm",
+                     "yaw_deadzone_pwm", "forward_deadzone_pwm", "lateral_deadzone_pwm"):
+            self.declare_parameter(name, getattr(defaults, name))
+        for name in ("max_climb_rate_up", "max_climb_rate_down", "max_yaw_rate"):
+            self.declare_parameter(name, getattr(defaults, name))
 
-        self._mapper = WrenchDemandMapper(
-            limits=DemandLimits(
-                surge_full_scale_n=self._param("surge_full_scale_n"),
-                sway_full_scale_n=self._param("sway_full_scale_n"),
-                heave_full_scale_n=self._param("heave_full_scale_n"),
-                yaw_full_scale_nm=self._param("yaw_full_scale_nm"),
-                neutral_z=self._param("neutral_z"),
-                deadband_counts=self._param("deadband_counts"),
-            )
-        )
+        self._mapper = AxisDemandMapper(limits=ChannelLimits(
+            neutral_pwm=self._param("neutral_pwm"),
+            span_pwm=self._param("span_pwm"),
+            max_climb_rate_up=self._param("max_climb_rate_up"),
+            max_climb_rate_down=self._param("max_climb_rate_down"),
+            max_yaw_rate=self._param("max_yaw_rate"),
+            throttle_deadzone_pwm=self._param("throttle_deadzone_pwm"),
+            yaw_deadzone_pwm=self._param("yaw_deadzone_pwm"),
+            forward_deadzone_pwm=self._param("forward_deadzone_pwm"),
+            lateral_deadzone_pwm=self._param("lateral_deadzone_pwm"),
+        ))
 
         self._enabled = bool(self._param("start_enabled"))
         self._last_command = None
@@ -65,13 +71,9 @@ class PilotDemandNode(Node):
         self._was_stale = False
 
         self._demand_pub = self.create_publisher(PilotDemand, "~/demand", 10)
-        # What the vehicle will actually feel, after clipping and after the
-        # axes ArduSub cannot deliver are dropped. The controller compares it
-        # against what it asked for and stops integrating on the difference.
-        self._realised_pub = self.create_publisher(WrenchStamped, "~/realised_wrench", 10)
         self._saturated_pub = self.create_publisher(Bool, "~/saturated", 10)
 
-        self.create_subscription(WrenchStamped, "~/cmd_wrench", self._on_wrench, 10)
+        self.create_subscription(AxisDemand, "~/cmd_axis", self._on_axis, 10)
         self.create_service(SetBool, "~/enable", self._on_enable)
 
         rate = max(1.0, self._param("send_rate_hz"))
@@ -84,11 +86,8 @@ class PilotDemandNode(Node):
 
     # -- inputs ------------------------------------------------------------
 
-    def _on_wrench(self, msg: WrenchStamped) -> None:
-        self._last_command = (
-            np.array([msg.wrench.force.x, msg.wrench.force.y, msg.wrench.force.z]),
-            np.array([msg.wrench.torque.x, msg.wrench.torque.y, msg.wrench.torque.z]),
-        )
+    def _on_axis(self, msg: AxisDemand) -> None:
+        self._last_command = (msg.surge, msg.sway, msg.climb_rate, msg.yaw_rate)
         self._last_command_time = self._now()
 
     def _on_enable(self, request, response):
@@ -102,42 +101,26 @@ class PilotDemandNode(Node):
     # -- output ------------------------------------------------------------
 
     def _publish(self) -> None:
+        if not self._enabled:
+            return
+
         demand = self._resolve_demand()
-        stamp = self.get_clock().now().to_msg()
 
-        # Published unconditionally at a fixed rate, even when neutral. A gap
-        # in pilot input is something the autopilot has to interpret; a steady
-        # neutral is unambiguous.
         msg = PilotDemand()
-        msg.header.stamp = stamp
-        msg.header.frame_id = "base_link"
-        msg.x = int(demand.x)
-        msg.y = int(demand.y)
-        msg.z = int(demand.z)
-        msg.r = int(demand.r)
-        msg.buttons = 0
-        msg.saturated = bool(demand.saturated)
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.pitch = demand.pitch
+        msg.roll = demand.roll
+        msg.throttle = demand.throttle
+        msg.yaw = demand.yaw
+        msg.forward = demand.forward
+        msg.lateral = demand.lateral
         self._demand_pub.publish(msg)
-
-        realised = WrenchStamped()
-        realised.header.stamp = stamp
-        realised.header.frame_id = "base_link"
-        realised.wrench.force.x = float(demand.realised_force[0])
-        realised.wrench.force.y = float(demand.realised_force[1])
-        realised.wrench.force.z = float(demand.realised_force[2])
-        realised.wrench.torque.x = float(demand.realised_torque[0])
-        realised.wrench.torque.y = float(demand.realised_torque[1])
-        realised.wrench.torque.z = float(demand.realised_torque[2])
-        self._realised_pub.publish(realised)
 
         flag = Bool()
         flag.data = bool(demand.saturated)
         self._saturated_pub.publish(flag)
 
     def _resolve_demand(self):
-        if not self._enabled:
-            return self._mapper.neutral()
-
         if self._last_command is None or self._last_command_time is None:
             return self._mapper.neutral()
 
@@ -146,26 +129,20 @@ class PilotDemandNode(Node):
             if not self._was_stale:
                 self._was_stale = True
                 self.get_logger().warn(
-                    f"no wrench for {age:.2f} s; holding depth and stopping translation"
+                    f"no axis demand for {age:.2f} s; sticks centred "
+                    "(hold depth, hold heading, stop pushing)"
                 )
             return self._mapper.neutral()
 
         if self._was_stale:
             self._was_stale = False
-            self.get_logger().info("wrench command resumed")
+            self.get_logger().info("axis demand resumed")
 
         demand = self._mapper.map(*self._last_command)
-
-        if demand.dropped_roll_pitch:
-            self.get_logger().warn(
-                "roll/pitch torque commanded but not deliverable: ArduSub's "
-                "STABILIZE and ALT_HOLD stabilise those axes to level and "
-                "accept a lean angle, not a torque",
-                throttle_duration_sec=LOG_THROTTLE_S,
-            )
         if demand.saturated:
             self.get_logger().warn(
-                "demand saturated; the controller should hold its integrators",
+                "demand beyond full stick, clipped: lower the controller's caps "
+                "or check max_climb_rate_* / max_yaw_rate against the vehicle",
                 throttle_duration_sec=LOG_THROTTLE_S,
             )
         return demand

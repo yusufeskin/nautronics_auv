@@ -11,11 +11,14 @@ Only interfaces with no adequate standard equivalent live here.
 |---|---|---|
 | `SensorHealth` | gate → operators and estimator | every Layer 1 gate |
 | `NavStatus` | estimator → mission | Layer 2 |
-| `ThrusterCommand` | allocation → hardware | Layer 4 |
+| `AxisDemand` | control law → output stage | Layer 4 `pose_controller` |
+| `PilotDemand` | output stage → autopilot bridge (RC channels) | Layer 4 `pilot_demand` |
+| `ThrusterCommand` | allocation → hardware | unused |
 
-`NavStatus` and `ThrusterCommand` describe layers that do not exist yet. They
-are defined now because fixing the contracts early is what lets those layers
-be built in parallel — see
+`ThrusterCommand` belongs to a direct thrust-allocation path this vehicle does
+not use: ArduSub does the motor mixing. It is kept because that path is the
+designed escape if ALT_HOLD ever becomes intolerable. Fixing contracts early
+is what lets layers be built in parallel — see
 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md#contracts).
 
 Before adding a message here, check that no standard one fits.

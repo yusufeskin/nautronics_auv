@@ -4,13 +4,9 @@ import time
 import rclpy
 from rclpy.node import Node
 from pymavlink import mavutil
-# RC_CHANNELS_OVERRIDE yolu devre disi birakildi. Bu yol da MANUAL_CONTROL
-# gibi "pilot girdisi" sayiliyor ve otopilot en son geleni uyguluyor - ikisi
-# ayni anda calisirsa hangisinin kazandigi belirsiz olur. Yeni kontrol yigini
-# (auv_actuation -> /pilot_demand -> ManualControlHandler) tek pilot girdisi
-# kaynagi olarak kaliyor.
-# Geri acmak icin: bu satir, PwmHandler kurulumu, pwm_subscription ve
-# pwm_callback yorumdan cikarilir; ayni anda /pilot_demand yayinlanmamalidir.
+# Eski pwm_router -> PwmHandler yolu kapali. Yeni yigin RC override'i
+# /pilot_demand -> RcOverrideHandler uzerinden gonderir (command_mode:
+# rc_override); ikisi ayni anda acilirsa otopilot en son geleni uygular.
 # from .pwm_handler import PwmHandler
 from .mode_handler import ModeHandler
 from .telemetry_handler import TelemetryHandler
@@ -32,9 +28,11 @@ from .dvl_odom_handler import DvlOdomHandler
 from .set_position_target_handler import SetPositionTargetHandler
 from .local_position_handler import LocalPositionHandler
 from .set_speed_handler import SetSpeedHandler
-from .manual_control_handler import ManualControlHandler
+from .rc_override_handler import RcOverrideHandler
 from .attitude_imu_handler import AttitudeImuHandler
 from geometry_msgs.msg import Point
+
+COMMAND_MODES = ('legacy', 'rc_override')
 
 POOL_ORIGIN_LAT_DEG = 40.72304
 POOL_ORIGIN_LON_DEG = 29.82703
@@ -49,22 +47,42 @@ class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')
 
+        # Which architecture is driving the vehicle. Exactly one of them, never
+        # both: each is a source of command authority over the same autopilot.
+        #
+        #   legacy        the previous stack. ArduSub's EKF3 is fed the DVL and
+        #                 commanded with depth / attitude / position targets
+        #                 (auv_bt, auv_control and the *_mission launches).
+        #   rc_override   the new stack (docs/ARCHITECTURE.md). ArduSub stays in
+        #                 ALT_HOLD, is given no DVL and no targets, and is driven
+        #                 only by /pilot_demand as RC channel overrides.
+        self.declare_parameter('command_mode', 'legacy')
+        self.command_mode = self.get_parameter('command_mode').value
+        if self.command_mode not in COMMAND_MODES:
+            raise ValueError(
+                f"command_mode '{self.command_mode}' not one of {COMMAND_MODES}"
+            )
+        legacy = self.command_mode == 'legacy'
+
         self.master = mavutil.mavlink_connection('udp:127.0.0.1:14551', baud=57600)
         self.master.wait_heartbeat()
-        self.get_logger().info("Pixhawk'a bağlanıldı!")
+        self.get_logger().info(f"Pixhawk'a bağlanıldı! (command_mode: {self.command_mode})")
 
-        self.send_gps_global_origin()
+        if legacy:
+            # Only EKF3's position needs an origin, and only the legacy stack
+            # asks EKF3 for a position.
+            self.send_gps_global_origin()
 
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_ATTITUDE, 50)
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT, 10)
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_SCALED_PRESSURE2, 10)
-        self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_LOCAL_POSITION_NED, 10)
+        if legacy:
+            self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_LOCAL_POSITION_NED, 10)
 
         self.status_publisher   = self.create_publisher(VehicleStatus, 'vehicle/state', 10)
         self.baro_publisher     = self.create_publisher(Float64, 'baro_data', 10)
         self.baro_publisher2    = self.create_publisher(Float64, 'baro_data2', 10)
         self.attitude_publisher = self.create_publisher(Vector3, 'current_attitude', 10)
-        self.local_position_publisher = self.create_publisher(Point, 'vehicle/local_position', 10)
         # The autopilot's fused attitude, in this stack's ENU/FLU convention.
         # heading_gate consumes it as the absolute heading source.
         self.attitude_imu_publisher = self.create_publisher(Imu, 'autopilot/attitude', 10)
@@ -73,27 +91,18 @@ class PixhawkBridge(Node):
         self.mode_module           = ModeHandler(self.master, self.get_logger())
         self.telemetry_module      = TelemetryHandler(self, self.status_publisher)
         self.baro_module           = BaroHandler(self, self.baro_publisher)
-        self.baro_module2          = BaroHandler2(self, self.baro_publisher2) 
-        self.set_depth_module      = SetDepthHandler(self.master, self.get_logger())
-        self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
+        self.baro_module2          = BaroHandler2(self, self.baro_publisher2)
         self.attitude_module       = AttitudeHandler(self, self.attitude_publisher)
         self.led_module            = LedHandler(self.master, self.get_logger())
-        self.dvl_module            = DvlOdomHandler(self, self.master, self.get_logger())
-        self.set_position_module   = SetPositionTargetHandler(self.master, self.get_logger())
-        self.local_position_module = LocalPositionHandler(self, self.local_position_publisher)
-        self.set_speed_module      = SetSpeedHandler(self.master, self.get_logger())
-        self.manual_control_module = ManualControlHandler(self.master, self.get_logger())
         self.attitude_imu_module   = AttitudeImuHandler(self, self.attitude_imu_publisher)
-        
+
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
             #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
             'GLOBAL_POSITION_INT':   [self.baro_module.handle_message],
             'ATTITUDE': [self.attitude_module.handle_message,
-                         self.attitude_imu_module.handle_message,
-                         self.dvl_module.handle_attitude],
+                         self.attitude_imu_module.handle_message],
             'SCALED_PRESSURE2': [self.baro_module2.handle_message],
-            'LOCAL_POSITION_NED': [self.local_position_module.handle_message]
         }
 
         self.mode_change_service = self.create_service(
@@ -106,41 +115,57 @@ class PixhawkBridge(Node):
         #     UInt16MultiArray, 'pwm_router', self.pwm_callback, 10
         # )
 
-        self.set_depth_subscription = self.create_subscription(
-            Float64, 'target_depth', self.set_depth_callback, 10
-        )
-
-        self.set_attitude_subscription = self.create_subscription(
-            Vector3, 'target_attitude', self.set_attitude_callback, 10
-        )
-
         self.led_subscription = self.create_subscription(
             UInt16, 'led_control', self.led_callback, 10
         )
 
+        if legacy:
+            self._setup_legacy_commands()
+        else:
+            # Pilot demand from the new control stack (auv_actuation). This
+            # process owns the MAVLink link, so that stack publishes a ROS
+            # message and this bridge is what actually talks to the autopilot.
+            self.rc_override_module = RcOverrideHandler(self.master, self.get_logger())
+            self.pilot_demand_subscription = self.create_subscription(
+                PilotDemand, 'pilot_demand', self.pilot_demand_callback, 10
+            )
+
+        self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
+
+    def _setup_legacy_commands(self):
+        """The previous architecture's command paths. Not used by the new stack.
+
+        DvlOdomHandler forwards the DVL into ArduSub's EKF3, and the set_*
+        handlers command EKF3-based targets. The new stack refuses both: it
+        keeps the only position estimate on the companion computer.
+        """
+        self.local_position_publisher = self.create_publisher(Point, 'vehicle/local_position', 10)
+
+        self.set_depth_module      = SetDepthHandler(self.master, self.get_logger())
+        self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
+        self.dvl_module            = DvlOdomHandler(self, self.master, self.get_logger())
+        self.set_position_module   = SetPositionTargetHandler(self.master, self.get_logger())
+        self.local_position_module = LocalPositionHandler(self, self.local_position_publisher)
+        self.set_speed_module      = SetSpeedHandler(self.master, self.get_logger())
+
+        self.msg_handlers['ATTITUDE'].append(self.dvl_module.handle_attitude)
+        self.msg_handlers['LOCAL_POSITION_NED'] = [self.local_position_module.handle_message]
+
+        self.set_depth_subscription = self.create_subscription(
+            Float64, 'target_depth', self.set_depth_callback, 10
+        )
+        self.set_attitude_subscription = self.create_subscription(
+            Vector3, 'target_attitude', self.set_attitude_callback, 10
+        )
         self.set_position_subscription = self.create_subscription(
             Point, 'target_position_local', self.set_position_callback, 10
         )
-
         self.set_position_yaw_subscription = self.create_subscription(
             PositionYawTarget, 'target_position_yaw', self.set_position_yaw_callback, 10
         )
-
         self.set_speed_subscription = self.create_subscription(
             Float64, 'target_speed', self.set_speed_callback, 10
         )
-
-        # Pilot demand from the new control stack (auv_actuation). This
-        # process owns the MAVLink link, so that stack publishes a ROS message
-        # and this bridge is what actually talks to the autopilot.
-        #
-        # Tek pilot girdisi kaynagi budur. RC_CHANNELS_OVERRIDE yolu yukarida
-        # bilerek yorum satirina alindi.
-        self.pilot_demand_subscription = self.create_subscription(
-            PilotDemand, 'pilot_demand', self.pilot_demand_callback, 10
-        )
-
-        self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
 
     def send_gps_global_origin(self):
         lat_e7 = int(round(POOL_ORIGIN_LAT_DEG * 1e7))
@@ -209,7 +234,7 @@ class PixhawkBridge(Node):
         self.set_speed_module.set_speed(msg.data)
 
     def pilot_demand_callback(self, msg):
-        self.manual_control_module.send_demand(msg)
+        self.rc_override_module.send_demand(msg)
 
 
 def main(args=None):

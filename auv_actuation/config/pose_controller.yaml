@@ -1,82 +1,75 @@
-# Cascaded pose controller gains.
+# Pose controller gains, for ArduSub in ALT_HOLD.
 #
-# Two nested loops:
-#   outer (P only)   position error -> desired approach speed, saturated
-#   inner (PID)      speed error vs the DVL -> body wrench
+# Per axis, matching what each ALT_HOLD stick means:
+#   forward, lateral   position error -> desired speed (P, capped)
+#                      -> speed error vs the DVL -> thrust fraction (PID)
+#   depth              depth error -> climb rate (P, capped); ArduSub closes it
+#   yaw                yaw error  -> turn rate  (P, capped); ArduSub closes it
 #
-# The outer loop is proportional on purpose. Its job is to pick a sensible
-# speed to approach at, and it saturates; an integral there would fight the
-# saturation and wind up on every long transit. The steady-state errors -
-# buoyancy trim, a standing current, one thruster pushing harder - belong to
-# the inner loop, which closes on measured velocity.
+# There is no PID on depth or yaw on purpose: ArduSub already closes those
+# rate loops, and a second PID around them would tune neither.
 #
 # TUNING ORDER. Do not skip ahead; each step depends on the one before.
-#   1. Measure the bridge's full-scale forces (config/pilot_demand.yaml).
-#      Until then the controller asks for newtons and the vehicle receives
-#      stick deflections through an unknown conversion, and no gain here
-#      means anything.
-#   2. Tune the inner loop alone. Publish a constant ~/cmd_vel and watch the
-#      DVL: raise kp until the velocity settles quickly without oscillating,
-#      then add just enough ki to remove the steady offset.
-#   3. Tune the outer loop. Send a ~/target_pose a few metres away and watch
-#      the approach. Raise kp_position until it arrives briskly without
-#      overshooting; the speed caps below decide the cruise.
+#   1. Check pilot_demand.yaml against the vehicle's parameters: the climb
+#      and turn rate at full stick, and the deadzones. Until then the caps
+#      below do not mean what they say.
+#   2. Depth and yaw. Send a target depth, then a target heading. Raise
+#      kp_depth / kp_yaw until the vehicle arrives briskly without overshoot.
+#   3. Surge and sway. Hold position and push the vehicle: raise kp until it
+#      returns without oscillating, then add just enough ki to remove the
+#      standing offset from trim.
+#   4. Position. Send a target a few metres away; kp_position and
+#      max_speed_xy decide the approach.
 #
-# The gains below are a starting point sized off the placeholder full-scale
-# forces. They are NOT tuned and nobody has run this on a vehicle.
+# The values below are a starting point. They are NOT tuned and nobody has
+# run this on a vehicle.
 
 pose_controller:
   ros__parameters:
 
     rate_hz: 20.0
     odom_timeout_s: 0.5
-    cmd_vel_timeout_s: 0.5
+    # A streamed reference older than this is treated as stopped, and the
+    # vehicle holds at the last reference pose.
+    reference_timeout_s: 0.5
+
+    # Forward and lateral are centred when the DVL has been out longer than
+    # this, or nav_status has gone quiet. Depth and yaw carry on.
+    nav_status_timeout_s: 1.0
+    dvl_coast_s: 2.0
 
     # Output is gated off until the ~/enable service is called, the same as
-    # the bridge. Two independent gates on the path to the thrusters is
-    # deliberate.
+    # the output stage. Two independent gates on the path to the thrusters is
+    # deliberate. Enabling holds where the vehicle is.
     start_enabled: false
 
-    # --- outer loop ---------------------------------------------------
+    # --- horizontal, outer --------------------------------------------
     kp_position: 0.8          # m/s of approach speed per metre of error
-    kp_yaw: 1.2               # rad/s of turn rate per radian of error
+    max_speed_xy: 0.5         # m/s; the first thing to lower if it looks violent
 
-    # The cruise speeds. These are what stop the vehicle lunging at a distant
-    # target, and they are the first thing to lower if a manoeuvre looks
-    # violent in the pool.
-    max_speed_xy: 0.5         # m/s
-    max_speed_z: 0.3          # m/s
-    max_yaw_rate: 0.6         # rad/s, about 35 deg/s
+    # --- depth ----------------------------------------------------------
+    kp_depth: 0.8             # m/s of climb rate per metre of depth error
+    max_climb_rate: 0.3       # m/s; keep below pilot_demand's max_climb_rate_*
+
+    # --- yaw ------------------------------------------------------------
+    kp_yaw: 1.0               # rad/s of turn rate per radian of error
+    max_yaw_rate: 0.5         # rad/s, about 30 deg/s; keep below pilot_demand's
 
     # "Arrived" thresholds, published on ~/at_target for the mission layer.
     position_tolerance_m: 0.1
+    depth_tolerance_m: 0.1
     yaw_tolerance_deg: 5.0
 
-    # --- inner loop ---------------------------------------------------
-    # output_limit must not exceed the matching full-scale force in
-    # pilot_demand.yaml: asking for more than the bridge can express only
-    # produces saturation, and saturation freezes the integrators.
+    # --- horizontal, inner: speed error (m/s) -> thrust fraction --------
     surge:
-      kp: 20.0
-      ki: 2.0
+      kp: 1.2
+      ki: 0.3
       kd: 0.0
-      output_limit: 40.0
-      integral_limit: 20.0
+      output_limit: 1.0
+      integral_limit: 0.3     # trim never takes more than 30 % of the stick
     sway:
-      kp: 20.0
-      ki: 2.0
+      kp: 1.2
+      ki: 0.3
       kd: 0.0
-      output_limit: 30.0
-      integral_limit: 15.0
-    heave:
-      kp: 20.0
-      ki: 4.0                 # higher: this axis fights constant buoyancy
-      kd: 0.0
-      output_limit: 40.0
-      integral_limit: 20.0
-    yaw_rate:
-      kp: 5.0
-      ki: 0.5
-      kd: 0.0
-      output_limit: 8.0
-      integral_limit: 4.0
+      output_limit: 1.0
+      integral_limit: 0.3

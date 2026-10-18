@@ -1,7 +1,8 @@
 """Bring up Layer 4: the outer control loop and the boundary to ArduSub.
 
-auv_hardware/pixhawk_bridge2 must already be running: it owns the MAVLink
-link and forwards /pilot_demand to the autopilot as MANUAL_CONTROL.
+auv_hardware/pixhawk_bridge2 must already be running with
+command_mode:=rc_override: it owns the MAVLink link and forwards /pilot_demand
+to the autopilot as RC_CHANNELS_OVERRIDE.
 
 Nothing moves on launch. The vehicle is not armed, the flight mode is not
 changed, and both nodes start with their output gated off. Four deliberate
@@ -12,10 +13,14 @@ steps, in this order:
     ros2 service call /pilot_demand/enable    std_srvs/srv/SetBool "{data: true}"
     ros2 service call /pose_controller/enable std_srvs/srv/SetBool "{data: true}"
 
-Then send a target:
+Enabling the controller holds the vehicle where it is. Then send a target:
 
     ros2 topic pub --once /pose_controller/target_pose geometry_msgs/msg/PoseStamped \
       "{header: {frame_id: odom}, pose: {position: {x: 2.0, y: 0.0, z: -1.5}}}"
+
+or hold wherever it is now:
+
+    ros2 service call /pose_controller/hold std_srvs/srv/Trigger
 """
 
 import os
@@ -62,8 +67,8 @@ def generate_launch_description():
             parameters=[controller_config, overlay, {'use_sim_time': use_sim_time}],
             remappings=[
                 ('~/odom', '/odom/filtered'),
-                ('~/cmd_wrench', '/pilot_demand/cmd_wrench'),
-                ('~/saturated', '/pilot_demand/saturated'),
+                ('~/nav_status', '/nav_status'),
+                ('~/cmd_axis', '/pilot_demand/cmd_axis'),
             ],
         ),
     ])

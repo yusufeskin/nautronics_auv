@@ -135,9 +135,12 @@ def generate_launch_description():
     # --- autopilot side ---
     # Sole owner of the MAVLink link. Blocks on wait_heartbeat(), so it is
     # started late in simulation to give SITL a chance to come up.
+    # rc_override: ArduSub gets no DVL and no targets, only /pilot_demand as
+    # RC channels - the legacy command paths stay closed.
     pixhawk = Node(
         package='auv_hardware', executable='pixhawk_bridge2', name='pixhawk_bridge_node',
-        output='screen', parameters=[{'use_sim_time': use_sim_time}],
+        output='screen',
+        parameters=[{'use_sim_time': use_sim_time, 'command_mode': 'rc_override'}],
         condition=IfCondition(autopilot),
     )
 

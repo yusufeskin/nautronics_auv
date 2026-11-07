@@ -7,11 +7,13 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    dvl_driver_dir = get_package_share_directory('waterlinked_dvl_driver')
+    # Our wrapper, not the driver's launch directly: it supplies the parameter
+    # file that actually reaches the node (acoustics on). See real_dvl.launch.py.
+    hardware_dir = get_package_share_directory('auv_hardware')
 
     dvl_driver_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(dvl_driver_dir, 'launch', 'dvl.launch.py')
+            os.path.join(hardware_dir, 'launch', 'real_dvl.launch.py')
         )
     )
 

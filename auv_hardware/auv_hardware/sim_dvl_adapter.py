@@ -41,7 +41,9 @@ class SimDvlAdapter(Node):
         # reports the resulting std in its DeadReckoningReport, which the real
         # driver copies straight into pose.covariance[0/7/14].
         self.declare_parameter('dead_reckoning_drift_ratio', 0.02)
-        self.declare_parameter('dead_reckoning_frame_id', 'odom')
+        # The real driver stamps every message, dead reckoning included, with
+        # its single frame_id parameter (waterlinked_dvl_driver.cpp:145-148).
+        self.declare_parameter('dead_reckoning_frame_id', 'dvl_link')
         # Ground-truth attitude stand-in. On the real vehicle the A50 is given
         # attitude over its own API and integrates internally; in sim we take
         # the vehicle pose Gazebo already publishes rather than modelling an
@@ -87,7 +89,9 @@ class SimDvlAdapter(Node):
         out = Dvl()
         out.header = msg.header
         out.velocity_mode = msg.velocity_mode
-        out.dvl_type = msg.dvl_type
+        # The real driver hard-codes PISTON (waterlinked_dvl_driver.cpp:151),
+        # whatever beam model the Gazebo sensor uses.
+        out.dvl_type = Dvl.DVL_TYPE_PISTON
         out.velocity = msg.velocity
         out.velocity_covar = covar
         out.course_gnd = msg.course_gnd
@@ -104,6 +108,16 @@ class SimDvlAdapter(Node):
         out.beam_velocity = msg.beam_velocity
         out.beam_velocity_covar = msg.beam_velocity_covar
         self.velocity_report_pub.publish(out)
+
+        # The real driver still publishes velocity_report for an invalid
+        # sample, but skips odom (waterlinked_dvl_driver.cpp:283-286).
+        if not out.beam_velocities_valid:
+            self.get_logger().warn(
+                'DVL reported an invalid velocity; skipping odometry publication.',
+                throttle_duration_sec=5.0,
+            )
+            self.publish_dead_reckoning(msg, force_invalid)
+            return
 
         odom = Odometry()
         odom.header = msg.header

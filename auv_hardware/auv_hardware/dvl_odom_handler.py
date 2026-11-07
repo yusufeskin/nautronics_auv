@@ -104,17 +104,19 @@ class DvlOdomHandler:
             )
             return
 
+        # _att_buf is keyed by time.monotonic(), so it must be queried with
+        # now_mono - never with t, which is the message's ROS stamp.
         if self._prev_time is None:
             self._prev_time = t
             self._prev_velocity = (vx, vy, vz)
-            self._prev_att = self._attitude_at(t)
+            self._prev_att = self._attitude_at(now_mono)
             return
 
         dt = t - self._prev_time
         if dt <= 0.0 or dt > MAX_DT_S:
             self._prev_time = t
             self._prev_velocity = (vx, vy, vz)
-            self._prev_att = self._attitude_at(t)
+            self._prev_att = self._attitude_at(now_mono)
             return
 
         pvx, pvy, pvz = self._prev_velocity

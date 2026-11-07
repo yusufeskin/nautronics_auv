@@ -4,33 +4,28 @@
 *.pt
 *.onnx
 *.engine
-# data files
+
+# Data files
 *.csv
 *.db3
 *.npz
-# data folders
+*.mp4
+
+# Data folders
 gate_dataset/
 scripts/calibrator/calib_images/
-# Python
-__pycache__/
-*.pyc
-# dev env
-additional_drivers/
-.vscode/
-#video files
-*.mp4
-# ROS 2 derleme klasörleri
+
+# ROS 2 build folders
 build/
 install/
 log/
 
-# Python önbellek dosyaları
+# Python
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
 
-# IDE yapılandırmaları
+# Dev env
+additional_drivers/
 .vscode/
-
-# auto annotator script
-scripts/auto_annotator/auto_annotator.py

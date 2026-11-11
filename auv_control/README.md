@@ -20,6 +20,10 @@ Implements an action server for visual servoing, allowing the AUV to align itsel
 - **Goal**: Target keypoints or visual features.
 - **Feedback**: Current error and alignment status.
 
+Demo (single-point visual servoing):
+
+https://github.com/user-attachments/assets/fa987057-2e50-4cee-a099-fd2dc598c016
+
 ### Movement Primitives
 
 - **`point_follower.py`**: Logic for following a set of waypoints.

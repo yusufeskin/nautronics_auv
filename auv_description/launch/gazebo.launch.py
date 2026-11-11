@@ -44,6 +44,12 @@ def generate_launch_description():
                      'parkuru), teknofest_pool.world, open_water.world')
     )
 
+    dvl_arg = DeclareLaunchArgument(
+        'dvl',
+        default_value='true',
+        description='Simule DVL (auv_hardware/sim_dvl.launch.py) da baslasin'
+    )
+
     use_rviz = LaunchConfiguration('rviz')
     use_sim_time = LaunchConfiguration('use_sim_time')
     world_file = PathJoinSubstitution([worlds_dir, LaunchConfiguration('world')])
@@ -110,6 +116,16 @@ def generate_launch_description():
         output='screen'
     )
 
+    # 7. Simule DVL - gercek A50 + waterlinked_dvl_driver ile ayni topic'ler.
+    # Kapatmak icin: dvl:=false
+    sim_dvl = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('auv_hardware'), 'launch', 'sim_dvl.launch.py')
+        ),
+        launch_arguments={'use_sim_time': use_sim_time}.items(),
+        condition=IfCondition(LaunchConfiguration('dvl')),
+    )
+
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -123,12 +139,14 @@ def generate_launch_description():
         rviz_arg,
         sim_time_arg,
         world_arg,
+        dvl_arg,
         robot_state_publisher,
         ros_gz_bridge,
         gz_sim,
         spawn_entity,
         spawn_torpedo1,
         spawn_torpedo2,
+        sim_dvl,
         SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1'),
         SetEnvironmentVariable('__GLX_VENDOR_LIBRARY_NAME', 'nvidia'),
         SetEnvironmentVariable('GZ_SIM_RENDER_ENGINE', 'ogre2')

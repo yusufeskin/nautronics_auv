@@ -4,7 +4,8 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
-from launch.substitutions import Command, LaunchConfiguration
+from launch_ros.parameter_descriptions import ParameterValue
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch.conditions import IfCondition
 from launch.actions import SetEnvironmentVariable
 
@@ -14,14 +15,14 @@ def generate_launch_description():
     
     # 1. Dosya Yolları
     xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'prototype.urdf.xacro')
-    world_file = os.path.join(pkg_share, 'worlds', 'teknofest_pool.world')
+    worlds_dir = os.path.join(pkg_share, 'worlds')
     bridge_config_path = os.path.join(pkg_share, 'config', 'bridge.yaml')
     rviz_config_path = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
     torpedo_xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'macros', 'torpedo.xacro')
     torpedo_desc_1 = Command(['xacro ', torpedo_xacro_file, ' torp_id:=1'])
     torpedo_desc_2 = Command(['xacro ', torpedo_xacro_file, ' torp_id:=2'])
     # 2. Robot Tanımı (Xacro -> URDF)
-    robot_desc_content = Command(['xacro ', xacro_file])
+    robot_desc_content = ParameterValue(Command(['xacro ', xacro_file]), value_type=str)
 
 
     rviz_arg = DeclareLaunchArgument(
@@ -31,13 +32,21 @@ def generate_launch_description():
     )
 
     sim_time_arg = DeclareLaunchArgument(
-        'use_sim_time', 
+        'use_sim_time',
         default_value='true',
         description='Gazebo time'
     )
 
+    world_arg = DeclareLaunchArgument(
+        'world',
+        default_value='robosub_2026.world',
+        description=('worlds/ altindaki dosya adi: robosub_2026.world (RoboSub 2026 '
+                     'parkuru), teknofest_pool.world, open_water.world')
+    )
+
     use_rviz = LaunchConfiguration('rviz')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    world_file = PathJoinSubstitution([worlds_dir, LaunchConfiguration('world')])
 
     # 3. Robot State Publisher
     robot_state_publisher = Node(
@@ -68,7 +77,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
         ),
-        launch_arguments={'gz_args': f'-r {world_file}'}.items(),
+        launch_arguments={'gz_args': ['-r -v 4 ', world_file]}.items(),
     )
 
     # 6. Spawn (Robotu Yarat)
@@ -111,8 +120,9 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        rviz_arg,      
+        rviz_arg,
         sim_time_arg,
+        world_arg,
         robot_state_publisher,
         ros_gz_bridge,
         gz_sim,

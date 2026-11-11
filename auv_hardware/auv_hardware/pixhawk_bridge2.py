@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import time
+
 import rclpy
 from rclpy.node import Node
 from pymavlink import mavutil
@@ -8,7 +10,7 @@ from .telemetry_handler import TelemetryHandler
 from .baro_handler import BaroHandler
 from std_srvs.srv import SetBool
 from auv_interfaces.srv import SetVehicleMode
-from auv_interfaces.msg import VehicleStatus
+from auv_interfaces.msg import VehicleStatus, PositionYawTarget
 from std_msgs.msg import Float64, UInt16MultiArray
 from .set_depth_handler import SetDepthHandler
 from .set_attitude_handler import SetAttitudeHandler
@@ -17,23 +19,56 @@ from .baro_handler2 import BaroHandler2
 from geometry_msgs.msg import Vector3
 from std_msgs.msg import UInt16
 from .led_handler import LedHandler
+# DVL -> Pixhawk path, disabled. Written under competition time pressure to
+# push DVL velocity into the autopilot's EKF as VISION_POSITION_DELTA; the DVL
+# is now treated as a plain ROS sensor, independent of the flight controller,
+# exactly like the real WaterLinked A50 + waterlinked_dvl_driver. Kept (not
+# deleted) so it can be switched back on if the EKF ever needs an external
+# velocity aid again - re-enable the three lines marked "DVL-to-EKF" below.
+# from .dvl_odom_handler import DvlOdomHandler
+from .set_position_target_handler import SetPositionTargetHandler
+from .local_position_handler import LocalPositionHandler
+from .set_speed_handler import SetSpeedHandler
+from geometry_msgs.msg import Point
+
+POOL_ORIGIN_LAT_DEG = 40.72304
+POOL_ORIGIN_LON_DEG = 29.82703
+POOL_ORIGIN_ALT_M = 0.0
+
+
+SET_ORIGIN_RETRIES = 3
+SET_ORIGIN_RETRY_DELAY_S = 0.5
+
 
 class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')
 
-        self.master = mavutil.mavlink_connection('udpin:0.0.0.0:14551', baud=57600)
+        # Overridable so the same node serves the real Pixhawk and SITL. Note
+        # that sim_vehicle.py only opens 14550 by default (Tools/autotest/
+        # sim_vehicle.py: ports = [14550 + 10 * i]), so a SITL run needs an
+        # explicit --out=udp:127.0.0.1:14551 or this connection never gets a
+        # heartbeat and the node blocks in wait_heartbeat() forever.
+        self.declare_parameter('mavlink_url', 'udp:127.0.0.1:14551')
+        mavlink_url = self.get_parameter('mavlink_url').value
+
+        self.master = mavutil.mavlink_connection(mavlink_url, baud=57600)
+        self.get_logger().info(f"MAVLink baglantisi bekleniyor: {mavlink_url}")
         self.master.wait_heartbeat()
         self.get_logger().info("Pixhawk'a bağlanıldı!")
+
+        self.send_gps_global_origin()
 
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_ATTITUDE, 50)
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_GLOBAL_POSITION_INT, 10)
         self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_SCALED_PRESSURE2, 10)
+        self.request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_LOCAL_POSITION_NED, 10)
 
         self.status_publisher   = self.create_publisher(VehicleStatus, 'vehicle/state', 10)
         self.baro_publisher     = self.create_publisher(Float64, 'baro_data', 10)
         self.baro_publisher2    = self.create_publisher(Float64, 'baro_data2', 10)
         self.attitude_publisher = self.create_publisher(Vector3, 'current_attitude', 10)
+        self.local_position_publisher = self.create_publisher(Point, 'vehicle/local_position', 10)
 
         self.pwm_module            = PwmHandler(self.master, self.get_logger())
         self.mode_module           = ModeHandler(self.master, self.get_logger())
@@ -44,13 +79,19 @@ class PixhawkBridge(Node):
         self.set_attitude_module   = SetAttitudeHandler(self.master, self.get_logger())
         self.attitude_module       = AttitudeHandler(self, self.attitude_publisher)
         self.led_module            = LedHandler(self.master, self.get_logger())
+        # DVL-to-EKF: self.dvl_module = DvlOdomHandler(self, self.master, self.get_logger())
+        self.set_position_module   = SetPositionTargetHandler(self.master, self.get_logger())
+        self.local_position_module = LocalPositionHandler(self, self.local_position_publisher)
+        self.set_speed_module      = SetSpeedHandler(self.master, self.get_logger())
         
         self.msg_handlers = {
             'HEARTBEAT': [self.telemetry_module.handle_message],
             #'VFR_HUD':   [self.baro_module.handle_message], # useless, will be adjusted
             'GLOBAL_POSITION_INT':   [self.baro_module.handle_message],
+            # DVL-to-EKF: add self.dvl_module.handle_attitude to this list.
             'ATTITUDE': [self.attitude_module.handle_message],
-            'SCALED_PRESSURE2': [self.baro_module2.handle_message] 
+            'SCALED_PRESSURE2': [self.baro_module2.handle_message],
+            'LOCAL_POSITION_NED': [self.local_position_module.handle_message]
         }
 
         self.mode_change_service = self.create_service(
@@ -75,7 +116,37 @@ class PixhawkBridge(Node):
             UInt16, 'led_control', self.led_callback, 10
         )
 
+        self.set_position_subscription = self.create_subscription(
+            Point, 'target_position_local', self.set_position_callback, 10
+        )
+
+        self.set_position_yaw_subscription = self.create_subscription(
+            PositionYawTarget, 'target_position_yaw', self.set_position_yaw_callback, 10
+        )
+
+        self.set_speed_subscription = self.create_subscription(
+            Float64, 'target_speed', self.set_speed_callback, 10
+        )
+
         self.mavlink_timer = self.create_timer(0.02, self.dispatch_mavlink)  # 50 Hz
+
+    def send_gps_global_origin(self):
+        lat_e7 = int(round(POOL_ORIGIN_LAT_DEG * 1e7))
+        lon_e7 = int(round(POOL_ORIGIN_LON_DEG * 1e7))
+        alt_mm = int(round(POOL_ORIGIN_ALT_M * 1000.0))
+
+        for _ in range(SET_ORIGIN_RETRIES):
+            self.master.mav.set_gps_global_origin_send(
+                self.master.target_system,
+                lat_e7,
+                lon_e7,
+                alt_mm,
+            )
+            time.sleep(SET_ORIGIN_RETRY_DELAY_S)
+
+        self.get_logger().info(
+            f"EKF origin gonderildi: {POOL_ORIGIN_LAT_DEG:.7f}, {POOL_ORIGIN_LON_DEG:.7f}"
+        )
 
     def request_message_interval(self, message_id, frequency_hz):
         self.master.mav.command_long_send(
@@ -112,6 +183,18 @@ class PixhawkBridge(Node):
 
     def led_callback(self, msg):
         self.led_module.set_led_pwm(msg.data)
+
+    def set_position_callback(self, msg):
+        # msg.x is North, msg.y is East, msg.z is Down (positive depth)
+        self.set_position_module.set_target_position_local(msg.x, msg.y, msg.z)
+
+    def set_position_yaw_callback(self, msg):
+        # msg.x is North, msg.y is East, msg.z is Down (positive depth)
+        yaw = msg.yaw_deg if msg.use_yaw else None
+        self.set_position_module.set_target_position_local(msg.x, msg.y, msg.z, yaw=yaw)
+
+    def set_speed_callback(self, msg):
+        self.set_speed_module.set_speed(msg.data)
 
 
 def main(args=None):

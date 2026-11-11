@@ -7,6 +7,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
 - [Packages](#packages)
+- [Credits](#credits)
 
 ## Requirements
 
@@ -84,3 +85,21 @@ This repository consists of several ROS 2 packages:
 - **[auv_interfaces](auv_interfaces/README.md)**: Custom ROS 2 messages and service definitions.
 - **[auv_vision](auv_vision/README.md)**: Computer vision algorithms (Object detection, Keypoint detection).
 - **additional_drivers**: External drivers imported via `nautronics.repos` ([gscam2](https://github.com/clydemcqueen/gscam2) camera driver, [waterlinked_dvl](https://github.com/yusufeskin/waterlinked_dvl) DVL driver).
+
+## Credits
+
+The RoboSub task models and the course layout in the simulation are **not
+ours** - they are the [ITU AUV Team](https://github.com/itu-auv/auv-software)'s
+work, redistributed here under their BSD 3-Clause licence with our thanks.
+That covers the gate, slalom, path markers, bins, torpedo board, octagon and
+the Task 5 pickup objects in `auv_description/models/`, and the layout in
+`auv_description/worlds/robosub_2026.world`. We adapted them to run under
+Gazebo Sim; those changes are listed in
+[`auv_description/models/ITU_AUV_NOTICE`](auv_description/models/ITU_AUV_NOTICE).
+
+The pool textures come from
+[HonuRobotics/bluerobotics_models](https://github.com/HonuRobotics/bluerobotics_models)
+(Apache-2.0).
+
+See [NOTICE](NOTICE) for the full list of third-party assets and their
+licences.

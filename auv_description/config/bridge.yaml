@@ -1,29 +1,45 @@
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+
 - ros_topic_name: "/odom"
   gz_topic_name: "/model/prototype_vehicle/odometry"
   ros_type_name: "nav_msgs/msg/Odometry"
   gz_type_name: "gz.msgs.Odometry"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/world/prototype_world/dynamic_pose/info"
-  gz_topic_name: "/world/deneme/dynamic_pose/info" 
-  ros_type_name: "geometry_msgs/msg/PoseArray"
-  gz_type_name: "gz.msgs.Pose_V"
-  direction: GZ_TO_ROS
+# NOTE: dropped two entries that could never carry data -
+#   /world/deneme/dynamic_pose/info  (world is named prototype_world, and
+#                                     deneme.world no longer exists)
+#   /model/prototype_vehicle/pose    (nothing publishes it; the model has an
+#                                     OdometryPublisher, not a PosePublisher)
+# Re-add a PosePublisher plugin in macros/plugins.xacro first if you want poses.
 
-- ros_topic_name: "/model/prototype_vehicle/pose"
-  gz_topic_name: "/model/prototype_vehicle/pose"
-  ros_type_name: "geometry_msgs/msg/PoseArray"
-  gz_type_name: "gz.msgs.Pose_V"
-  direction: GZ_TO_ROS
-  
+# Flight IMU. The gz topic is the fully-scoped sensor path because the sensor
+# MUST NOT carry an explicit <topic> - ArduPilotPlugin computes this exact path
+# itself and subscribes to it. See the note in prototype.urdf.xacro.
 - ros_topic_name: "/model/prototype_vehicle/imu"
-  gz_topic_name: "/model/prototype_vehicle/imu"
+  gz_topic_name: "/world/prototype_world/model/prototype_vehicle/link/base_link/sensor/imu_sensor/imu"
   ros_type_name: "sensor_msgs/msg/Imu"
   gz_type_name: "gz.msgs.IMU"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "/camera/camera_info"
-  gz_topic_name: "/camera/camera_info"
+# Camera intrinsics, one per camera - front and bottom only. The back camera
+# was removed: it cost a third 640x480 render pass every frame and nothing in
+# the stack ever subscribed to it. These come from <camera_info_topic> in
+# macros/camera_macro.xacro, which is set to "<image topic>/camera_info" -
+# the old single "/camera/camera_info" entry matched no gz topic at all, so
+# bbox_pnp_solver waited on intrinsics forever and never solved a pose.
+- ros_topic_name: "/camera/front/camera_info"
+  gz_topic_name: "/camera/front/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/camera/bottom/camera_info"
+  gz_topic_name: "/camera/bottom/camera_info"
   ros_type_name: "sensor_msgs/msg/CameraInfo"
   gz_type_name: "gz.msgs.CameraInfo"
   direction: GZ_TO_ROS
@@ -36,12 +52,6 @@
 
 - ros_topic_name: "/camera/bottom"
   gz_topic_name: "/camera/bottom"
-  ros_type_name: "sensor_msgs/msg/Image"
-  gz_type_name: "gz.msgs.Image"
-  direction: GZ_TO_ROS
-
-- ros_topic_name: "/camera/back"
-  gz_topic_name: "/camera/back"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS

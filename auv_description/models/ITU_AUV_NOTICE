@@ -1,0 +1,54 @@
+The following models are taken from the ITU AUV Team's open-source repository
+https://github.com/itu-auv/auv-software and are used under its BSD 3-Clause
+licence (Copyright (c) 2024, ITU AUV Team).  Upstream path:
+auv_sim/auv_sim_description/auv_sim_description/models/
+
+    robosub_gate              robosub_octagon_animals   nutbolt
+    robosub_slalom            robosub_buoy              pill
+    robosub_path              robosub_bottle            electric
+    robosub_bin               robosub_ladle             bandaid
+    robosub_torpedo           water_bottle
+    robosub_octagon
+
+The course layout in worlds/robosub_2026.world is likewise theirs, from their
+semi_final_pool.world / start_pool_world.launch.
+
+Local change: the models were authored for Gazebo Classic and used Ogre
+material scripts (materials/scripts/*.material).  Those cannot be rendered by
+Gazebo Sim, so every <material><script> block in the SDF files was rewritten
+as a PBR <albedo_map> pointing at the same texture.  The original .material
+files are kept alongside the textures for reference.
+
+models/pool is from a different source - see models/pool/NOTICE.
+
+Full text of the upstream licence, retained as BSD 3-Clause clause 1
+requires:
+
+    BSD 3-Clause License
+    
+    Copyright (c) 2024, ITU AUV Team
+    
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+    
+    1. Redistributions of source code must retain the above copyright notice, this
+       list of conditions and the following disclaimer.
+    
+    2. Redistributions in binary form must reproduce the above copyright notice,
+       this list of conditions and the following disclaimer in the documentation
+       and/or other materials provided with the distribution.
+    
+    3. Neither the name of the copyright holder nor the names of its
+       contributors may be used to endorse or promote products derived from
+       this software without specific prior written permission.
+    
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

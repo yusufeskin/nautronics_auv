@@ -1,0 +1,35 @@
+# Parameters for waterlinked_dvl_driver (https://github.com/yusufeskin/waterlinked_dvl).
+#
+# We pass this file instead of the driver's own config/dvl.yaml because that
+# file is keyed "waterlinked_dvl_driver_node", while its launch file names the
+# node "waterlinked_dvl_driver" - so ROS silently ignores it and every value
+# falls back to the compiled-in default. "/**/waterlinked_dvl_driver" matches
+# the real node name in any namespace.
+#
+# Loaded by auv_hardware/launch/real_dvl.launch.py.
+
+/**/waterlinked_dvl_driver:
+  ros__parameters:
+    ip_address: "192.168.1.25"
+    port: 16171
+    ntp_address: "192.168.1.10"
+    timeout: 5 # seconds
+
+    # x: Forward, y: Right, z: Down. Must match the dvl_link frame in the URDF.
+    frame_id: "dvl_link"
+
+    speed_of_sound: 1481 # m/s
+
+    # Rotation of the DVL about its z-axis on the vehicle. MEASURE it on the
+    # real vehicle; the URDF currently assumes 0.
+    mounting_rotation_offset: 0 # degrees
+
+    # The driver sends this to the DVL on every start-up and defaults it to
+    # false, which leaves the transducers silent until someone calls
+    # ~/enable_acoustic. Nothing in this repo calls that service, so it must
+    # be true here or the DVL never measures anything.
+    acoustic_enabled: true
+
+    dark_mode_enabled: false
+    range_mode: "auto"
+    periodic_cycling_enabled: true

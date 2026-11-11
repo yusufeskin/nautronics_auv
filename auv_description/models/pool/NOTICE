@@ -1,0 +1,8 @@
+Textures in materials/textures/ (pool_floor*.png, pool_tile*.png) are ported
+from HonuRobotics/bluerobotics_models (bluerobotics_common/models/pool),
+https://github.com/HonuRobotics/bluerobotics_models, licensed Apache-2.0.
+See https://www.apache.org/licenses/LICENSE-2.0 for the full license text.
+
+model.sdf and model.config in this directory are original to this repository
+and reuse only the geometry/layout that previously lived inline in
+worlds/teknofest_pool.world.

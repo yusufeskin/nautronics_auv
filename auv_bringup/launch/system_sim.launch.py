@@ -8,6 +8,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     description_dir = get_package_share_directory('auv_description')
+    hardware_dir = get_package_share_directory('auv_hardware')
 
     gazebo_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -53,10 +54,20 @@ def generate_launch_description():
 
     pixhawk_bridge = Node(
         package='auv_hardware',
-        executable='pixhawk_bridge',
+        executable='pixhawk_bridge2',
         name='pixhawk_bridge_node',
         output='screen',
         parameters=[{'use_sim_time': True}],
+    )
+
+    # Simulated DVL, defined once in auv_hardware so running it alone and
+    # running it inside the full sim cannot drift apart. It is a plain ROS
+    # sensor - it does not feed the autopilot.
+    sim_dvl_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(hardware_dir, 'launch', 'sim_dvl.launch.py')
+        ),
+        launch_arguments={'use_sim_time': 'true'}.items()
     )
 
     return LaunchDescription([
@@ -64,6 +75,7 @@ def generate_launch_description():
         LogInfo(msg='[system_sim]1 '),
         gazebo_launch,
         pixhawk_bridge,
+        sim_dvl_launch,
 
         # t=8s:
         TimerAction(

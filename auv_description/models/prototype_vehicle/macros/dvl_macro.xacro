@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<!-- Water Linked DVL-A50 macro. Real hardware is a phased-array (electronic
+beam steering) transducer, not a mechanical piston, and the driver referenced
+by this repo (additional_drivers/waterlinked_dvl) targets that same A50. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
+
+  <xacro:macro name="add_dvl" params="name parent_link topic update_rate x y z r p yaw">
+
+    <link name="${name}_link">
+      <inertial>
+        <mass value="0.00000001"/> <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.00000001" ixy="0" ixz="0" iyy="0.00000001" iyz="0" izz="0.00000001"/>
+      </inertial>
+
+      <!-- DVL-A50: 73.5mm diameter, ~40mm tall puck. -->
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder length="0.04" radius="0.0368"/>
+        </geometry>
+        <material name="dvl_black">
+          <color rgba="0.08 0.08 0.08 1"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder length="0.04" radius="0.0368"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="${name}_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="${r} ${p} ${yaw}"/>
+    </joint>
+
+    <gazebo reference="${name}_link">
+      <sensor name="${name}" type="custom" gz:type="dvl">
+        <pose>0 0 0 0 0 0</pose>
+        <topic>${topic}</topic>
+        <update_rate>${update_rate}</update_rate>
+        <always_on>true</always_on>
+        <!-- gz_frame_id, not frame_id: see the note in ping1d_macro.xacro. -->
+        <gz_frame_id>${name}_link</gz_frame_id>
+        <gz:dvl>
+          <type>phased_array</type>
+          <arrangement degrees="true">
+            <beam id="1">
+              <aperture>2.1</aperture>
+              <rotation>45</rotation>
+              <tilt>22.5</tilt>
+            </beam>
+            <beam id="2">
+              <aperture>2.1</aperture>
+              <rotation>135</rotation>
+              <tilt>22.5</tilt>
+            </beam>
+            <beam id="3">
+              <aperture>2.1</aperture>
+              <rotation>-135</rotation>
+              <tilt>22.5</tilt>
+            </beam>
+            <beam id="4">
+              <aperture>2.1</aperture>
+              <rotation>-45</rotation>
+              <tilt>22.5</tilt>
+            </beam>
+          </arrangement>
+          <minimum_range>0.05</minimum_range>
+          <maximum_range>50.0</maximum_range>
+          <tracking>
+            <bottom_mode>
+              <when>best</when>
+              <noise type="gaussian">
+                <stddev>0.002</stddev>
+              </noise>
+            </bottom_mode>
+          </tracking>
+        </gz:dvl>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

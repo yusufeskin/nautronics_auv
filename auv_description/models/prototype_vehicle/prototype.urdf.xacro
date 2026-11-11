@@ -5,8 +5,9 @@
   <xacro:include filename="macros/thruster_macro.xacro" />
   <xacro:include filename="macros/plugins.xacro" />
   <xacro:include filename="macros/imu_macro.xacro"/>
-  <xacro:include filename="macros/sonar_macro.xacro" />
+  <xacro:include filename="macros/ping1d_macro.xacro" />
   <xacro:include filename="macros/camera_macro.xacro" />
+  <xacro:include filename="macros/dvl_macro.xacro" />
 
   <link name="base_link">
     
@@ -25,26 +26,41 @@
       </geometry>
     </visual>
 
+    <!-- This box is what the world's Buoyancy plugin displaces, so its VOLUME
+         sets net buoyancy (0.457*0.575*0.05 * 1000 = 13.14 kg vs 12.8 kg mass,
+         i.e. slightly positive) and its CENTROID is the centre of buoyancy.
+         z=0.0376 puts the CoB 0.049 m above the CoM at z=-0.0114 - the same
+         separation bluerov2_heavy/model.sdf uses (0.060 vs 0.011).
+         Was 0.376 (a dropped zero): that sat 20 cm above the hull's actual
+         top (the mesh ends at z=0.145), giving an 8x too stiff righting
+         moment and a vehicle that could never float to the surface. -->
     <collision name="base_collision">
-      <origin xyz="0 0 0.376" rpy="0 0 0"/> 
+      <origin xyz="0 0 0.0376" rpy="0 0 0"/>
       <geometry>
-        <box size="0.457 0.575 0.05"/> 
+        <box size="0.457 0.575 0.05"/>
       </geometry>
     </collision>
   </link>
 
-  <xacro:add_imu name="imu_sensor" parent_link="base_link" update_rate="400.0" 
+  <!-- Flight IMU. MUST NOT set an explicit topic. ArduPilotPlugin finds the
+       sensor by name (<imuName>) but then computes the topic itself as
+       scopedName(sensor) + "/imu" and subscribes to that - it never reads the
+       sensor's own topic (see ArduPilotPlugin.cc:1158). An explicit topic moves
+       where gz publishes, the plugin's subscription gets nothing, so it never
+       replies to SITL and sim_vehicle.py sits on "No JSON sensor message
+       received, resending servos". bridge.yaml reaches it at the scoped path
+       instead. -->
+  <xacro:add_imu name="imu_sensor" parent_link="base_link" update_rate="400.0"
                  x="0" y="0" z="0" r="${pi}" p="0" yaw="0" />
                  
   <xacro:add_imu name="vio_imu" parent_link="base_link" update_rate="50.0" topic="/imu0" 
                  x="0" y="0" z="0" r="0" p="0" yaw="0" />
-<!-- 
-  <xacro:add_sonar 
-      name="ping_sonar" 
-      parent_link="base_link" 
-      topic="sensors/sonar/front"
-      x="0.188254" y="-0.038661" z="0.09952" 
-      r="0.0" p="0.0" yaw="0.0" /> -->
+  <xacro:add_ping1d
+      name="ping1d_sonar"
+      parent_link="base_link"
+      topic="/sensors/sonar/front"
+      x="0.188254" y="-0.038661" z="0.09952"
+      r="0.0" p="0.0" yaw="0.0" />
 
   <xacro:add_camera
     name="front_camera"
@@ -62,13 +78,13 @@
     r="0.0" p="1.57" yaw="0.0"
     color="Green" />
 
-    <xacro:add_camera
-    name="back_camera"
+  <xacro:add_dvl
+    name="dvl"
     parent_link="base_link"
-    topic="/camera/back"
-    x="-0.177035" y="0.0" z="0.0"
-    r="0.0" p="0.0" yaw="3.14"
-    color="Green" />
+    topic="/model/prototype_vehicle/dvl"
+    update_rate="8"
+    x="0.0" y="0.0" z="-0.15"
+    r="0.0" p="0.0" yaw="0.0" />
 
   <xacro:add_thruster id="1" x="0.2201"  y="-0.1126" z="-0.0224" r="-1.571" p="1.571" yaw="-0.785" prop_type="ccw" coeff="0.02" />
   <xacro:add_thruster id="2" x="0.2201"  y="0.1126"  z="-0.0224" r="-1.571" p="1.571" yaw="-2.356" prop_type="ccw" coeff="0.02" />

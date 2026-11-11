@@ -33,7 +33,15 @@
       
       <sensor name="${name}" type="camera">
         <pose>0 0 0 0 0 0</pose>
+        <!-- gz_frame_id, not frame_id: see the note in ping1d_macro.xacro. -->
+        <gz_frame_id>${name}_link</gz_frame_id>
         <camera>
+          <!-- Publish intrinsics next to the image (<topic>/camera_info).
+               Without this gz still derives a camera_info topic, but from the
+               fully-scoped sensor path, which is not what the vision nodes
+               subscribe to - bbox_pnp_solver sat waiting on a topic that
+               never existed. Keep this in sync with bridge.yaml. -->
+          <camera_info_topic>${topic}/camera_info</camera_info_topic>
           <horizontal_fov>1.047</horizontal_fov> <!-- 60 Derece -->
           <image>
             <width>640</width>
@@ -44,13 +52,32 @@
             <near>0.1</near>
             <far>100</far>
           </clip>
+          <!-- Mild sensor noise and lens distortion so images aren't
+               pinhole-perfect; roughly a cheap wide-angle underwater lens. -->
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+          <distortion>
+            <k1>-0.06</k1>
+            <k2>0.01</k2>
+            <k3>0.0</k3>
+            <p1>0.0004</p1>
+            <p2>-0.0002</p2>
+            <center>0.5 0.5</center>
+          </distortion>
         </camera>
-        
+
         <always_on>true</always_on>
 
-        <update_rate>100</update_rate>
+        <!-- 30 Hz, matching the real cameras. Was 100: three 640x480 render
+             passes at 100 Hz is far more than the GPU delivers, so the sim
+             just loses real-time factor while the images still arrive late
+             and irregularly. Nothing downstream consumes faster than 30. -->
+        <update_rate>30</update_rate>
         <visualize>true</visualize>
-        <topic>${topic}</topic> 
+        <topic>${topic}</topic>
       </sensor>
     </gazebo>
 

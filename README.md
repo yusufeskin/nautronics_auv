@@ -84,7 +84,7 @@ This repository consists of several ROS 2 packages:
 - **[auv_hardware](auv_hardware/README.md)**: Hardware interfaces for sensors and actuators.
 - **[auv_interfaces](auv_interfaces/README.md)**: Custom ROS 2 messages and service definitions.
 - **[auv_vision](auv_vision/README.md)**: Computer vision algorithms (Object detection, Keypoint detection).
-- **[additional_drivers](additional_drivers/bno055/README.md)**: External drivers (e.g., BNO055 IMU).
+- **additional_drivers**: External drivers imported via `nautronics.repos` ([gscam2](https://github.com/clydemcqueen/gscam2) camera driver, [waterlinked_dvl](https://github.com/yusufeskin/waterlinked_dvl) DVL driver).
 
 ## Credits
 
@@ -103,4 +103,3 @@ The pool textures come from
 
 See [NOTICE](NOTICE) for the full list of third-party assets and their
 licences.
-- **additional_drivers**: External drivers imported via `nautronics.repos` ([gscam2](https://github.com/clydemcqueen/gscam2) camera driver, [waterlinked_dvl](https://github.com/yusufeskin/waterlinked_dvl) DVL driver).

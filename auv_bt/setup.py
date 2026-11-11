@@ -34,10 +34,6 @@ setup(
             'slalom_bt = slalom.slalom_bt:main',
             'mixed_mission = pool.mixed_mission:main',
             'main_behaviour_tree = pool.main_behaviour_tree:main',
-            'dvl_transit_test = pool.dvl_transit_test:main',
-            'multi_point_transit = pool.multi_point_transit:main',
-            'relative_zigzag_test = pool.relative_zigzag_test:main',
-            'teknofest_dvl_mission = teknofest.teknofest_dvl_mission:main',
 
         ],
     },

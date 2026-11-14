@@ -123,8 +123,8 @@ class SimDvlAdapter(Node):
         odom.header = msg.header
         odom.child_frame_id = child_frame_id
         odom.twist.twist.linear.x = msg.velocity.x
-        odom.twist.twist.linear.y = msg.velocity.y
-        odom.twist.twist.linear.z = msg.velocity.z
+        odom.twist.twist.linear.y = -msg.velocity.y
+        odom.twist.twist.linear.z = -msg.velocity.z
         for i in range(3):
             for j in range(3):
                 odom.twist.covariance[i * 6 + j] = covar[i * 3 + j]

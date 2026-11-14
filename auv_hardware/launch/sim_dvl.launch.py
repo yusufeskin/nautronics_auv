@@ -14,7 +14,8 @@ Those are the same three topics the real driver publishes, so swapping this
 launch file for waterlinked_dvl_driver's own dvl.launch.py is the only
 difference between sim and hardware.
 
-Needs Gazebo running first - sim_dvl_bridge subscribes to a Gazebo Transport
+Started automatically by auv_description/gazebo.launch.py (dvl:=false to skip).
+Run on its own only if Gazebo is already up - sim_dvl_bridge subscribes to a Gazebo Transport
 topic, and publishes nothing until the sensor appears.
 
     ros2 launch auv_hardware sim_dvl.launch.py

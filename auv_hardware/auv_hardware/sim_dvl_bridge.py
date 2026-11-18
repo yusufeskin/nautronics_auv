@@ -73,7 +73,7 @@ class SimDvlBridge(Node):
 
         self.declare_parameter('gz_topic', '/model/prototype_vehicle/dvl')
         self.declare_parameter('ros_topic', '/sim/dvl/raw')
-        self.declare_parameter('frame_id', 'dvl_link')
+        self.declare_parameter('frame_id', 'dvl_frd')
         self.declare_parameter('min_good_beams', 3)
 
         self.frame_id = self.get_parameter('frame_id').value
@@ -111,7 +111,8 @@ class SimDvlBridge(Node):
         v = msg.velocity.mean
         vx, vy, vz = v.x, -v.y, -v.z
         out.velocity = Vector3(x=vx, y=vy, z=vz)
-        out.velocity_covar = self._resolve_covar9(msg.velocity.covariance)
+        covar_flu = self._resolve_covar9(msg.velocity.covariance)
+        out.velocity_covar = self._covariance_flu_to_frd(covar_flu)
         out.course_gnd = math.atan2(vy, vx)
         out.speed_gnd = math.hypot(vx, vy)
         out.sound_speed = 1481.0
@@ -166,6 +167,29 @@ class SimDvlBridge(Node):
             return covar
         diagonal = [float(UNKNOWN_COVAR)] * 9
         return diagonal
+
+    @staticmethod
+    def _covariance_flu_to_frd(covar):
+        # Gecersiz veya bilinmeyen covariance degerlerini
+        # gecerli bir matris gibi donusturme.
+        if len(covar) != 9:
+            return [UNKNOWN_COVAR] * 9
+
+        if not all(math.isfinite(value) for value in covar):
+            return [UNKNOWN_COVAR] * 9
+
+        if any(covar[i] < 0.0 for i in (0, 4, 8)):
+            return [UNKNOWN_COVAR] * 9
+
+        # FLU -> FRD: X ayni, Y ve Z ters.
+        signs = (1.0, -1.0, -1.0)
+
+        return [
+            signs[i] * signs[j] * covar[i * 3 + j]
+            for i in range(3)
+            for j in range(3)
+        ]
+
 
 
 def main(args=None):

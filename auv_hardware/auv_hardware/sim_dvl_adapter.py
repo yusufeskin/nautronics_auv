@@ -35,7 +35,7 @@ class SimDvlAdapter(Node):
         self.declare_parameter('velocity_variance', 0.0025)
         self.declare_parameter('force_invalid', False)
         self.declare_parameter('drop_ratio', 0.0)
-        self.declare_parameter('child_frame_id', 'dvl_link')
+        self.declare_parameter('child_frame_id', 'dvl_frd')
         # Growth of the dead-reckoning position std per metre travelled. The
         # A50 datasheet quotes error as a percentage of distance; the device
         # reports the resulting std in its DeadReckoningReport, which the real
@@ -43,7 +43,7 @@ class SimDvlAdapter(Node):
         self.declare_parameter('dead_reckoning_drift_ratio', 0.02)
         # The real driver stamps every message, dead reckoning included, with
         # its single frame_id parameter (waterlinked_dvl_driver.cpp:145-148).
-        self.declare_parameter('dead_reckoning_frame_id', 'dvl_link')
+        self.declare_parameter('dead_reckoning_frame_id', 'dvl_frd')
         # Ground-truth attitude stand-in. On the real vehicle the A50 is given
         # attitude over its own API and integrates internally; in sim we take
         # the vehicle pose Gazebo already publishes rather than modelling an
@@ -123,8 +123,8 @@ class SimDvlAdapter(Node):
         odom.header = msg.header
         odom.child_frame_id = child_frame_id
         odom.twist.twist.linear.x = msg.velocity.x
-        odom.twist.twist.linear.y = -msg.velocity.y
-        odom.twist.twist.linear.z = -msg.velocity.z
+        odom.twist.twist.linear.y = msg.velocity.y
+        odom.twist.twist.linear.z = msg.velocity.z
         for i in range(3):
             for j in range(3):
                 odom.twist.covariance[i * 6 + j] = covar[i * 3 + j]

@@ -2,7 +2,10 @@
 import os
 
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from ament_index_python.packages import get_package_share_directory
 
 
@@ -14,24 +17,36 @@ def generate_launch_description():
         'ekf.yaml'
     )
 
+    use_sim_time = ParameterValue(
+        LaunchConfiguration('use_sim_time'),
+        value_type=bool
+    )
+
     return LaunchDescription([
 
-        # IMU covariance correction
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='true',
+            description='Use simulation clock'
+        ),
+
         Node(
             package='auv_bringup',
             executable='imu_covariance.py',
             name='imu_covariance_node',
+            parameters=[{'use_sim_time': use_sim_time}],
             output='screen'
         ),
 
-        # Extended Kalman Filter
         Node(
             package='robot_localization',
             executable='ekf_node',
             name='ekf_filter_node',
-            parameters=[config],
+            parameters=[
+                config,
+                {'use_sim_time': use_sim_time}
+            ],
             output='screen'
         )
 
     ])
-

@@ -16,6 +16,8 @@
   <depend>auv_interfaces</depend>
   <depend>nav_msgs</depend>
   <depend>marine_acoustic_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2_ros</depend>
 
   <exec_depend>realsense2_camera</exec_depend>
   <exec_depend>realsense2_description</exec_depend>

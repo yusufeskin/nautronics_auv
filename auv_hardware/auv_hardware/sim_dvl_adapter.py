@@ -22,6 +22,14 @@ from rclpy.node import Node
 from marine_acoustic_msgs.msg import Dvl
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import TransformStamped
+from rclpy.time import Time
+from tf2_ros import (
+    Buffer,
+    TransformListener,
+    StaticTransformBroadcaster,
+    TransformException,
+)
 
 # The real driver marks orientation covariance unknown, because the A50 does
 # not report one (waterlinked_dvl_driver.cpp:321-325).
@@ -43,7 +51,7 @@ class SimDvlAdapter(Node):
         self.declare_parameter('dead_reckoning_drift_ratio', 0.02)
         # The real driver stamps every message, dead reckoning included, with
         # its single frame_id parameter (waterlinked_dvl_driver.cpp:145-148).
-        self.declare_parameter('dead_reckoning_frame_id', 'dvl_frd')
+        self.declare_parameter('dead_reckoning_frame_id', 'dvl_dr')
         # Ground-truth attitude stand-in. On the real vehicle the A50 is given
         # attitude over its own API and integrates internally; in sim we take
         # the vehicle pose Gazebo already publishes rather than modelling an
@@ -69,11 +77,29 @@ class SimDvlAdapter(Node):
             self.attitude_callback, 10
         )
 
-        # Integrated dead-reckoning state.
+
+        # Dead-reckoning state
         self._dr_position = [0.0, 0.0, 0.0]
         self._dr_distance = 0.0
         self._dr_prev_stamp = None
+
+        # Current DVL orientation in odom
         self._orientation = None
+
+        # Initial, fixed dead-reckoning reference
+        self._dr_ref_q = None
+
+        # DVL mounting transform relative to base_link
+        self._sensor_mount = None
+
+        # Read the fixed base_link -> dvl_frd transform
+        self._tf_buffer = Buffer()
+        self._tf_listener = TransformListener(
+            self._tf_buffer, self
+        )
+
+        # Publish the initial odom -> dvl_dr transform
+        self._static_broadcaster = StaticTransformBroadcaster(self)
 
     def raw_callback(self, msg):
         drop_ratio = self.get_parameter('drop_ratio').value
@@ -132,17 +158,108 @@ class SimDvlAdapter(Node):
 
         self.publish_dead_reckoning(msg, force_invalid)
 
+
     def attitude_callback(self, msg: Odometry):
         q = msg.pose.pose.orientation
-        self._orientation = (q.x, q.y, q.z, q.w)
+
+        q_world_base = self._normalize_quaternion(
+            (q.x, q.y, q.z, q.w)
+        )
+
+        if q_world_base is None:
+            return
+
+        # Get the fixed mounting transform once.
+        if self._sensor_mount is None:
+            try:
+                tf = self._tf_buffer.lookup_transform(
+                    msg.child_frame_id or 'base_link',
+                    self.get_parameter('child_frame_id').value,
+                    Time()
+                )
+            except TransformException:
+                self.get_logger().warn(
+                    'Waiting for base_link -> dvl_frd TF',
+                    throttle_duration_sec=5.0
+                )
+                return
+
+            t = tf.transform.translation
+            r = tf.transform.rotation
+
+            mount_q = self._normalize_quaternion(
+                (r.x, r.y, r.z, r.w)
+            )
+
+            if mount_q is None:
+                return
+
+            self._sensor_mount = (
+                (t.x, t.y, t.z),
+                mount_q
+            )
+
+        mount_t, mount_q = self._sensor_mount
+
+        # Current DVL orientation in the odom frame.
+        q_world_dvl = self._quat_multiply(
+            q_world_base, mount_q
+        )
+
+        self._orientation = q_world_dvl
+
+        if self._dr_ref_q is not None:
+            return
+
+        # DVL origin expressed in odom.
+        p = msg.pose.pose.position
+        offset = self._rotate_vector(
+            q_world_base, mount_t
+        )
+
+        origin = (
+            p.x + offset[0],
+            p.y + offset[1],
+            p.z + offset[2]
+        )
+
+        # Freeze the initial DVL orientation.
+        self._dr_ref_q = q_world_dvl
+
+        transform = TransformStamped()
+        transform.header.stamp = msg.header.stamp
+        transform.header.frame_id = (
+            msg.header.frame_id or 'odom'
+        )
+        transform.child_frame_id = (
+            self.get_parameter(
+                'dead_reckoning_frame_id'
+            ).value
+        )
+
+        transform.transform.translation.x = origin[0]
+        transform.transform.translation.y = origin[1]
+        transform.transform.translation.z = origin[2]
+
+        (
+            transform.transform.rotation.x,
+            transform.transform.rotation.y,
+            transform.transform.rotation.z,
+            transform.transform.rotation.w
+        ) = self._dr_ref_q
+
+        self._static_broadcaster.sendTransform(transform)
+
+        self.get_logger().info(
+            'Initialized DVL dead-reckoning reference frame'
+        )
+
 
     def publish_dead_reckoning(self, msg: Dvl, force_invalid):
-        """Integrate DVL velocity into a position, like the A50 does onboard.
+        # Do not integrate until the initial reference exists.
+        if self._dr_ref_q is None or self._orientation is None:
+            return
 
-        The real device integrates internally and reports the result; here the
-        same integration is done on the (already noisy) simulated velocity, so
-        the output drifts the way bottom-track dead reckoning really does.
-        """
         stamp = msg.header.stamp
         t = stamp.sec + stamp.nanosec * 1.0e-9
 
@@ -152,66 +269,122 @@ class SimDvlAdapter(Node):
 
         dt = t - self._dr_prev_stamp
         self._dr_prev_stamp = t
-        # A backwards or absurd step means the clock jumped (a sim reset, or
-        # use_sim_time toggling); integrating across it would corrupt position.
+
+        # Reject invalid or excessively large time steps.
         if dt <= 0.0 or dt > 1.0:
             return
 
-        # An invalid report carries no usable velocity, so hold position and
-        # let the covariance keep growing - the same visible behaviour as the
-        # real unit losing bottom lock.
         if not force_invalid and msg.beam_velocities_valid:
-            if self._orientation is None:
-                # No attitude yet: integrate in the body frame. Correct only
-                # while the vehicle is level, which is why it is not the
-                # steady state - it just avoids dropping the first samples.
-                dx, dy, dz = msg.velocity.x, msg.velocity.y, msg.velocity.z
-            else:
-                dx, dy, dz = self._rotate_to_world(
-                    msg.velocity.x, msg.velocity.y, msg.velocity.z
-                )
-            self._dr_position[0] += dx * dt
-            self._dr_position[1] += dy * dt
-            self._dr_position[2] += dz * dt
-            self._dr_distance += math.sqrt(dx * dx + dy * dy + dz * dz) * dt
 
-        drift_ratio = self.get_parameter('dead_reckoning_drift_ratio').value
+            # DVL velocity is expressed in FRD.
+            v_frd = (
+                msg.velocity.x,
+                msg.velocity.y,
+                msg.velocity.z
+            )
+
+            # Current DVL frame -> odom frame.
+            v_world = self._rotate_vector(
+                self._orientation, v_frd
+            )
+
+            # odom frame -> initial DVL reference frame.
+            v_dr = self._rotate_vector(
+                self._quat_conjugate(self._dr_ref_q),
+                v_world
+            )
+
+            # Integrate velocity in the fixed reference frame.
+            for i in range(3):
+                self._dr_position[i] += v_dr[i] * dt
+
+            self._dr_distance += math.sqrt(
+                sum(v * v for v in v_dr)
+            ) * dt
+
+        drift_ratio = self.get_parameter(
+            'dead_reckoning_drift_ratio'
+        ).value
+
         std = drift_ratio * self._dr_distance
+        variance = std * std
 
         out = PoseWithCovarianceStamped()
         out.header.stamp = msg.header.stamp
-        out.header.frame_id = self.get_parameter('dead_reckoning_frame_id').value
+        out.header.frame_id = self.get_parameter(
+            'dead_reckoning_frame_id'
+        ).value
+
         out.pose.pose.position.x = self._dr_position[0]
         out.pose.pose.position.y = self._dr_position[1]
         out.pose.pose.position.z = self._dr_position[2]
-        if self._orientation is not None:
-            (out.pose.pose.orientation.x, out.pose.pose.orientation.y,
-             out.pose.pose.orientation.z, out.pose.pose.orientation.w) = self._orientation
-        else:
-            out.pose.pose.orientation.w = 1.0
 
-        # Same layout the real driver writes: position std on the diagonal,
-        # orientation marked unknown (waterlinked_dvl_driver.cpp:317-325).
-        out.pose.covariance[0] = std
-        out.pose.covariance[7] = std
-        out.pose.covariance[14] = std
+        # Current DVL orientation relative to initial DVL.
+        q_relative = self._quat_multiply(
+            self._quat_conjugate(self._dr_ref_q),
+            self._orientation
+        )
+
+        (
+            out.pose.pose.orientation.x,
+            out.pose.pose.orientation.y,
+            out.pose.pose.orientation.z,
+            out.pose.pose.orientation.w
+        ) = q_relative
+
+        # ROS covariance expects variance, not stddev.
+        out.pose.covariance[0] = variance
+        out.pose.covariance[7] = variance
+        out.pose.covariance[14] = variance
+
+        # Preserve the existing driver's unknown-orientation
+        # convention for interface compatibility.
         out.pose.covariance[21] = UNKNOWN_ORIENTATION_COVAR
         out.pose.covariance[28] = UNKNOWN_ORIENTATION_COVAR
         out.pose.covariance[35] = UNKNOWN_ORIENTATION_COVAR
 
         self.dead_reckoning_pub.publish(out)
 
-    def _rotate_to_world(self, vx, vy, vz):
-        """Rotate a body-frame vector by the current attitude quaternion."""
-        qx, qy, qz, qw = self._orientation
-        # v' = v + 2 * q_vec x (q_vec x v + w * v)
+
+    @staticmethod
+    def _normalize_quaternion(q):
+        norm = math.sqrt(sum(x * x for x in q))
+
+        if norm < 1e-12 or not math.isfinite(norm):
+            return None
+
+        return tuple(x / norm for x in q)
+
+    @staticmethod
+    def _quat_conjugate(q):
+        x, y, z, w = q
+        return (-x, -y, -z, w)
+
+    @staticmethod
+    def _quat_multiply(a, b):
+        ax, ay, az, aw = a
+        bx, by, bz, bw = b
+
+        return (
+            aw * bx + ax * bw + ay * bz - az * by,
+            aw * by - ax * bz + ay * bw + az * bx,
+            aw * bz + ax * by - ay * bx + az * bw,
+            aw * bw - ax * bx - ay * by - az * bz
+        )
+
+    @staticmethod
+    def _rotate_vector(q, v):
+        qx, qy, qz, qw = q
+        vx, vy, vz = v
+
         tx = 2.0 * (qy * vz - qz * vy)
         ty = 2.0 * (qz * vx - qx * vz)
         tz = 2.0 * (qx * vy - qy * vx)
+
         return (
-            vx + qw * tx + (qy * tz - qz * ty),
-            vy + qw * ty + (qz * tx - qx * tz),
-            vz + qw * tz + (qx * ty - qy * tx),
+            vx + qw * tx + qy * tz - qz * ty,
+            vy + qw * ty + qz * tx - qx * tz,
+            vz + qw * tz + qx * ty - qy * tx
         )
 
     @staticmethod

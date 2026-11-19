@@ -12,7 +12,6 @@ from launch.actions import SetEnvironmentVariable
 def generate_launch_description():
     pkg_name = 'auv_description'
     pkg_share = get_package_share_directory(pkg_name)
-    
     # 1. Dosya Yolları
     xacro_file = os.path.join(pkg_share, 'models', 'prototype_vehicle', 'prototype.urdf.xacro')
     worlds_dir = os.path.join(pkg_share, 'worlds')
@@ -65,6 +64,20 @@ def generate_launch_description():
             'use_sim_time': True
         }]
     )
+    # VIO IMU Static TF
+    imu_tf_publisher = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='vio_imu_static_tf',
+        arguments=[
+            '--x', '0', '--y', '0', '--z', '0',
+            '--roll', '0', '--pitch', '0', '--yaw', '0',
+            '--frame-id', 'base_link',
+            '--child-frame-id', 'prototype_vehicle/base_link/vio_imu'
+        ],
+        output='screen'
+    )
+
 
     ros_gz_bridge = Node(
         package='ros_gz_bridge',
@@ -141,6 +154,7 @@ def generate_launch_description():
         world_arg,
         dvl_arg,
         robot_state_publisher,
+        imu_tf_publisher,
         ros_gz_bridge,
         gz_sim,
         spawn_entity,

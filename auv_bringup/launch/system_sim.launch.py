@@ -17,6 +17,7 @@ def generate_launch_description():
         launch_arguments={
             'use_sim_time': 'true',
             'rviz': 'false',        #RVIZ CLOESD
+            'dvl': 'false',
         }.items()
     )
 

@@ -16,7 +16,7 @@ spawned into.
   `teknofest_pipe`, `robosub_*`, `bluerov2_heavy`, `sand_heightmap`, ...).
   Each is a standalone `model.sdf` + `model.config`, includable with
   `<include><uri>model://&lt;name&gt;</uri></include>`.
-- **`worlds/`**: `teknofest_pool.world` (default) and `open_water.world`.
+- **`worlds/`**: `robosub_2026.world` (default, RoboSub 2026 course), `teknofest_pool.world` and `open_water.world`.
   Course fixtures (lane markers, waypoint markers, pipe) live inline in the
   world file; reusable static geometry (the pool itself) is a `models/`
   entry included by the world instead of being duplicated inline.

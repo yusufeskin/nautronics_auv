@@ -11,17 +11,22 @@
 
 ## Requirements
 
-- **ROS 2** (Humble Hawksbill recommended)
-- **ArduPilot**
-  - [https://github.com/ArduPilot/ardupilot](https://github.com/ArduPilot/ardupilot)
-- **ArduPilot Gazebo**  
-  - [https://github.com/ArduPilot/ardupilot_gazebo](https://github.com/ArduPilot/ardupilot_gazebo)
-- **Gazebo Sim (Harmonic for ROS 2)**  
-  - [https://gazebosim.org/docs/latest/getstarted/](https://gazebosim.org/docs/latest/getstarted/)
+| Component | Version |
+|---|---|
+| OS | Ubuntu 22.04 (Jammy) |
+| ROS 2 | Humble (`ros-humble-desktop`) |
+| Gazebo | Harmonic (gz-sim 8) |
+| ArduPilot | `master`, ArduSub SITL |
+| [ArduPilot Gazebo plugin](https://github.com/ArduPilot/ardupilot_gazebo) | `main`, from source |
+| [ros_gz](https://github.com/gazebosim/ros_gz) | `humble` branch, **built from source against Harmonic** |
+
+**Set these up first by following [docs/sim_setup.md](docs/sim_setup.md).** Each step there ends with a check.
+
+> ⚠️ Do not install the `ros-humble-ros-gz*` binary packages or `ros-humble-desktop-full`. They are built for Gazebo Fortress and break the Harmonic setup. The guide explains why.
 
 ## Installation
 
-Follow these steps to set up the development environment:
+With the [simulation environment](docs/sim_setup.md) ready, build our workspace:
 
 1. **Create a Workspace**
    ```bash
@@ -58,20 +63,44 @@ Follow these steps to set up the development environment:
    ```
 
 7. **Source the Workspace**
+
+   Add it to the end of your `~/.bashrc`, **after** the `ros_gz_ws` line from the setup guide:
    ```bash
-   source install/setup.bash
+   echo 'source ~/nautronics_ws/install/setup.bash' >> ~/.bashrc
+   source ~/.bashrc
    ```
 
-### GZ Sim & ArduPilot Configuration
+The `auv_description` models are added to `GZ_SIM_RESOURCE_PATH` automatically by its environment hook when you source the workspace. The ArduPilot Gazebo paths are set in [step 4 of the setup guide](docs/sim_setup.md#4-ardupilot-gazebo-plugin).
 
-Add the ArduPilot Gazebo model paths to your `~/.bashrc`:
+## Usage
+
+### Simulation
+
+Run Gazebo with our stack in one terminal and ArduSub SITL in another.
 
 ```bash
-echo 'export GZ_SIM_RESOURCE_PATH=$HOME/ardupilot_gazebo/models:$HOME/ardupilot_gazebo/worlds:${GZ_SIM_RESOURCE_PATH}' >> ~/.bashrc
-source ~/.bashrc
+# Terminal 1: Gazebo, ROS bridge, vehicle, simulated DVL, control and vision nodes
+ros2 launch auv_bringup system_sim.launch.py
+
+# Terminal 2: ArduSub SITL, connected to the vehicle in Gazebo
+cd ~/ardupilot/ArduSub
+sim_vehicle.py -v ArduSub -f vectored_6dof --model JSON --out=udp:127.0.0.1:14551 --console
 ```
 
-The `auv_description` models are added to `GZ_SIM_RESOURCE_PATH` automatically by its environment hook when you run `source install/setup.bash`.
+- `--model JSON` makes SITL talk to `libArduPilotPlugin.so` in Gazebo instead of its built-in physics.
+- `--out=udp:127.0.0.1:14551` is where `pixhawk_bridge2` listens. Without it the bridge waits for a heartbeat forever.
+- Add `-w` on the first run to reset SITL parameters to defaults.
+
+SITL is connected when it stops printing `No JSON sensor message received`.
+
+To start only Gazebo and the vehicle, without the rest of the stack:
+
+```bash
+ros2 launch auv_description gazebo.launch.py                          # default world: robosub_2026.world
+ros2 launch auv_description gazebo.launch.py world:=teknofest_pool.world
+```
+
+See [auv_description](auv_description/README.md) for the other worlds and launch arguments.
 
 ## Packages
 

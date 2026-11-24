@@ -76,14 +76,29 @@ The `auv_description` models are added to `GZ_SIM_RESOURCE_PATH` automatically b
 
 ### Simulation
 
-Start Gazebo with the vehicle:
+Run Gazebo with the vehicle in one terminal and ArduSub SITL in another.
 
 ```bash
-ros2 launch auv_description gazebo.launch.py                          # default world: robosub_2026.world
-ros2 launch auv_description gazebo.launch.py world:=teknofest_pool.world
+# Terminal 1: Gazebo, ROS bridge, vehicle and simulated DVL
+ros2 launch auv_description gazebo.launch.py
+
+# Terminal 2: ArduSub SITL, connected to the vehicle in Gazebo
+cd ~/ardupilot/ArduSub
+sim_vehicle.py -v ArduSub -f vectored_6dof --model JSON --out=udp:127.0.0.1:14551 --console
 ```
 
-This starts Gazebo, the ROS <-> Gazebo bridge, the vehicle (plus the two torpedo props) and the simulated DVL. Add `dvl:=false` to skip the DVL.
+- `--model JSON` makes SITL talk to `libArduPilotPlugin.so` in Gazebo instead of its built-in physics.
+- `--out=udp:127.0.0.1:14551` is where `pixhawk_bridge2` listens when you run it. Without it the bridge waits for a heartbeat forever.
+- Add `-w` on the first run to reset SITL parameters to defaults.
+
+SITL is connected when it stops printing `No JSON sensor message received`.
+
+To use another world, or to skip the simulated DVL:
+
+```bash
+ros2 launch auv_description gazebo.launch.py world:=teknofest_pool.world   # default world: robosub_2026.world
+ros2 launch auv_description gazebo.launch.py dvl:=false
+```
 
 See [auv_description](auv_description/README.md) for the other worlds and launch arguments.
 

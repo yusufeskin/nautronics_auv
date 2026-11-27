@@ -7,15 +7,11 @@ from geometry_msgs.msg import Twist, Vector3
 from auv_interfaces.action import YawAndScan
 import math
 import time
+from auv_control.angles import normalize_angle, p_turn_rate
 
 KP = 0.4
 TOLERANCE_RAD = 0.05
 MIN_SPEED = 0.0
-
-def normalize_angle(angle):
-    while angle > math.pi: angle -= 2.0 * math.pi
-    while angle < -math.pi: angle += 2.0 * math.pi
-    return angle
 
 class ScanActionServer(Node):
     def __init__(self):
@@ -103,11 +99,7 @@ class ScanActionServer(Node):
                 self.get_logger().info("success, stopping")
                 break
 
-            calculated_speed = error * KP
-
-            if abs(calculated_speed) > max_speed: calculated_speed = math.copysign(max_speed, calculated_speed)
-            if abs(error) > TOLERANCE_RAD * 3 and abs(calculated_speed) < MIN_SPEED:
-                calculated_speed = math.copysign(MIN_SPEED, calculated_speed)
+            calculated_speed = p_turn_rate(error, KP, max_speed, TOLERANCE_RAD, MIN_SPEED)
 
             cmd.angular.z = calculated_speed
             self.vel_pub.publish(cmd)            

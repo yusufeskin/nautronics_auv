@@ -7,6 +7,7 @@ from geometry_msgs.msg import Twist, Vector3  # Odometry silindi, Vector3 eklend
 from auv_interfaces.action import ReturnLoop
 import time
 import math
+from auv_control.angles import clamp, loop_velocities, normalize_angle
 
 # Kuaterniyon dönüşüm fonksiyonuna (euler_from_quaternion) artık ihtiyacımız yok, silindi.
 
@@ -70,11 +71,7 @@ class ReturnLoopActionServer(Node):
         duration = goal_handle.request.duration
         radius = goal_handle.request.radius
 
-        w_const = (2.0 * math.pi) / duration
-        if radius < 0:
-            w_const = -w_const
-            radius = -radius
-        v_const = radius * abs(w_const)
+        v_const, w_const = loop_velocities(duration, radius)
 
         loop_rate = self.create_rate(20)
         start_time = self.get_clock().now()
@@ -89,10 +86,8 @@ class ReturnLoopActionServer(Node):
                 result.success = False
                 return result
 
-            delta_yaw = self.current_yaw - last_yaw
-            while delta_yaw > math.pi: delta_yaw -= 2.0 * math.pi
-            while delta_yaw < -math.pi: delta_yaw += 2.0 * math.pi
-            
+            delta_yaw = normalize_angle(self.current_yaw - last_yaw)
+
             accumulated_yaw += abs(delta_yaw)
             last_yaw = self.current_yaw
 
@@ -126,10 +121,7 @@ class ReturnLoopActionServer(Node):
                 result.success = False
                 return result
 
-            yaw_error = initial_yaw - self.current_yaw
-            
-            while yaw_error > math.pi: yaw_error -= 2.0 * math.pi
-            while yaw_error < -math.pi: yaw_error += 2.0 * math.pi
+            yaw_error = normalize_angle(initial_yaw - self.current_yaw)
 
             if abs(yaw_error) <= error_threshold:
                 self.stop_robot()
@@ -139,7 +131,7 @@ class ReturnLoopActionServer(Node):
             align_cmd.linear.x = 0.0
             
             w_cmd = yaw_error * kp_align
-            w_cmd = max(-max_align_speed, min(max_align_speed, w_cmd))
+            w_cmd = clamp(w_cmd, -max_align_speed, max_align_speed)
             align_cmd.angular.z = float(w_cmd)
             
             self.publisher.publish(align_cmd)

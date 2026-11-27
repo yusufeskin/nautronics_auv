@@ -4,13 +4,12 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from sensor_msgs.msg import CameraInfo
-from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from auv_interfaces.msg import DetectionArray
 from auv_interfaces.action import VisualServoing
 import numpy as np
-import time
 import math
+from auv_control.servo_math import build_interaction, servo_velocity
 from rclpy.qos import qos_profile_sensor_data
 class VisualServoingActionServer(Node):
     def __init__(self):
@@ -131,30 +130,9 @@ class VisualServoingActionServer(Node):
             # w_yaw_val = -0.2 * yaw_error
             w_yaw_val = -self.lambda_yaw * yaw_error
 
-            L_stacked = []
-            error_stacked = []
-
-            for i in range(4):
-                curr_u, curr_v = current_detected_points[i]
-                x = (curr_u - self.cu) / self.fx
-                y = (curr_v - self.cv) / self.fy
-                
-                tar_u, tar_v = target_points_xy[i]
-                x_star = (tar_u - self.cu) / self.fx
-                y_star = (tar_v - self.cv) / self.fy
-
-                L_i = np.array([
-                    [-1/z,    0,      x/z,   -(1 + x**2)],
-                    [ 0,     -1/z,    y/z,   -x * y]
-                ])
-
-                e_i = np.array([[x - x_star], [y - y_star]])
-                
-                L_stacked.append(L_i)
-                error_stacked.append(e_i)
-            #vertical stacking
-            L_total = np.vstack(L_stacked)
-            e_total = np.vstack(error_stacked)
+            L_total, e_total = build_interaction(
+                current_detected_points, target_points_xy, z,
+                self.fx, self.fy, self.cu, self.cv)
             error_norm = np.linalg.norm(e_total)
 
             feedback_msg.current_distance = float(z)
@@ -169,20 +147,11 @@ class VisualServoingActionServer(Node):
                 return result
 
             try:
-                L_v = L_total[:, 0:3] 
-                L_w = L_total[:, 3:] 
-
-                L_v_inv = np.linalg.pinv(L_v)
                 # hybrid visual servoing (https://inria.hal.science/inria-00350638v1/document)
                 # v = -lambda * L_v_inv * (error - L_w * w_yaw)
-                compensated_error = e_total - (L_w * w_yaw_val)
-                v_target_raw = np.dot(L_v_inv, compensated_error).flatten()
-
-
-                v_sway  = np.clip(-self.lambda_sway  * v_target_raw[0], -0.05, 0.05)
-                v_heave = np.clip(-self.lambda_heave * v_target_raw[1], -0.05, 0.05)
-                v_surge = np.clip(-self.lambda_surge * v_target_raw[2], -0.05, 0.05)
-                v_yaw   = np.clip(w_yaw_val, -0.05, 0.05)
+                v_surge, v_sway, v_heave, v_yaw = servo_velocity(
+                    L_total, e_total, w_yaw_val,
+                    self.lambda_sway, self.lambda_heave, self.lambda_surge)
                 
                 # self.get_logger().info(f"""
                 #     ---------------------------

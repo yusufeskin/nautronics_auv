@@ -7,13 +7,9 @@ from geometry_msgs.msg import Twist, Vector3
 from auv_interfaces.action import Roll
 import math
 import time
+from auv_control.angles import accumulate_turn
 
 TOLERANCE_RAD = 0.1
-
-def normalize_angle(angle):
-    while angle > math.pi: angle -= 2.0 * math.pi
-    while angle < -math.pi: angle += 2.0 * math.pi
-    return angle
 
 class RollActionServer(Node):
     def __init__(self):
@@ -86,8 +82,7 @@ class RollActionServer(Node):
                     result.success = False
                     return result
 
-                delta_roll = normalize_angle(self.current_roll - prev_roll)
-                total_turned_rad += delta_roll
+                total_turned_rad = accumulate_turn(total_turned_rad, prev_roll, self.current_roll)
                 prev_roll = self.current_roll
 
                 feedback_msg.current_angle_deg = math.degrees(abs(total_turned_rad))

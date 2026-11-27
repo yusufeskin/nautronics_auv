@@ -102,6 +102,9 @@ jobs:
         run: |
           sudo apt-get update
           pip3 install -r src/nautronics_auv/requirements.txt
+          # rosdep marks python3-pyqt6 "not available" on Ubuntu 22.04 (jammy),
+          # so gui_node's PyQt6 comes from pip, as auv_control/setup.py declares.
+          pip3 install PyQt6
           rosdep update --rosdistro "${{ matrix.ros_distro }}"
           # TODO: drop -r once every package.xml declares what it imports,
           # so an unresolvable dependency fails CI instead of being ignored.

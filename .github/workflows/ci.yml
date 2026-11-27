@@ -18,9 +18,11 @@ env:
   ROS_DISTRO: humble
   # gscam2 needs GStreamer dev packages and is only used on the vehicle;
   # ultralytics pulls in PyTorch (several GB), so CI does not install it.
+  # python3-pyqt6 has no Ubuntu 22.04 package; requirements.txt installs it.
   COLCON_SKIP: gscam2
   ROSDEP_SKIP_KEYS: >-
     python3-ultralytics-pip
+    python3-pyqt6
     libgstreamer1.0-dev
     libgstreamer-plugins-base1.0-dev
 
@@ -101,14 +103,12 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
+          # requirements.txt holds what rosdep cannot install on 22.04 (PyQt6)
           pip3 install -r src/nautronics_auv/requirements.txt
-          # rosdep marks python3-pyqt6 "not available" on Ubuntu 22.04 (jammy),
-          # so gui_node's PyQt6 comes from pip, as auv_control/setup.py declares.
-          pip3 install PyQt6
           rosdep update --rosdistro "${{ matrix.ros_distro }}"
-          # TODO: drop -r once every package.xml declares what it imports,
-          # so an unresolvable dependency fails CI instead of being ignored.
-          rosdep install --from-paths src --ignore-src -r -y \
+          # No -r: a dependency rosdep cannot resolve fails CI instead of
+          # being silently ignored. Intentional gaps go in ROSDEP_SKIP_KEYS.
+          rosdep install --from-paths src --ignore-src -y \
             --rosdistro "${{ matrix.ros_distro }}" --skip-keys "$ROSDEP_SKIP_KEYS"
 
       - name: Build

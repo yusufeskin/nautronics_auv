@@ -26,8 +26,6 @@ from check_ros_entrypoints import build_type, console_scripts  # noqa: E402
 OPTIONAL = {
     'ultralytics',  # rosdep key skipped in CI: pulls in PyTorch (several GB)
     'gz',           # Gazebo Harmonic python bindings, simulation only
-    'pymavlink',    # not declared in package.xml yet; remove once it is
-    'brping',       # not declared in package.xml yet; remove once it is
 }
 
 

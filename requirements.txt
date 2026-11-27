@@ -1,1 +1,3 @@
- bluerobotics-ping
+# Python packages rosdep cannot install on Ubuntu 22.04 / ROS 2 Humble.
+# Everything else is declared in the packages' package.xml files.
+PyQt6  # auv_control gui_node; python3-pyqt6 is not packaged for jammy

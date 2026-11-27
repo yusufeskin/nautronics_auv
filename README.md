@@ -41,15 +41,27 @@ Follow these steps to set up the development environment:
    ```
 
 4. **Install Python Requirements**
+
+   Only what rosdep cannot install on Ubuntu 22.04 (currently PyQt6):
    ```bash
    pip3 install -r src/nautronics_auv/requirements.txt
    ```
 
 5. **Install ROS Dependencies**
+
+   Every package declares what it uses in its `package.xml`, so rosdep installs
+   the rest (including pip packages such as pymavlink and ultralytics):
    ```bash
    sudo apt update
    rosdep update
-   rosdep install --from-paths src --ignore-src -r -y
+   rosdep install --from-paths src --ignore-src -y --skip-keys python3-pyqt6
+   ```
+
+   For simulation, install the ROS ↔ Gazebo **Harmonic** bridge from the OSRF
+   repository instead of the `ros-humble-ros-gz` packages (those are built for
+   Gazebo Fortress):
+   ```bash
+   sudo apt install ros-humble-ros-gzharmonic
    ```
 
 6. **Build the Workspace**

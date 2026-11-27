@@ -9,7 +9,7 @@ from auv_interfaces.msg import DetectionArray
 from auv_interfaces.action import VisualServoing
 import numpy as np
 import math
-from auv_control.servo_math import build_interaction, servo_velocity
+from auv_control.servo_math import build_interaction, is_valid_depth, servo_velocity
 from rclpy.qos import qos_profile_sensor_data
 class VisualServoingActionServer(Node):
     def __init__(self):
@@ -118,6 +118,15 @@ class VisualServoingActionServer(Node):
                 loop_rate.sleep()
                 continue
             z = target_obj.distance
+            if not is_valid_depth(z):
+                # PnP failed (distance = -1.0) or gave a non-physical depth:
+                # don't servo on it, hold still until a valid pose arrives.
+                self.get_logger().warn(
+                    f"Geçersiz derinlik ({z}), PnP başarısız olabilir; komut gönderilmiyor.",
+                    throttle_duration_sec=1)
+                self.stop_robot()
+                loop_rate.sleep()
+                continue
             kpts = target_obj.keypoints
             current_detected_points = [
                 (kpts[0].x,     kpts[0].y),

@@ -3,7 +3,8 @@
 import numpy as np
 import pytest
 
-from auv_control.servo_math import build_interaction, servo_velocity
+from auv_control.servo_math import (
+    MIN_VALID_DEPTH, build_interaction, is_valid_depth, servo_velocity)
 
 FX = FY = 500.0
 CU, CV = 320.0, 240.0
@@ -80,3 +81,30 @@ def test_commands_are_clipped_to_limit():
         assert abs(v) <= 0.05
     assert yaw == 0.05
     assert abs(sway) == pytest.approx(0.05)
+
+
+@pytest.mark.parametrize('z', [
+    -1.0,          # what the PnP solvers publish when solvePnP fails
+    0.0,           # would divide by zero in build_interaction
+    -0.5,          # negative depth flips the sign of every command
+    MIN_VALID_DEPTH / 2,
+    float('nan'),
+    float('inf'),
+    float('-inf'),
+    None,
+])
+def test_invalid_depths_are_rejected(z):
+    assert not is_valid_depth(z)
+
+
+@pytest.mark.parametrize('z', [MIN_VALID_DEPTH, 0.5, 1.5, 12.0, np.float32(2.0)])
+def test_valid_depths_are_accepted(z):
+    assert is_valid_depth(z)
+
+
+def test_negative_depth_would_reverse_the_command():
+    """Why the guard matters: z = -1 drives the vehicle the wrong way."""
+    current, target = square(40, du=30.0), square(40)
+    good = command(current, target, 1.0)
+    bad = command(current, target, -1.0)
+    assert np.sign(bad[1]) == -np.sign(good[1]) != 0  # sway flips

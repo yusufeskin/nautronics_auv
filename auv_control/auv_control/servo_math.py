@@ -1,8 +1,23 @@
 """Pure image-based visual-servoing math used by visual_servoing_action (no ROS imports)."""
 
+import math
+
 import numpy as np
 
 VELOCITY_LIMIT = 0.05
+# Closest depth (m) the servo loop accepts. The PnP solvers publish -1.0 when
+# solvePnP fails; 0, negative and non-finite depths must never reach
+# build_interaction (1/z flips sign or divides by zero).
+MIN_VALID_DEPTH = 0.01
+
+
+def is_valid_depth(z):
+    """Return True if z is a finite depth in metres usable by build_interaction."""
+    try:
+        z = float(z)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(z) and z >= MIN_VALID_DEPTH
 
 
 def build_interaction(current_points, target_points, z, fx, fy, cu, cv):

@@ -4,7 +4,6 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Range
 from brping import Ping1D
-import time
 import sys
 
 class PingUARTNode(Node):

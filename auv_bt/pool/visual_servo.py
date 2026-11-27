@@ -3,7 +3,6 @@
 
 import sys
 
-from auv_control import visual_servoing_action
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import qos_profile_sensor_data

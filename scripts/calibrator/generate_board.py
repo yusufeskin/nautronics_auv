@@ -1,6 +1,5 @@
 import cv2
 import cv2.aruco as aruco
-import numpy as np
 
 aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
 board = aruco.CharucoBoard((5, 7), 0.04, 0.02, aruco_dict)

@@ -159,7 +159,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     wait_1s_node = py_trees.timers.Timer(
-        name=f"Wait 1s",
+        name="Wait 1s",
         duration=1.0
     )
 

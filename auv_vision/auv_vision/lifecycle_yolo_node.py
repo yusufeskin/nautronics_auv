@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import rclpy
-import cv2
 import numpy as np
 import os
 import gc
@@ -65,7 +64,8 @@ class UniversalYoloLifecycleNode(LifecycleNode):
             self.get_logger().error(f"Model yüklenemedi: {e}")
             return TransitionCallbackReturn.ERROR
         self.tracker = self.get_parameter('tracker_config').get_parameter_value().string_value
-        tracker_path = os.path.join(pkg_share_dir, 'config', self.tracker)
+        # TODO: tracker_path is never passed to the model, so the tracker config is ignored.
+        tracker_path = os.path.join(pkg_share_dir, 'config', self.tracker)  # noqa: F841
 
         self.get_logger().info('TensorRT motoru ısıtılıyor...')
         dummy_image = np.zeros((480, 640, 3), dtype=np.uint8)

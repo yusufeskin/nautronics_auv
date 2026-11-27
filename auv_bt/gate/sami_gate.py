@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import operator
 import rclpy
-from geometry_msgs.msg import Point
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import qos_profile_sensor_data
 import py_trees.timers
@@ -19,8 +17,6 @@ import gate.behaviours.object2bb
 import gate.behaviours.depth
 import common_behaviors.state 
 
-from auv_interfaces.action import VisualServoing
-from auv_interfaces.action import YawAndScan
 from auv_interfaces.srv import SetVehicleMode
 from auv_interfaces.action import Roll
 

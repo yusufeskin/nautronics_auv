@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to the same PR/branch cancels the run that is still going.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ROS_DISTRO: humble
+  # gscam2 needs GStreamer dev packages and is only used on the vehicle;
+  # ultralytics pulls in PyTorch (several GB), so CI does not install it.
+  COLCON_SKIP: gscam2
+  ROSDEP_SKIP_KEYS: >-
+    python3-ultralytics-pip
+    libgstreamer1.0-dev
+    libgstreamer-plugins-base1.0-dev
+
+jobs:
+  # ---------------------------------------------------------------- seconds
+  lint:
+    name: Lint (pre-commit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: pre-commit/action@v3.0.1
+
+  actionlint:
+    name: Lint workflows (actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color
+
+  static-checks:
+    name: Entry points & launch files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python tools/ci/check_ros_entrypoints.py .
+
+  unit-tests:
+    name: Unit tests (no ROS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+          cache-dependency-path: tools/ci/requirements-unit-tests.txt
+      - run: pip install -r tools/ci/requirements-unit-tests.txt
+      # The ament linter tests need ROS; the "ROS build & test" job runs the rest.
+      - name: pytest
+        run: >-
+          python -m pytest -v
+          --ignore-glob='*/test/test_copyright.py'
+          --ignore-glob='*/test/test_flake8.py'
+          --ignore-glob='*/test/test_pep257.py'
+          auv_control/test auv_vision/test
+
+  # ---------------------------------------------------------------- minutes
+  ros:
+    name: ROS ${{ matrix.ros_distro }} build & test
+    needs: [static-checks]
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro: [humble]
+    steps:
+      - uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: ${{ matrix.ros_distro }}
+
+      - uses: actions/checkout@v4
+        with:
+          path: src/nautronics_auv
+
+      - name: Import external repositories
+        working-directory: src
+        run: vcs import < nautronics_auv/nautronics.repos
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          pip3 install -r src/nautronics_auv/requirements.txt
+          rosdep update --rosdistro "${{ matrix.ros_distro }}"
+          # TODO: drop -r once every package.xml declares what it imports,
+          # so an unresolvable dependency fails CI instead of being ignored.
+          rosdep install --from-paths src --ignore-src -r -y \
+            --rosdistro "${{ matrix.ros_distro }}" --skip-keys "$ROSDEP_SKIP_KEYS"
+
+      - name: Build
+        shell: bash
+        run: |
+          source "/opt/ros/${{ matrix.ros_distro }}/setup.bash"
+          colcon build --packages-skip $COLCON_SKIP \
+            --event-handlers console_cohesion+ --cmake-args -DBUILD_TESTING=ON
+
+      - name: Import every node module
+        shell: bash
+        run: |
+          source install/setup.bash
+          python3 src/nautronics_auv/tools/ci/import_entrypoints.py src/nautronics_auv
+
+      # Style linters (ament_flake8 / pep257 / xmllint ...) are labelled
+      # "linter"; ruff in the lint job covers Python for now, so they are
+      # skipped here and only real tests run. (colcon wants a leading space
+      # on pass-through arguments that start with a dash.)
+      - name: Test
+        shell: bash
+        run: |
+          source install/setup.bash
+          colcon test --packages-skip $COLCON_SKIP \
+            --event-handlers console_direct+ \
+            --pytest-args " -m" "not linter" \
+            --ctest-args " -LE" linter
+          colcon test-result --verbose
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.ros_distro }}
+          path: |
+            build/*/pytest.xml
+            build/*/test_results/**
+            log/latest_test/**
+          if-no-files-found: ignore

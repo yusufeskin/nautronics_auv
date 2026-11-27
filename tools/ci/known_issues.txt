@@ -1,0 +1,18 @@
+# Problems check_ros_entrypoints.py knows about and tolerates for now.
+# One key per line, exactly as the script prints it. When you fix one,
+# delete its line: CI fails if a listed issue no longer happens.
+#
+# These launch files start nodes that were deleted from the repo:
+#   object_keypoint_detector -> removed in #40 (lifecycle vision); yolo_keypoint_lifecycle replaced it
+#   pwm_router, baro_publisher -> removed in #28
+#   pixhawk_bridge -> entry point commented out in auv_hardware/setup.py; pixhawk_bridge2 is used instead
+auv_bringup/launch/control_pipeline.launch.py: auv_hardware pixhawk_bridge
+auv_bringup/launch/system_sim.launch.py: auv_vision object_keypoint_detector
+auv_bringup/launch/vision_pipeline.launch.py: auv_vision object_keypoint_detector
+auv_control/launch/visual_servoing.launch.py: auv_hardware pwm_router
+auv_control/launch/visual_servoing.launch.py: auv_vision object_keypoint_detector
+auv_hardware/launch/gate_behaviour_tree.launch.py: auv_hardware pixhawk_bridge
+auv_hardware/launch/gate_behaviour_tree.launch.py: auv_vision object_keypoint_detector
+auv_hardware/launch/pool_behaviour_tree.py: auv_hardware pixhawk_bridge
+auv_hardware/launch/system_startup.launch.py: auv_hardware pixhawk_baro_reader
+auv_hardware/launch/system_startup.launch.py: auv_hardware pwm_router_node

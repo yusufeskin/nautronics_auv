@@ -117,7 +117,7 @@ def bag_to_mp4(bag_path: str, topic: str | None, output: str, fps: float):
         count = 0
         skipped = 0
 
-        print(f"[INFO] Dönüştürme başlıyor...")
+        print("[INFO] Dönüştürme başlıyor...")
 
         for conn, timestamp, rawdata in reader.messages(connections=conns):
             try:

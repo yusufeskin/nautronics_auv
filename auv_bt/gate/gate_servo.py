@@ -219,7 +219,7 @@ def create_root() -> py_trees.behaviour.Behaviour:
     )
 
     wait_2s_node = py_trees.timers.Timer(
-        name=f"Wait 2s",
+        name="Wait 2s",
         duration=2.0
     )
 

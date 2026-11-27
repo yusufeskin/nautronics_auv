@@ -32,7 +32,6 @@ setup(
             'main_behaviour_tree1 = pool.main_behaviour_tree1:main',
             'main_behaviour_tree2 = pool.main_behaviour_tree2:main',
             'slalom_bt = slalom.slalom_bt:main',
-            'mixed_mission = pool.mixed_mission:main',
             'main_behaviour_tree = pool.main_behaviour_tree:main',
 
         ],

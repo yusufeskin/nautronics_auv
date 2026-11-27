@@ -1,5 +1,4 @@
 import py_trees
-import rclpy
 from std_msgs.msg import Float64
 from py_trees.common import Status
 from rclpy.qos import qos_profile_sensor_data

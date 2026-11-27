@@ -1,7 +1,6 @@
 import py_trees
 import rcl_interfaces.srv as rcl_srvs
 import rcl_interfaces.msg as rcl_msgs
-import rclpy
 
 class SetYoloParameters(py_trees.behaviour.Behaviour):
     def __init__(self, name: str, node_name: str, parameters_dict: dict):

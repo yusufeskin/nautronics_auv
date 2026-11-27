@@ -7,14 +7,10 @@ from geometry_msgs.msg import Twist, Vector3
 from auv_interfaces.action import Roll
 import math
 import time
+from auv_control.angles import accumulate_turn, downward_thrust_body
 
 TOLERANCE_RAD = 0.1
 BASE_DOWNWARD_THRUST = 0.25 # Dünya ekseninde aracı aşağı bastıracak itki miktarı. Aracın pozitif yüzerliğine göre ayarlayabilirsiniz.
-
-def normalize_angle(angle):
-    while angle > math.pi: angle -= 2.0 * math.pi
-    while angle < -math.pi: angle += 2.0 * math.pi
-    return angle
 
 class StabilizedRollActionServer(Node):
     def __init__(self):
@@ -87,8 +83,7 @@ class StabilizedRollActionServer(Node):
                     result.success = False
                     return result
 
-                delta_roll = normalize_angle(self.current_roll - prev_roll)
-                total_turned_rad += delta_roll
+                total_turned_rad = accumulate_turn(total_turned_rad, prev_roll, self.current_roll)
                 prev_roll = self.current_roll
 
                 feedback_msg.current_angle_deg = math.degrees(abs(total_turned_rad))
@@ -106,8 +101,8 @@ class StabilizedRollActionServer(Node):
                 
                 # 2. Dinamik İtki Komutu (Dünya ekseninde hep -Z'ye basması için Gövde Y ve Z itkilerini hesaplıyoruz)
                 # Not: math.cos ve math.sin radyan cinsinden çalışır, current_roll zaten radyandır.
-                cmd.linear.z = -BASE_DOWNWARD_THRUST * math.cos(self.current_roll)
-                cmd.linear.y = -BASE_DOWNWARD_THRUST * math.sin(self.current_roll)
+                cmd.linear.y, cmd.linear.z = downward_thrust_body(
+                    self.current_roll, BASE_DOWNWARD_THRUST)
 
                 self.vel_pub.publish(cmd)            
                 

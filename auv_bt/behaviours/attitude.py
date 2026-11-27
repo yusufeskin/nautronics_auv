@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 import py_trees
 from py_trees.common import Status
-from rclpy.qos import qos_profile_sensor_data
-from geometry_msgs.msg import Vector3
 
 
 class AttitudeCheckerCondition(py_trees.behaviour.Behaviour):

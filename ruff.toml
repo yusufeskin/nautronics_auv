@@ -1,0 +1,18 @@
+# Ruff is used as a fast bug-finder, not a formatter: the rules below flag
+# real mistakes (syntax errors, undefined names, unused imports/variables,
+# shadowed definitions). Style rules can be turned on later, one at a time.
+line-length = 99
+target-version = "py310"  # Ubuntu 22.04 / ROS 2 Humble
+extend-exclude = ["build", "install", "log", "additional_drivers"]
+
+[lint]
+select = [
+  "E9",   # syntax / IO errors
+  "F",    # pyflakes: undefined names, unused imports & variables, redefinitions
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]
+# Launch files keep nodes that are defined but switched off (left out of the
+# LaunchDescription on purpose), so unused variables are expected there.
+"*/launch/*.py" = ["F841"]

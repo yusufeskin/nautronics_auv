@@ -5,7 +5,6 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from geometry_msgs.msg import Twist
 from auv_interfaces.action import BlindPush
-import time
 
 class BlindPushActionServer(Node):
     def __init__(self):

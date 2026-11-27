@@ -1,0 +1,30 @@
+# Run locally with:  pip install pre-commit && pre-commit install
+# After that the checks run on every `git commit`. CI runs the same hooks.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-xml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=5000]
+        exclude: ^auv_description/models/prototype_vehicle/meshes/sim\.obj$
+      - id: end-of-file-fixer
+        files: \.(yml|yaml|xml|xacro|launch\.py|repos|toml|txt|cfg)$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: local
+    hooks:
+      - id: ros-entrypoints
+        name: ROS entry points & launch executables
+        entry: python3 tools/ci/check_ros_entrypoints.py
+        language: system
+        pass_filenames: false
+        files: (setup\.py|package\.xml|/launch/.*\.py|tools/ci/.*)$

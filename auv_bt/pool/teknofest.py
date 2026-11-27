@@ -5,7 +5,6 @@ import sys
 import operator
 import gate
 import rclpy
-from geometry_msgs.msg import Point
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import qos_profile_sensor_data
 
@@ -18,8 +17,6 @@ import py_trees.timers
 import common_behaviors.state 
 import gate.behaviours.depth
 import gate.behaviours.arrange_depth_action
-import behaviours.attitude
-import behaviours.depth
 
 from auv_interfaces.action import BlindPush
 from auv_interfaces.action import YawAndScan

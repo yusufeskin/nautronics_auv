@@ -114,7 +114,7 @@ elif ret < 2.0:
 else:
     print("  Evaluation: POOR ✗ — Review images!")
 
-print(f"\nCamera Matrix (fx, fy, cx, cy):")
+print("\nCamera Matrix (fx, fy, cx, cy):")
 print(f"  fx = {camera_matrix[0,0]:.2f}  fy = {camera_matrix[1,1]:.2f}")
 print(f"  cx = {camera_matrix[0,2]:.2f}  cy = {camera_matrix[1,2]:.2f}")
 print(f"\nDistortion Coefficients:\n  {dist_coeffs.ravel()}")

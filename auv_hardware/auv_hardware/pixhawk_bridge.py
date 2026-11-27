@@ -17,7 +17,6 @@ from .baro_handler2 import BaroHandler2
 from .motor_output_handler import MotorOutputHandler
 from geometry_msgs.msg import Vector3
 from std_msgs.msg import UInt16
-from .led_handler import LedHandler
 class PixhawkBridge(Node):
     def __init__(self):
         super().__init__('pixhawk_bridge_node')

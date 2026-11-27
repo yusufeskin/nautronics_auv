@@ -4,6 +4,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from std_msgs.msg import UInt16MultiArray
 import numpy as np
+from auv_control import mixer_math
 
 # cmd_vel  1.0 ----> pwm 2000
 # cmd_vel  0.9 ----> pwm 1933
@@ -45,39 +46,22 @@ class ThrusterMixer(Node):
             'pwm_router',
             10)
 
-        # Thruster Configuration Parameters
+        # Thruster Configuration Parameters (values live in mixer_math)
         # PWM Range
-        self.pwm_min = 1000
-        self.pwm_max = 2000
-        self.pwm_neutral = 1500
-        
+        self.pwm_min = mixer_math.PWM_MIN
+        self.pwm_max = mixer_math.PWM_MAX
+        self.pwm_neutral = mixer_math.PWM_NEUTRAL
+
         # 16V Thruster Data Mapping (PWM vs Thrust in kgf)
         # Reverse thrusts are represented as negative values
-        self.thruster_data_pwm = np.array([
-            1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1500, 
-            1650, 1700, 1750, 1800, 1850, 1900, 1950, 2000
-        ])
-        self.thruster_data_thrust = np.array([
-            -3.52, -3.06, -2.75, -2.11, -1.86, -1.37, -1.05, -0.74, 0.0,
-             0.73,  1.13,  1.69,  2.54,  3.15,  3.76,  4.43,  4.68
-        ])
-        self.max_forward_thrust = 4.68
-        self.max_reverse_thrust = 3.52
-        
-        # Weights (can be tuned)
-        self.mixing_matrix = np.array([
-            # x(surge) y(sway) z(heave) r(roll) p(pitch) yw(yaw)
-            [ 0.0,      0.0,    0.0,     0.0,   -1.0,     0.0 ],  # T1
-            [ 0.0,      0.0,    0.0,     1.0,    0.0,     0.0 ],  # T2
-            [ 0.0,      0.0,    1.0,     0.0,    0.0,     0.0 ],  # T3
-            [ 0.0,      0.0,    0.0,     0.0,    0.0,     1.0 ],  # T4
-            
-            [ 1.0,      0.0,    0.0,     0.0,    0.0,     0.0 ],  # T5
-            [ 0.0,     -1.0,    0.0,     0.0,    0.0,     0.0 ],  # T6
-            [ 0.0,      0.0,    0.0,     0.0,    0.0,     0.0 ],  # T7
-            [ 0.0,      0.0,    0.0,     0.0,    0.0,     0.0 ]   # T8
-        ])
-        
+        self.thruster_data_pwm = mixer_math.THRUSTER_DATA_PWM.copy()
+        self.thruster_data_thrust = mixer_math.THRUSTER_DATA_THRUST.copy()
+        self.max_forward_thrust = mixer_math.MAX_FORWARD_THRUST
+        self.max_reverse_thrust = mixer_math.MAX_REVERSE_THRUST
+
+        # Weights (can be tuned) - rows T1..T8, columns surge sway heave roll pitch yaw
+        self.mixing_matrix = mixer_math.MIXING_MATRIX.copy()
+
         # Note: T5-T8 mixing depends heavily on exact geometry (which is +Roll vs -Roll).
         # This is a starting point.
         
@@ -96,26 +80,20 @@ class ThrusterMixer(Node):
         ])
         
         # Calculate Motor Inputs (-1.0 to 1.0 nominally, but can exceed)
-        motor_inputs = np.dot(self.mixing_matrix, control_vector)
-        
         # Normalize if any value exceeds 1.0 to maintain ratios (optional but good practice)
-        max_val = np.max(np.abs(motor_inputs))
-        if max_val > 1.0:
-            motor_inputs = motor_inputs / max_val
-            
+        motor_inputs = mixer_math.mix(self.mixing_matrix, control_vector)
+
         pwm_values = []
         for input_val in motor_inputs:
-            # Scale normalized input [-1.0, 1.0] to target thrust in kgf
-            if input_val >= 0:
-                target_thrust = input_val * self.max_forward_thrust
-            else:
-                target_thrust = input_val * self.max_reverse_thrust
-            
-            # Interpolate to find the required PWM for the target thrust
-            pwm = int(np.interp(target_thrust, self.thruster_data_thrust, self.thruster_data_pwm))
-            
-            # Clamp to safe range just in case
-            pwm = max(self.pwm_min, min(self.pwm_max, pwm))
+            # Scale to thrust, interpolate PWM from thruster data, clamp to safe range
+            pwm = mixer_math.input_to_pwm(
+                input_val,
+                self.thruster_data_thrust,
+                self.thruster_data_pwm,
+                self.max_forward_thrust,
+                self.max_reverse_thrust,
+                self.pwm_min,
+                self.pwm_max)
             pwm_values.append(pwm)
             
         # Publish

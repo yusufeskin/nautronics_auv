@@ -9,9 +9,14 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-
+  <!-- everything the launch files start -->
   <exec_depend>ros2launch</exec_depend>
-
+  <exec_depend>auv_control</exec_depend>
+  <exec_depend>auv_description</exec_depend>
+  <exec_depend>auv_hardware</exec_depend>
+  <exec_depend>auv_vision</exec_depend>
+  <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>gscam2</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

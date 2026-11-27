@@ -1,7 +1,5 @@
 import py_trees
-import rclpy
 from lifecycle_msgs.srv import ChangeState
-from lifecycle_msgs.msg import Transition
 
 class ChangeLifecycleState(py_trees.behaviour.Behaviour):
     def __init__(self, name: str, node_name: str, transition_id: int):

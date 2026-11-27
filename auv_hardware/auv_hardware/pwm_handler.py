@@ -1,4 +1,3 @@
-from pymavlink import mavutil
 
 class PwmHandler:
     def __init__(self, mav_connection, logger):

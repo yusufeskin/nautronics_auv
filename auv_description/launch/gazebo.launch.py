@@ -149,6 +149,6 @@ def generate_launch_description():
         sim_dvl,
         SetEnvironmentVariable('__NV_PRIME_RENDER_OFFLOAD', '1'),
         SetEnvironmentVariable('__GLX_VENDOR_LIBRARY_NAME', 'nvidia'),
-        SetEnvironmentVariable('GZ_SIM_RENDER_ENGINE', 'ogre2')
-        # rviz_node
+        SetEnvironmentVariable('GZ_SIM_RENDER_ENGINE', 'ogre2'),
+        rviz_node
     ])

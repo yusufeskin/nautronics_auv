@@ -58,7 +58,7 @@ class SimDvlAdapter(Node):
         # AHRS. This is the one place the emulation is optimistic: real
         # dead-reckoning also drifts with attitude error, this does not.
         self.declare_parameter('attitude_topic', '/odom')
-
+        self.declare_parameter('base_frame', 'base_link')
         self.velocity_report_pub = self.create_publisher(
             Dvl, '/waterlinked_dvl_driver/velocity_report', 10
         )
@@ -173,7 +173,7 @@ class SimDvlAdapter(Node):
         if self._sensor_mount is None:
             try:
                 tf = self._tf_buffer.lookup_transform(
-                    msg.child_frame_id or 'base_link',
+                    self.get_parameter('base_frame').value,
                     self.get_parameter('child_frame_id').value,
                     Time()
                 )

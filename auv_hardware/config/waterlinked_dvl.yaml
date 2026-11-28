@@ -16,7 +16,7 @@
     timeout: 5 # seconds
 
     # x: Forward, y: Right, z: Down. Must match the dvl_link frame in the URDF.
-    frame_id: "dvl_link"
+    frame_id: "dvl_frd"
 
     speed_of_sound: 1481 # m/s
 

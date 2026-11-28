@@ -11,6 +11,13 @@
 
   <!-- everything the launch files start -->
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
   <exec_depend>auv_control</exec_depend>
   <exec_depend>auv_description</exec_depend>
   <exec_depend>auv_hardware</exec_depend>

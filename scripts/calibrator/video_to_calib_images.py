@@ -192,7 +192,7 @@ def extract_frames(
         print("  → Video daha kısa olabilir veya filtreler çok sıkı.")
     else:
         print(f"\n[OK] {saved} kalibrasyon görüntüsü hazır!")
-        print(f"  Şimdi çalıştırabilirsiniz: python calibrate_charuco.py")
+        print("  Şimdi çalıştırabilirsiniz: python calibrate_charuco.py")
 
 
 # ─── CLI ────────────────────────────────────────────────────────────────────

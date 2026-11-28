@@ -1,0 +1,3 @@
+# Dependencies of the pure-logic unit tests (CI job "Unit tests (no ROS)").
+pytest>=7
+numpy>=1.21,<3

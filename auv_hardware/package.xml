@@ -11,19 +11,29 @@
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
-  <depend>rclpy</depend>
-  <depend>std_msgs</depend>
-  <depend>auv_interfaces</depend>
-  <depend>nav_msgs</depend>
-  <depend>marine_acoustic_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>tf2_ros</depend>
 
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>marine_acoustic_msgs</exec_depend>
+  <exec_depend>auv_interfaces</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>python3-pymavlink-pip</exec_depend>
+  <exec_depend>python3-bluerobotics-ping-pip</exec_depend>
+  <!-- sim_dvl_bridge also needs the Gazebo Harmonic python bindings
+       (gz.transport13 / gz.msgs10), which come with Gazebo, not rosdep. -->
+
+  <!-- used by the launch files -->
+  <exec_depend>ros2launch</exec_depend>
   <exec_depend>realsense2_camera</exec_depend>
   <exec_depend>realsense2_description</exec_depend>
   <exec_depend>image_transport_plugins</exec_depend>
-  <exec_depend>ros2launch</exec_depend>
-
+  <exec_depend>bno055</exec_depend>
+  <exec_depend>waterlinked_dvl_driver</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>

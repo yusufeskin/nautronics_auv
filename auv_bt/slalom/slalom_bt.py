@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import operator
 import rclpy
-from geometry_msgs.msg import Point
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import qos_profile_sensor_data
 import py_trees.timers
@@ -18,7 +16,6 @@ import gate.behaviours.arrange_depth_action
 import gate.behaviours.depth
 import common_behaviors.state 
 
-from auv_interfaces.action import VisualServoing
 from auv_interfaces.action import YawAndScan
 from auv_interfaces.action import BlindPush
 from auv_interfaces.srv import SetVehicleMode
@@ -113,7 +110,8 @@ def create_root() -> py_trees.behaviour.Behaviour:
     goal_msg_rotate_20.angular_speed = 0.05
     goal_msg_rotate_20.is_absolute = True
     
-    rotate_20 = py_trees_ros.action_clients.FromConstant(
+    # TODO: rotate_20 is built but not added to the tree; add it or delete it.
+    rotate_20 = py_trees_ros.action_clients.FromConstant(  # noqa: F841
         name="Turn to Absolute 20",
         action_type=YawAndScan,
         action_name="/yaw_and_scan", 

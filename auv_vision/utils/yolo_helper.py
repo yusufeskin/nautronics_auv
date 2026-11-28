@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import numpy as np
 from auv_interfaces.msg import DetectedObject, DetectionArray
 
 MODEL_TYPE_BBOX      = "bbox"

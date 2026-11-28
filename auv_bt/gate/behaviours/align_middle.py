@@ -4,7 +4,6 @@
 import py_trees
 import rclpy
 from geometry_msgs.msg import Twist
-from auv_interfaces.msg import DetectionArray
 
 class CenterTarget(py_trees.behaviour.Behaviour):
     """

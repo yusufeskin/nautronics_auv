@@ -4,7 +4,6 @@ import math
 import time
 from collections import deque
 
-from pymavlink import mavutil
 from nav_msgs.msg import Odometry
 from marine_acoustic_msgs.msg import Dvl
 

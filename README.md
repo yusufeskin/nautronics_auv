@@ -41,15 +41,27 @@ Follow these steps to set up the development environment:
    ```
 
 4. **Install Python Requirements**
+
+   Only what rosdep cannot install on Ubuntu 22.04 (currently PyQt6):
    ```bash
    pip3 install -r src/nautronics_auv/requirements.txt
    ```
 
 5. **Install ROS Dependencies**
+
+   Every package declares what it uses in its `package.xml`, so rosdep installs
+   the rest (including pip packages such as pymavlink and ultralytics):
    ```bash
    sudo apt update
    rosdep update
-   rosdep install --from-paths src --ignore-src -r -y
+   rosdep install --from-paths src --ignore-src -y --skip-keys python3-pyqt6
+   ```
+
+   For simulation, install the ROS ↔ Gazebo **Harmonic** bridge from the OSRF
+   repository instead of the `ros-humble-ros-gz` packages (those are built for
+   Gazebo Fortress):
+   ```bash
+   sudo apt install ros-humble-ros-gzharmonic
    ```
 
 6. **Build the Workspace**
@@ -72,6 +84,34 @@ source ~/.bashrc
 ```
 
 The `auv_description` models are added to `GZ_SIM_RESOURCE_PATH` automatically by its environment hook when you run `source install/setup.bash`.
+
+## Development & CI
+
+Every pull request runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+| Job | What it checks | Time |
+|---|---|---|
+| Lint (pre-commit) | YAML/XML syntax, large files, [ruff](ruff.toml) bug checks (undefined names, unused imports/variables) | seconds |
+| Lint workflows | `actionlint` on the GitHub workflows | seconds |
+| Entry points & launch files | every `console_scripts` module exists, every launch file only starts executables that exist ([`tools/ci/check_ros_entrypoints.py`](tools/ci/check_ros_entrypoints.py)) | seconds |
+| Unit tests (no ROS) | pure-logic pytest tests in `auv_control/test` and `auv_vision/test` | seconds |
+| ROS humble build & test | `rosdep` + `colcon build`, imports every node module, `colcon test` | minutes |
+
+Run the same checks locally before pushing:
+
+```bash
+pip install pre-commit pytest numpy
+pre-commit install            # now runs on every git commit
+pre-commit run --all-files
+python -m pytest auv_control/test auv_vision/test
+```
+
+Known broken launch references are listed in
+[`tools/ci/known_issues.txt`](tools/ci/known_issues.txt); delete a line when you
+fix it (CI fails if a listed issue no longer happens).
+
+New logic should go in a ROS-free module (see `auv_control/auv_control/mixer_math.py`)
+with a test next to it in `<package>/test/`.
 
 ## Packages
 

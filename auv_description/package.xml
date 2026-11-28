@@ -11,12 +11,16 @@
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-  <exec_depend>joint_state_publisher</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
-  <!-- <exec_depend>gazebo_ros</exec_depend> -->
   <exec_depend>xacro</exec_depend>
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <!-- gazebo.launch.py includes auv_hardware's sim_dvl.launch.py -->
   <exec_depend>auv_hardware</exec_depend>
+  <!-- ros_gz_sim / ros_gz_bridge are needed too, but on Humble rosdep would
+       install the Gazebo Fortress build. This project uses Gazebo Harmonic, so
+       install ros-humble-ros-gzharmonic from packages.osrfoundation.org instead
+       (see README). -->
   <!-- <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend> -->
 

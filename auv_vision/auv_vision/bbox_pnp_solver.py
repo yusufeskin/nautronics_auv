@@ -6,7 +6,8 @@ import numpy as np
 from sensor_msgs.msg import CameraInfo
 from auv_interfaces.msg import DetectionArray
 from scipy.spatial.transform import Rotation as R
-from .object_config import OBJECT_REGISTRY 
+from .object_config import OBJECT_REGISTRY
+from .pnp_geometry import bbox_corners, scale_camera_matrix
 
 class BBoxPnPSolverNode(Node):
     def __init__(self):
@@ -34,15 +35,10 @@ class BBoxPnPSolverNode(Node):
             self.camera_matrix = np.array(msg.k, dtype=np.float64).reshape((3, 3))
             self.dist_coeffs = np.array(msg.d, dtype=np.float64)
 
-            scale_x = 640.0 / msg.width
-            scale_y = 640.0 / msg.height
+            # scale fx, fy, cx, cy to 640x640
+            scale_camera_matrix(self.camera_matrix, msg.width, msg.height, 640.0)
 
-            self.camera_matrix[0, 0] *= scale_x  # fx
-            self.camera_matrix[1, 1] *= scale_y  # fy
-            self.camera_matrix[0, 2] *= scale_x  # cx
-            self.camera_matrix[1, 2] *= scale_y  # cy
-
-            self.get_logger().info(f'Kamera matrisi ayarlandı ve 640x640 için ölçeklendi.')
+            self.get_logger().info('Kamera matrisi ayarlandı ve 640x640 için ölçeklendi.')
 
     def yolo_cb(self, msg: DetectionArray):
         if self.camera_matrix is None or self.dist_coeffs is None:
@@ -63,12 +59,7 @@ class BBoxPnPSolverNode(Node):
             w = det.bbox_width
             h = det.bbox_height
 
-            image_2d_points = np.array([
-                [cx - w / 2.0, cy - h / 2.0],
-                [cx + w / 2.0, cy - h / 2.0],
-                [cx + w / 2.0, cy + h / 2.0],
-                [cx - w / 2.0, cy + h / 2.0]
-            ], dtype=np.float32)
+            image_2d_points = bbox_corners(cx, cy, w, h)
             
             object_3d_points = self.object_library.get(cls_id)
 

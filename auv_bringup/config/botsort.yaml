@@ -13,4 +13,4 @@ track_buffer: 60            # Hedef kaybolduğunda ID'yi hafızada tutma süresi
 gmc_method: sparseOptFlow   # Global Motion Compensation (Kamera hareketini telafi etme yöntemi)
 proximity_thresh: 0.5       # Konum yakınlığı eşiği
 appearance_thresh: 0.25     # Görünüm (renk/doku) eşleşme eşiği
-with_reid: False        
+with_reid: False

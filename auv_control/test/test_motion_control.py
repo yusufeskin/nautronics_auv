@@ -3,7 +3,7 @@ import math
 import pytest
 
 from auv_control.position_control import (
-    ControllerParams, PositionController, Reference, State,
+    ControllerParams, PositionController, Reference, SpeedCurve, State,
 )
 from auv_control.rc_output_node import demand_to_channels
 
@@ -39,7 +39,8 @@ def test_speed_demand_is_capped():
     c = PositionController(p)
     # Moving at max_speed toward a far target: no velocity error, output is FF only.
     d = c.compute(State(0, 0, 0, 0, p.max_speed, 0), Reference(100, 0, 0, 0), DT)
-    assert d.surge == pytest.approx(p.vel_kff * p.max_speed)
+    curve = SpeedCurve(p.surge_curve_stick, p.surge_curve_speed)
+    assert d.surge == pytest.approx(curve.stick_for(p.max_speed))
 
 
 def test_outputs_are_limited():
@@ -76,8 +77,8 @@ def test_dvl_loss_centres_horizontal_but_keeps_depth_and_yaw():
 
 
 def test_integrator_removes_steady_state_velocity_error():
-    p = ControllerParams(vel_kff=0.0)
-    c = PositionController(p)
+    # Feedforward alone gives 0.1 m/s, but the vehicle is held at 0 (current).
+    c = make()
     s, r = State(0, 0, 0, 0, 0.0, 0), Reference(0, 0, 0, 0, vx_ff=0.1)
     first = c.compute(s, r, DT).surge
     for _ in range(100):
@@ -119,3 +120,44 @@ def test_rc_full_demand_unchanged_by_deadzone():
 def test_rc_clamps_out_of_range_demand():
     ch = demand_to_channels(5, -5, 0, 0, SIGNS)
     assert ch[4] == 1900 and ch[5] == 1900
+
+
+def test_speed_curve_hits_measured_points_and_is_odd():
+    c = SpeedCurve([0.0, 0.1, 0.4], [0.0, 0.45, 0.95])
+    assert c.stick_for(0.45) == pytest.approx(0.1)
+    assert c.stick_for(-0.95) == pytest.approx(-0.4)
+    assert c.stick_for(0.0) == 0.0
+    assert c.stick_for(0.225) == pytest.approx(0.05)          # linear between points
+    assert c.stick_for(1.2) == pytest.approx(0.4 + 0.3 * 0.25 / 0.5)  # extrapolated
+
+
+def test_speed_curve_rejects_bad_tables():
+    for stick, speed in (([0.0, 0.1], [0.0]), ([0.1, 0.2], [0.0, 0.5]), ([0.0, 0.2, 0.1], [0.0, 0.3, 0.5])):
+        with pytest.raises(ValueError):
+            SpeedCurve(stick, speed)
+
+
+def test_feedforward_uses_measured_curve():
+    # 0.25 m/s cruise needs ~0.034 stick in sim, a third of what the old linear gain gave.
+    c = make()
+    d = c.compute(State(0, 0, 0, 0, 0.25, 0), Reference(0, 0, 0, 0, vx_ff=0.25), DT)
+    assert 0.03 < d.surge < 0.04
+
+
+def test_acceleration_feedforward_pushes_harder_to_speed_up_and_brakes_to_slow_down():
+    p = ControllerParams()
+    s = State(0, 0, 0, 0, 0.1, 0)
+    cruise = PositionController(p).compute(s, Reference(0, 0, 0, 0, vx_ff=0.1), DT).surge
+    up = PositionController(p).compute(s, Reference(0, 0, 0, 0, vx_ff=0.1, ax_ff=0.1), DT).surge
+    down = PositionController(p).compute(s, Reference(0, 0, 0, 0, vx_ff=0.1, ax_ff=-0.1), DT).surge
+    assert up == pytest.approx(cruise + p.vel_ka * 0.1)
+    assert down == pytest.approx(cruise - p.vel_ka * 0.1)
+
+
+def test_acceleration_feedforward_is_rotated_into_body_frame():
+    # Facing +y; reference accelerating along +x world = to the vehicle's right.
+    p = ControllerParams()
+    d = PositionController(p).compute(State(0, 0, 0, math.pi / 2, 0, 0),
+                                      Reference(0, 0, 0, math.pi / 2, ax_ff=0.1), DT)
+    assert d.sway == pytest.approx(-p.vel_ka * 0.1)
+    assert d.surge == pytest.approx(0.0, abs=1e-9)

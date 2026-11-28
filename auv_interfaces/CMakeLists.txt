@@ -27,6 +27,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DetectedPipe.msg"
   "msg/PositionYawTarget.msg"
   "msg/AxisDemand.msg"
+  "msg/MotionReference.msg"
 
   DEPENDENCIES std_msgs geometry_msgs
 )

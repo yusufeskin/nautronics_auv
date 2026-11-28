@@ -42,6 +42,7 @@ setup(
             'position_controller = auv_control.position_controller_node:main',
             'rc_output = auv_control.rc_output_node:main',
             'guidance = auv_control.guidance_node:main',
+            'stick_calibration = auv_control.stick_calibration:main',
         ],
     },
 )

@@ -9,6 +9,7 @@ guidance:
     world_frame: odom
     odom_topic: /odometry/filtered
     odom_timeout: 0.5
+    controller_timeout: 1.0  # [s] no /controller/at_setpoint -> goals refused
     # Keep max_speed below position_controller.max_speed, or the controller's
     # speed cap clips the feedforward and the vehicle lags the reference.
     max_speed: 0.25          # [m/s] along the line
@@ -26,18 +27,17 @@ position_controller:
     reference_timeout: 0.5   # [s] guidance feedforward older than this is dropped
     world_frame: odom
 
-    # Horizontal cascade: position P -> speed demand -> velocity PI(+FF) on DVL
+    # Horizontal cascade: position P -> speed demand -> velocity PI (m/s) on
+    # DVL/EKF velocity -> inverse speed curve -> stick.
     pos_kp: 0.5              # [1/s]
     max_speed: 0.3           # [m/s]
-    # Sim (ekf_test_1 bag): stick 0.5 -> 1.1 m/s within ~1 s, so ~2.2 m/s per
-    # unit stick and almost no inertia. Velocity follows the stick at once, so
-    # the loop gain vel_kp * 2.2 must stay well below 1 or the DVL/EKF delay
-    # makes it oscillate (seen as the vehicle crabbing in circles at kp=1.0).
-    # Re-measure on the real vehicle: it will have far more inertia.
-    vel_kff: 0.45            # thrust fraction per m/s = 1 / (m/s per unit stick)
-    vel_kp: 0.2
-    vel_ki: 0.1
-    vel_i_limit: 0.5
+    vel_kp: 1.0              # [-]   extra m/s commanded per m/s of velocity error
+    vel_ki: 0.5              # [1/s]
+    vel_i_limit: 0.3         # [m]   integrator limit; max correction = ki * limit [m/s]
+    # Acceleration feedforward in stick units: the speed curve is steady-state
+    # only, speeding up / braking needs extra push. Fitted on guidance_test_2/3
+    # (excess stick vs measured accel): surge 0.088, sway 0.098.
+    vel_ka: 0.09             # [stick per m/s^2]
     max_thrust: 0.4          # surge/sway output limit, [0, 1]  (~0.9 m/s in sim)
 
     # Yaw and depth: P only - ArduSub closes the rate loop on ch4 / ch3
@@ -52,6 +52,16 @@ position_controller:
     pos_tolerance: 0.15      # [m]
     depth_tolerance: 0.10    # [m]
     yaw_tolerance_deg: 5.0
+
+    # Steady speed [m/s] vs stick fraction in ALT_HOLD, from stick_calibration
+    # (sim, 2026-11-28). Roughly v ~ sqrt(stick): drag grows with v^2.
+    # 1 us = 0.0025 stick is already 0.047 m/s, so slow moves are coarse.
+    # Must start at 0.0 and increase; write every value as a float (0.0, not 0).
+    # Re-measure on the real vehicle and replace these.
+    surge_curve_stick: [0.0, 0.0025, 0.005, 0.0075, 0.0125, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4]
+    surge_curve_speed: [0.0, 0.048, 0.075, 0.098, 0.136, 0.181, 0.23, 0.308, 0.451, 0.562, 0.655, 0.813, 0.944]
+    sway_curve_stick: [0.0, 0.0025, 0.005, 0.0075, 0.0125, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4]
+    sway_curve_speed: [0.0, 0.047, 0.077, 0.101, 0.139, 0.186, 0.237, 0.316, 0.465, 0.578, 0.674, 0.834, 0.97]
 
 rc_output:
   ros__parameters:

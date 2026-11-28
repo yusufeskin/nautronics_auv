@@ -2,9 +2,13 @@
 
 The vehicle is fully actuated and the pool is open water, so guidance is
 trajectory generation, not path search: go along the straight 3D line from
-start to goal, accelerate at a_max up to the cruise speed, cruise, decelerate
-at a_max to a stop exactly on the goal. Yaw turns from the start heading to
-the goal heading over the same time, the short way round.
+start to goal, change speed at a_max from the start speed to the cruise speed,
+cruise, decelerate at a_max to a stop exactly on the goal. Yaw turns from the
+start heading to the goal heading over the same time, the short way round.
+
+The start speed is the vehicle's current velocity along the new line, so a
+goal that replaces another mid-move does not ask a moving vehicle to be at
+rest. Velocity across the line is not modelled; the controller removes it.
 
 The cruise speed is lowered when needed so that
   * the vertical component stays under max_vertical_speed, and
@@ -42,11 +46,46 @@ class Sample:
     vy: float
     vz: float
     yaw_rate: float
+    ax: float = 0.0
+    ay: float = 0.0
+    az: float = 0.0
+
+
+@dataclass
+class Profile:
+    """Speed along the line: v0 -> vp in t1, cruise vp for tc, vp -> 0 in t3."""
+    v0: float
+    vp: float
+    a1: float   # signed acceleration of the first phase
+    t1: float
+    tc: float
+    t3: float
+
+    @property
+    def duration(self):
+        return self.t1 + self.tc + self.t3
+
+
+def make_profile(length, v0, v_cruise, a):
+    """Shortest profile from speed v0 to rest over length, capped at v_cruise.
+
+    v0 must already allow stopping in length: v0^2 / (2a) <= length.
+    """
+    if v0 <= v_cruise:
+        d_needed = (v_cruise ** 2 - v0 ** 2) / (2 * a) + v_cruise ** 2 / (2 * a)
+        vp = v_cruise if d_needed <= length else math.sqrt(a * length + v0 ** 2 / 2)
+    else:
+        vp = v_cruise    # already faster than allowed: slow down first
+    d1 = abs(vp ** 2 - v0 ** 2) / (2 * a)
+    d3 = vp ** 2 / (2 * a)
+    tc = max(length - d1 - d3, 0.0) / vp if vp > EPS else 0.0
+    return Profile(v0, vp, a if vp >= v0 else -a, abs(vp - v0) / a, tc, vp / a)
 
 
 class StraightLineTrajectory:
-    def __init__(self, start, start_yaw, goal, goal_yaw, limits: Limits):
-        """start, goal: (x, y, z) in odom."""
+    def __init__(self, start, start_yaw, goal, goal_yaw, limits: Limits,
+                 start_velocity=(0.0, 0.0, 0.0)):
+        """start, goal: (x, y, z) in odom. start_velocity: (vx, vy, vz) in odom."""
         self.p0 = tuple(start)
         self.yaw0 = start_yaw
         self.dyaw = wrap(goal_yaw - start_yaw)
@@ -62,46 +101,46 @@ class StraightLineTrajectory:
 
         t_yaw = abs(self.dyaw) / limits.max_yaw_rate
         if self.length > EPS:
-            v, t_acc, t_cruise = self._profile(self.length, v, a)
-            t_lin = 2.0 * t_acc + t_cruise
-            if t_yaw > t_lin:
-                # Slow the line down so it ends together with the yaw turn:
-                # T = L/v + v/a  ->  v^2 - aT v + aL = 0, smaller root.
-                T = t_yaw
-                v = (a * T - math.sqrt(a * a * T * T - 4.0 * a * self.length)) / 2.0
-                t_acc = v / a
-                t_cruise = T - 2.0 * t_acc
+            # Speed already along the new line; never more than lets us stop on the goal.
+            v0 = sum(c * w for c, w in zip(self.dir, start_velocity))
+            v0 = min(max(v0, 0.0), math.sqrt(2 * a * self.length))
+            prof = make_profile(self.length, v0, v, a)
+            if t_yaw > prof.duration:
+                # Slow the cruise so the line ends together with the yaw turn.
+                # Duration falls monotonically with the cruise speed: bisect.
+                lo, hi = 1e-4, v
+                for _ in range(60):
+                    mid = 0.5 * (lo + hi)
+                    if make_profile(self.length, v0, mid, a).duration > t_yaw:
+                        lo = mid
+                    else:
+                        hi = mid
+                prof = make_profile(self.length, v0, hi, a)
         else:
-            v, t_acc, t_cruise = 0.0, 0.0, 0.0
-        self.a, self.v, self.t_acc, self.t_cruise = a, v, t_acc, t_cruise
-        self.duration = max(2.0 * t_acc + t_cruise, t_yaw)
-
-    @staticmethod
-    def _profile(length, v, a):
-        """Return (cruise speed, accel time, cruise time); triangular if too short."""
-        if v * v / a > length:
-            v = math.sqrt(a * length)
-            return v, v / a, 0.0
-        return v, v / a, (length - v * v / a) / v
+            prof = Profile(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        self.a, self.profile = a, prof
+        self.v, self.t_acc, self.t_cruise = prof.vp, prof.t1, prof.tc
+        self.duration = max(prof.duration, t_yaw)
 
     def _along(self, t):
-        """Distance along the line and speed at time t."""
-        a, v, ta, tc = self.a, self.v, self.t_acc, self.t_cruise
-        t_end = 2.0 * ta + tc
-        if self.length <= EPS or t >= t_end:
-            return self.length, 0.0
-        if t < ta:
-            return 0.5 * a * t * t, a * t
-        if t < ta + tc:
-            return 0.5 * a * ta * ta + v * (t - ta), v
-        rem = t_end - t
-        return self.length - 0.5 * a * rem * rem, a * rem
+        """Distance along the line, speed and acceleration at time t."""
+        p, a = self.profile, self.a
+        if self.length <= EPS or t >= p.duration:
+            return self.length, 0.0, 0.0
+        if t < p.t1:
+            return p.v0 * t + 0.5 * p.a1 * t * t, p.v0 + p.a1 * t, p.a1
+        s1 = p.v0 * p.t1 + 0.5 * p.a1 * p.t1 ** 2
+        if t < p.t1 + p.tc:
+            return s1 + p.vp * (t - p.t1), p.vp, 0.0
+        rem = p.duration - t
+        return self.length - 0.5 * a * rem * rem, a * rem, -a
 
     def sample(self, t) -> Sample:
         t = min(max(t, 0.0), self.duration)
-        s, speed = self._along(t)
+        s, speed, acc = self._along(t)
         x, y, z = (p + c * s for p, c in zip(self.p0, self.dir))
         vx, vy, vz = (c * speed for c in self.dir)
+        ax, ay, az = (c * acc for c in self.dir)
 
         # Yaw progresses with the distance covered, so it turns smoothly with
         # the speed profile; a pure rotation progresses linearly in time.
@@ -113,4 +152,4 @@ class StraightLineTrajectory:
             frac, rate = 1.0, 0.0
         if t >= self.duration:
             frac, rate = 1.0, 0.0
-        return Sample(x, y, z, wrap(self.yaw0 + self.dyaw * frac), vx, vy, vz, rate)
+        return Sample(x, y, z, wrap(self.yaw0 + self.dyaw * frac), vx, vy, vz, rate, ax, ay, az)

@@ -5,8 +5,9 @@ Inputs
   /odometry/filtered        nav_msgs/Odometry   EKF state (pose in odom, twist in base_link)
   /waterlinked_dvl_driver/odom                  only its arrival time, to know the DVL is alive
   /controller/setpoint      geometry_msgs/PoseStamped  hold this pose (odom frame)
-  /controller/reference     nav_msgs/Odometry   moving reference from guidance:
-                                                pose + feedforward velocity, both in odom
+  /controller/reference     auv_interfaces/MotionReference  moving reference from
+                                                guidance: pose + feedforward velocity
+                                                and acceleration, all in odom
 Outputs
   /axis_demand              auv_interfaces/AxisDemand  (only while enabled)
   /controller/at_setpoint   std_msgs/Bool
@@ -24,7 +25,7 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Bool
 from std_srvs.srv import SetBool, Trigger
-from auv_interfaces.msg import AxisDemand
+from auv_interfaces.msg import AxisDemand, MotionReference
 
 from auv_control.position_control import (
     ControllerParams, PositionController, Reference, State,
@@ -76,7 +77,7 @@ class PositionControllerNode(Node):
         self.create_subscription(Odometry, self.get_parameter('odom_topic').value, self.odom_cb, 10)
         self.create_subscription(Odometry, self.get_parameter('dvl_topic').value, self.dvl_cb, 10)
         self.create_subscription(PoseStamped, '/controller/setpoint', self.setpoint_cb, 10)
-        self.create_subscription(Odometry, '/controller/reference', self.reference_cb, 10)
+        self.create_subscription(MotionReference, '/controller/reference', self.reference_cb, 10)
         self.demand_pub = self.create_publisher(AxisDemand, '/axis_demand', 10)
         self.at_pub = self.create_publisher(Bool, '/controller/at_setpoint', 10)
         self.create_service(SetBool, '/controller/enable', self.enable_cb)
@@ -118,8 +119,9 @@ class PositionControllerNode(Node):
     def reference_cb(self, msg):
         if not self._frame_ok(msg.header.frame_id):
             return
-        p, q, v = msg.pose.pose.position, msg.pose.pose.orientation, msg.twist.twist.linear
-        self.reference = Reference(p.x, p.y, p.z, yaw_of(q), v.x, v.y)
+        p, q = msg.pose.position, msg.pose.orientation
+        v, a = msg.velocity.linear, msg.acceleration.linear
+        self.reference = Reference(p.x, p.y, p.z, yaw_of(q), v.x, v.y, a.x, a.y)
         self.ff_time = self.now()
 
     def _latch_current_pose(self):
@@ -187,8 +189,8 @@ class PositionControllerNode(Node):
 
         ref = self.reference
         if self.ff_time is not None and now - self.ff_time > self.reference_timeout:
-            # Guidance went quiet: keep its last pose, drop its velocity.
-            ref.vx_ff = ref.vy_ff = 0.0
+            # Guidance went quiet: keep its last pose, drop its feedforward.
+            ref.vx_ff = ref.vy_ff = ref.ax_ff = ref.ay_ff = 0.0
             self.ff_time = None
 
         dvl_ok = self.dvl_time is not None and now - self.dvl_time < self.dvl_timeout

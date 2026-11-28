@@ -74,3 +74,56 @@ def test_zero_length_zero_turn_is_immediately_done():
     assert tr.duration == 0.0
     s = tr.sample(0.0)
     assert (s.x, s.y, s.z, s.yaw) == pytest.approx((1, 1, -1, 0.3))
+
+
+def test_acceleration_matches_velocity_derivative():
+    tr = StraightLineTrajectory((0, 0, 0), 0.0, (3, 4, -1), 0.0, LIM)
+    dt = 1e-4
+    for t in (0.5, tr.t_acc + 1.0, tr.duration - 0.5):
+        a, b = tr.sample(t), tr.sample(t + dt)
+        assert (b.vx - a.vx) / dt == pytest.approx(a.ax, abs=1e-3)
+        assert (b.vy - a.vy) / dt == pytest.approx(a.ay, abs=1e-3)
+        assert (b.vz - a.vz) / dt == pytest.approx(a.az, abs=1e-3)
+    assert tr.sample(0.0).ax > 0 and tr.sample(tr.duration - 0.1).ax < 0
+    assert tr.sample(tr.duration).ax == 0.0
+
+
+def test_replan_starts_at_current_speed_along_line():
+    # Moving +x at 0.2 m/s, new goal straight ahead: no jump to rest.
+    tr = StraightLineTrajectory((0, 0, 0), 0.0, (5, 0, 0), 0.0, LIM, start_velocity=(0.2, 0.05, 0))
+    s0 = tr.sample(0.0)
+    assert s0.vx == pytest.approx(0.2)
+    assert s0.ax > 0                      # still speeding up to 0.25
+    assert tr.sample(tr.duration).x == pytest.approx(5.0)
+    rest = StraightLineTrajectory((0, 0, 0), 0.0, (5, 0, 0), 0.0, LIM)
+    assert tr.duration < rest.duration
+
+
+def test_replan_ignores_velocity_away_from_goal():
+    tr = StraightLineTrajectory((0, 0, 0), 0.0, (5, 0, 0), 0.0, LIM, start_velocity=(-0.2, 0, 0))
+    assert tr.sample(0.0).vx == 0.0
+
+
+def test_start_faster_than_cruise_slows_down_first():
+    tr = StraightLineTrajectory((0, 0, 0), 0.0, (5, 0, 0), 0.0, LIM, start_velocity=(0.4, 0, 0))
+    assert tr.sample(0.0).vx == pytest.approx(0.4)
+    assert tr.sample(0.0).ax < 0
+    ss = samples(tr)
+    assert max(s.vx for s in ss[len(ss) // 2:]) <= LIM.max_speed + 1e-9
+    assert tr.sample(tr.duration).x == pytest.approx(5.0)
+
+
+def test_start_speed_too_high_to_stop_is_clamped():
+    tr = StraightLineTrajectory((0, 0, 0), 0.0, (0.1, 0, 0), 0.0, LIM, start_velocity=(0.25, 0, 0))
+    v0 = tr.sample(0.0).vx
+    assert v0 == pytest.approx(math.sqrt(2 * LIM.max_accel * 0.1))
+    ss = samples(tr, dt=0.001)
+    assert all(s.x <= 0.1 + 1e-9 for s in ss)
+    assert tr.sample(tr.duration).x == pytest.approx(0.1)
+
+
+def test_moving_start_with_big_turn_still_finishes_with_yaw():
+    tr = StraightLineTrajectory((0, 0, 0), 0.0, (1.0, 0, 0), math.pi, LIM, start_velocity=(0.2, 0, 0))
+    assert tr.duration == pytest.approx(math.pi / LIM.max_yaw_rate)
+    assert tr.profile.duration == pytest.approx(tr.duration, rel=1e-6)
+    assert tr.sample(tr.duration).x == pytest.approx(1.0)

@@ -1,0 +1,75 @@
+# Jetson motion control:
+#   /guidance/goal -> guidance -> /controller/reference -> position_controller
+#   -> /axis_demand -> rc_output -> pwm_router -> pixhawk_bridge2 -> ArduSub
+# Gains are first guesses, NOT tuned. Tune in sim, then in the pool.
+
+guidance:
+  ros__parameters:
+    rate: 20.0
+    world_frame: odom
+    odom_topic: /odometry/filtered
+    odom_timeout: 0.5
+    # Keep max_speed below position_controller.max_speed, or the controller's
+    # speed cap clips the feedforward and the vehicle lags the reference.
+    max_speed: 0.25          # [m/s] along the line
+    max_accel: 0.1           # [m/s^2]
+    max_vertical_speed: 0.15 # [m/s]
+    max_yaw_rate_deg: 15.0   # [deg/s]
+
+position_controller:
+  ros__parameters:
+    rate: 20.0
+    odom_topic: /odometry/filtered
+    dvl_topic: /waterlinked_dvl_driver/odom
+    odom_timeout: 0.5        # [s] EKF older than this -> all sticks centred
+    dvl_timeout: 1.0         # [s] DVL older than this -> surge/sway centred
+    reference_timeout: 0.5   # [s] guidance feedforward older than this is dropped
+    world_frame: odom
+
+    # Horizontal cascade: position P -> speed demand -> velocity PI(+FF) on DVL
+    pos_kp: 0.5              # [1/s]
+    max_speed: 0.3           # [m/s]
+    # Sim (ekf_test_1 bag): stick 0.5 -> 1.1 m/s within ~1 s, so ~2.2 m/s per
+    # unit stick and almost no inertia. Velocity follows the stick at once, so
+    # the loop gain vel_kp * 2.2 must stay well below 1 or the DVL/EKF delay
+    # makes it oscillate (seen as the vehicle crabbing in circles at kp=1.0).
+    # Re-measure on the real vehicle: it will have far more inertia.
+    vel_kff: 0.45            # thrust fraction per m/s = 1 / (m/s per unit stick)
+    vel_kp: 0.2
+    vel_ki: 0.1
+    vel_i_limit: 0.5
+    max_thrust: 0.4          # surge/sway output limit, [0, 1]  (~0.9 m/s in sim)
+
+    # Yaw and depth: P only - ArduSub closes the rate loop on ch4 / ch3
+    yaw_kp: 1.0              # demand per rad of yaw error
+    max_yaw: 0.5
+    yaw_deadband_deg: 1.0
+    depth_kp: 1.0            # demand per m of depth error
+    max_heave: 0.5
+    depth_deadband: 0.03     # [m]
+
+    # "At setpoint" thresholds (/controller/at_setpoint)
+    pos_tolerance: 0.15      # [m]
+    depth_tolerance: 0.10    # [m]
+    yaw_tolerance_deg: 5.0
+
+rc_output:
+  ros__parameters:
+    rate: 20.0
+    demand_timeout: 0.5      # [s] stale demand -> neutral 1500
+    pwm_range: 400           # 1500 +/- 400 at full demand
+    pwm_min: 1100
+    pwm_max: 1900
+    # Flip a sign here if an axis moves the wrong way in the sign check.
+    surge_sign: 1
+    sway_sign: -1
+    heave_sign: 1
+    yaw_sign: -1
+    start_enabled: false
+    # ArduSub ALT_HOLD stick deadzones [us]; a non-zero demand starts just
+    # outside them. Defaults with JS_GAIN 0.5: THR_DZ 100 -> 40 us,
+    # RC4_DZ 40 -> 20 us. Recompute if THR_DZ, RC4_DZ or the gain change.
+    surge_deadzone_us: 0
+    sway_deadzone_us: 0
+    heave_deadzone_us: 40
+    yaw_deadzone_us: 20

@@ -13,6 +13,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
     ],
     install_requires=['setuptools', 'PyQt6'],
     zip_safe=True,
@@ -38,6 +39,9 @@ setup(
             'absolute_yawer = auv_control.absolute_yawer:main',
             'center_target_action = auv_control.center_target_action:main',
             'gui_node = auv_control.gui_node:main',
+            'position_controller = auv_control.position_controller_node:main',
+            'rc_output = auv_control.rc_output_node:main',
+            'guidance = auv_control.guidance_node:main',
         ],
     },
 )
